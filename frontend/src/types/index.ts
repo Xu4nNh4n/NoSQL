@@ -514,6 +514,17 @@ export interface DrillReportMetadata {
   sql?: string;
   generatedAt?: string;
   profilesUrl?: string;
+  requestElapsedMs?: number;
+  reportKind?: string;
+  dataset?: 'OPERATIONS' | 'SIMULATED';
+  sourceNames?: string[];
+  from?: string;
+  to?: string;
+  stockAsOf?: string;
+  definition?: string;
+  managementAction?: string;
+  assumptions?: string[];
+  rowLimit?: number;
   missingExportDates?: string[];
   dataSources?: { date: string; format: 'JSON' | 'PARQUET'; exportedAt?: string; reference?: string }[];
 }

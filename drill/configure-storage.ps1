@@ -46,6 +46,10 @@ $plugins = @{
                 location = '/analytics/curated'; writable = $true
                 defaultInputFormat = 'parquet'; allowAccessOutsideWorkspace = $false
             }
+            simulation = @{
+                location = '/analytics/simulation'; writable = $false
+                defaultInputFormat = 'json'; allowAccessOutsideWorkspace = $false
+            }
         }
         formats = @{
             json = @{ type = 'json'; extensions = @('json') }

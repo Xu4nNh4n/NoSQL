@@ -19,6 +19,10 @@ export function DrillReportExplanation({ title, report, description }: Props) {
           <dl className="grid grid-cols-1 gap-2 text-xs sm:grid-cols-2">
             <div><dt className="text-gray-500">Kết quả truy vấn</dt><dd className="mt-1 font-medium text-gray-900">Đã nhận kết quả từ Drill</dd></div>
             <div><dt className="text-gray-500">Thời điểm nhận báo cáo</dt><dd className="mt-1 font-medium text-gray-900">{report.generatedAt ? formatDateTime(report.generatedAt) : 'Chưa có thông tin'}</dd></div>
+            {report.requestElapsedMs !== undefined && <div><dt className="text-gray-500">Thời gian phản hồi Drill</dt><dd className="mt-1 font-medium text-gray-900">{report.requestElapsedMs} ms <span className="font-normal text-gray-500">(không phải benchmark chuẩn)</span></dd></div>}
+            {report.dataset && <div><dt className="text-gray-500">Bộ dữ liệu</dt><dd className="mt-1 font-medium text-gray-900">{report.dataset === 'SIMULATED' ? 'Mô phỏng' : 'Vận hành'}</dd></div>}
+            {report.sourceNames && <div className="sm:col-span-2"><dt className="text-gray-500">Nguồn dữ liệu</dt><dd className="mt-1 font-medium text-gray-900">{report.sourceNames.join(' · ')}</dd></div>}
+            {report.stockAsOf && <div><dt className="text-gray-500">Ngày chụp tồn kho</dt><dd className="mt-1 font-medium text-gray-900">{report.stockAsOf}</dd></div>}
             <div className="sm:col-span-2"><dt className="text-gray-500">Mã truy vấn Drill</dt><dd className="mt-1 break-all font-mono text-gray-800">{report.queryId || 'Drill chưa trả mã truy vấn'}</dd></div>
           </dl>
           {report.dataSources && report.dataSources.length > 0 && (

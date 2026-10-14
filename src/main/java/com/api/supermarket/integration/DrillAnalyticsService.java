@@ -302,9 +302,10 @@ public class DrillAnalyticsService {
         return " LIMIT " + size + " OFFSET " + ((long) page * size);
     }
 
-    private Map<String, Object> query(String sql, int limit) {
+    Map<String, Object> query(String sql, int limit) {
         // Only fixed SELECT reports are exposed; callers cannot submit arbitrary SQL.
         try {
+            long started = System.nanoTime();
             String body = json.writeValueAsString(Map.of("queryType", "SQL", "query", sql, "autoLimit", limit));
             var request = HttpRequest.newBuilder(endpoint).timeout(timeout)
                     .header("Content-Type", "application/json")
@@ -326,6 +327,7 @@ public class DrillAnalyticsService {
             report.put("sql", sql);
             report.put("generatedAt", Instant.now().toString());
             report.put("profilesUrl", endpoint.resolve("/profiles").toString());
+            report.put("requestElapsedMs", (System.nanoTime() - started) / 1_000_000);
             return report;
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
