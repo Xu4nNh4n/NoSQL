@@ -1,9 +1,0 @@
-target/
-.git/
-.idea/
-.vscode/
-Bruno/
-docs/
-logs/
-*.log
-.env

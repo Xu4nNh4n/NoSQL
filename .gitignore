@@ -36,28 +36,17 @@ build/
 .env
 .env.*
 !.env.example
-database/secure-connect-*.zip
-analytics/cassandra/*.json
+secrets/
+*.zip
 Bruno/**/environments/*.local.yml
 
-### Runtime and generated analytics data ###
+### Runtime ###
 logs/
 *.log
 *.log.gz
-*.crc
 *.tmp
-*.parquet
-*.ready.json
-analytics/curated/*
-!analytics/curated/.gitkeep
-analytics/cassandra/*.tmp
-analytics/archive/
-analytics/simulation/*
-!analytics/simulation/.gitkeep
 frontend/dist/
 uploads/
 
-# Runtime imports and payment logs; templates stay in database/.
-analytics/pos-payments/
-analytics/business/supplier_prices.csv
-analytics-supplier-price-archive/
+### Office lock files ###
+~$*
