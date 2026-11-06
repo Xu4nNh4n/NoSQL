@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from './AuthContext';
-import type { Product, Customer, PaymentMethod, OrderType } from '../types';
+import type { Product, PaymentMethod, PosQuote } from '../types';
+import { api } from '../api/client';
 import { normalizeProduct } from '../types';
 
 export interface CartItem {
@@ -10,20 +11,14 @@ export interface CartItem {
 
 interface CartContextType {
   items: CartItem[];
-  selectedCustomer: Customer | null;
-  setSelectedCustomer: (customer: Customer | null) => void;
-  orderType: OrderType;
-  setOrderType: (type: OrderType) => void;
+  customerName: string;
+  setCustomerName: (name: string) => void;
+  customerPhone: string;
+  setCustomerPhone: (phone: string) => void;
   paymentMethod: PaymentMethod;
   setPaymentMethod: (method: PaymentMethod) => void;
   note: string;
   setNote: (note: string) => void;
-  shippingAddress: string;
-  setShippingAddress: (address: string) => void;
-  receiverName: string;
-  setReceiverName: (name: string) => void;
-  receiverPhone: string;
-  setReceiverPhone: (phone: string) => void;
   addItem: (product: Product, quantity?: number) => boolean;
   updateQuantity: (productId: number, quantity: number) => void;
   removeItem: (productId: number) => void;
@@ -31,6 +26,12 @@ interface CartContextType {
   refreshProducts: (products: Product[]) => void;
   subtotal: number;
   total: number;
+  discountAmount: number;
+  quote: PosQuote | null;
+  quoteLoading: boolean;
+  quoteError: string;
+  acceptQuote: (quote: PosQuote) => void;
+  retryQuote: () => void;
   itemCount: number;
 }
 
@@ -40,28 +41,44 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { user } = useAuth();
   const previousOwner = useRef(user?.id);
   const [items, setItems] = useState<CartItem[]>([]);
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
-  const [orderType, setOrderType] = useState<OrderType>('IN_STORE');
+  const [customerName, setCustomerName] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('CASH');
   const [note, setNote] = useState<string>('Bán tại quầy');
-  const [shippingAddress, setShippingAddress] = useState<string>('');
-  const [receiverName, setReceiverName] = useState<string>('');
-  const [receiverPhone, setReceiverPhone] = useState<string>('');
+  const [priced, setPriced] = useState<{ key: string; quote: PosQuote } | null>(null);
+  const [quoteLoading, setQuoteLoading] = useState(false);
+  const [quoteError, setQuoteError] = useState('');
+  const [quoteAttempt, setQuoteAttempt] = useState(0);
+  const quoteKey = JSON.stringify(items.map(item => ({ productId: item.product.id, quantity: item.quantity })));
+  const quote = priced?.key === quoteKey && items.length > 0 ? priced.quote : null;
+  const acceptQuote = (value: PosQuote) => setPriced({ key: quoteKey, quote: value });
+  const retryQuote = () => setQuoteAttempt(value => value + 1);
 
   useEffect(() => {
-    // Keep a guest's shopping selection when they sign in as a customer,
-    // but never carry another account's cart into a new session.
-    if (previousOwner.current !== user?.id && (previousOwner.current != null || user?.role !== 'CUSTOMER')) {
+    let cancelled = false;
+    setQuoteError('');
+    setPriced(null);
+    if (quoteKey === '[]') { setQuoteLoading(false); return; }
+    setQuoteLoading(true);
+    api.post<PosQuote>('/orders/quote', { items: JSON.parse(quoteKey) }).then(value => {
+      if (!cancelled) setPriced({ key: quoteKey, quote: value });
+    }).catch((err: unknown) => {
+      if (!cancelled) setQuoteError(err instanceof Error ? err.message : 'Không thể lấy giá POS');
+    }).finally(() => { if (!cancelled) setQuoteLoading(false); });
+    return () => { cancelled = true; };
+  }, [quoteKey, quoteAttempt, user?.id]);
+
+  useEffect(() => {
+    // Clear the POS cart whenever the signed-in employee changes.
+    if (previousOwner.current !== user?.id) {
       setItems([]);
-      setSelectedCustomer(null);
+      setCustomerName('');
+      setCustomerPhone('');
       setNote('Bán tại quầy');
       setPaymentMethod('CASH');
-      setShippingAddress('');
-      setReceiverName('');
-      setReceiverPhone('');
     }
     previousOwner.current = user?.id;
-  }, [user?.id, user?.role]);
+  }, [user?.id]);
 
   const addItem = (product: Product, quantity: number = 1): boolean => {
     const norm = normalizeProduct(product);
@@ -115,29 +132,22 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setItems([]);
     setNote('Bán tại quầy');
     setPaymentMethod('CASH');
-    setSelectedCustomer(null);
-    setShippingAddress('');
-    setReceiverName('');
-    setReceiverPhone('');
+    setCustomerName('');
+    setCustomerPhone('');
   };
 
   const refreshProducts = useCallback((products: Product[]) => {
     const latest = new Map(products.map(product => [product.id, product]));
-    // Preserve quantities so shoppers can see and resolve shortages explicitly.
+    // Preserve quantities so the cashier can resolve shortages explicitly.
     setItems(previous => previous.map(item => {
       const product = latest.get(item.product.id);
       return product ? { ...item, product } : item;
     }));
   }, []);
 
-  const subtotal = useMemo(() => {
-    return items.reduce((sum, item) => {
-      const price = item.product.sellingPrice ?? item.product.price ?? 0;
-      return sum + price * item.quantity;
-    }, 0);
-  }, [items]);
-
-  const total = subtotal;
+  const subtotal = quote?.subtotal ?? 0;
+  const total = quote?.totalAmount ?? 0;
+  const discountAmount = quote?.discountAmount ?? 0;
 
   const itemCount = useMemo(() => {
     return items.reduce((sum, item) => sum + item.quantity, 0);
@@ -147,20 +157,14 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     <CartContext.Provider
       value={{
         items,
-        selectedCustomer,
-        setSelectedCustomer,
-        orderType,
-        setOrderType,
+        customerName,
+        setCustomerName,
+        customerPhone,
+        setCustomerPhone,
         paymentMethod,
         setPaymentMethod,
         note,
         setNote,
-        shippingAddress,
-        setShippingAddress,
-        receiverName,
-        setReceiverName,
-        receiverPhone,
-        setReceiverPhone,
         addItem,
         updateQuantity,
         removeItem,
@@ -168,6 +172,12 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         refreshProducts,
         subtotal,
         total,
+        discountAmount,
+        quote,
+        quoteLoading,
+        quoteError,
+        acceptQuote,
+        retryQuote,
         itemCount,
       }}
     >

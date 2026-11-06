@@ -8,16 +8,18 @@ WITH report_day AS (
            TIMESTAMP '2026-10-08 00:00:00' AS utc_start,
            TIMESTAMP '2026-10-09 00:00:00' AS utc_end
 ), astra_raw AS (
-    SELECT event_date, event_type, amount, event_id,
+    SELECT event_date, event_type, amount, event_id, order_id,
            ROW_NUMBER() OVER (PARTITION BY event_id ORDER BY event_time DESC) AS event_rank
     FROM analytics.cassandra.`events-2026-10-08.json`
 ), astra_daily AS (
-    SELECT CAST(event_date AS DATE) AS event_date,
+    SELECT CAST(a.event_date AS DATE) AS event_date,
            SUM(CASE WHEN event_type = 'PAYMENT_RECEIVED' THEN 1 ELSE 0 END) AS astra_payment_count,
            SUM(CASE WHEN event_type = 'PAYMENT_RECEIVED' THEN CAST(amount AS DECIMAL(18, 2)) ELSE 0 END) AS astra_collected_amount,
            SUM(CASE WHEN event_type = 'REFUND_CONFIRMED' THEN 1 ELSE 0 END) AS astra_refund_count,
            SUM(CASE WHEN event_type = 'REFUND_CONFIRMED' THEN CAST(amount AS DECIMAL(18, 2)) ELSE 0 END) AS astra_refunded_amount
-    FROM astra_raw
+    FROM astra_raw a
+    JOIN mysql_source.supermarket_api.sales_orders source_order
+      ON CAST(a.order_id AS BIGINT) = source_order.order_id AND source_order.order_type = 'IN_STORE'
     WHERE event_rank = 1 AND event_id IS NOT NULL
       AND event_id <> '11111111-1111-1111-1111-111111111111'
       AND event_type IN ('PAYMENT_RECEIVED', 'REFUND_CONFIRMED')
@@ -29,13 +31,16 @@ WITH report_day AS (
            SUM(CASE WHEN event_type = 'REFUND' THEN 1 ELSE 0 END) AS mysql_refund_count,
            SUM(CASE WHEN event_type = 'REFUND' THEN amount ELSE 0 END) AS mysql_refunded_amount
     FROM mysql_source.supermarket_api.payment_records p
+    JOIN mysql_source.supermarket_api.sales_orders o ON o.order_id = p.order_id
     JOIN report_day d ON p.created_at >= d.utc_start AND p.created_at < d.utc_end
+    WHERE o.order_type = 'IN_STORE'
     GROUP BY d.event_date
 ), mysql_orders AS (
     -- Tổng tiền đơn được cộng trước khi JOIN dòng hàng; mỗi đơn chỉ tính một lần.
     SELECT d.event_date, SUM(COALESCE(o.subtotal, 0)) AS mysql_order_subtotal
     FROM mysql_source.supermarket_api.sales_orders o
     JOIN report_day d ON o.order_date >= d.utc_start AND o.order_date < d.utc_end
+    WHERE o.order_type = 'IN_STORE'
     GROUP BY d.event_date
 ), mysql_items AS (
     SELECT d.event_date,
@@ -43,6 +48,7 @@ WITH report_day AS (
     FROM mysql_source.supermarket_api.sales_orders o
     JOIN mysql_source.supermarket_api.sales_order_items i ON i.order_id = o.order_id
     JOIN report_day d ON o.order_date >= d.utc_start AND o.order_date < d.utc_end
+    WHERE o.order_type = 'IN_STORE'
     GROUP BY d.event_date
 )
 SELECT d.event_date,

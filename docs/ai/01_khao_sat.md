@@ -34,4 +34,3 @@ Hướng đề tài phù hợp: Drill có vai trò cụ thể trong truy vấn l
 3. Đối soát sạch và lỗi chủ động chỉ có giá trị khi chạy thật trên hai bộ dữ liệu tách biệt; bản ghi trùng ID có thể bị deduplicate nên không nhất thiết làm lệch tổng tiền. Chỉ đánh dấu `CHECK` nếu rule quality phát hiện lỗi thực sự.
 4. Thời gian phản hồi API không được gọi là benchmark. Benchmark phải đo theo quy trình cố định, giữ raw results và Drill Profiles; hiện chưa chạy.
 
-\n

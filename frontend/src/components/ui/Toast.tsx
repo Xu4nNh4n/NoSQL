@@ -51,7 +51,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             key={t.id}
             className={`pointer-events-auto flex items-start gap-3 p-3.5 rounded-xl border shadow-lg bg-white transition-all transform animate-in fade-in slide-in-from-bottom-2 duration-200 ${
               t.type === 'success'
-                ? 'border-emerald-200 text-emerald-950'
+                ? 'border-blue-200 text-blue-950'
                 : t.type === 'error'
                 ? 'border-rose-200 text-rose-950'
                 : t.type === 'warning'
@@ -60,7 +60,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             }`}
           >
             <div className="shrink-0 mt-0.5">
-              {t.type === 'success' && <CheckCircle2 className="w-5 h-5 text-emerald-600" />}
+              {t.type === 'success' && <CheckCircle2 className="w-5 h-5 text-blue-600" />}
               {t.type === 'error' && <AlertCircle className="w-5 h-5 text-rose-600" />}
               {t.type === 'warning' && <AlertTriangle className="w-5 h-5 text-amber-600" />}
               {t.type === 'info' && <Info className="w-5 h-5 text-blue-600" />}

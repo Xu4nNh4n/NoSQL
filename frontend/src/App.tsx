@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { CartProvider } from './contexts/CartContext';
 import { ToastProvider } from './components/ui/Toast';
@@ -10,15 +10,14 @@ import type { RoleName } from './types';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { ProductsPage } from './pages/ProductsPage';
-import { CategoriesPage } from './pages/CategoriesPage';
 import { InventoryPage } from './pages/InventoryPage';
+import { SuppliersPage } from './pages/SuppliersPage';
+import { PurchaseCostsPage } from './pages/PurchaseCostsPage';
+import { PromotionsPage } from './pages/PromotionsPage';
 import { PosPage } from './pages/PosPage';
 import { SalesOrdersPage } from './pages/SalesOrdersPage';
-import { SuppliersPage } from './pages/SuppliersPage';
-import { CustomersPage } from './pages/CustomersPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { UsersPage } from './pages/UsersPage';
-import { ShopPage } from './pages/ShopPage';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
@@ -27,7 +26,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
     return (
       <div className="min-h-screen bg-[#F8FAF9] flex items-center justify-center">
         <div className="flex items-center gap-2 text-sm text-gray-500 font-medium">
-          <svg className="animate-spin h-5 w-5 text-emerald-600" fill="none" viewBox="0 0 24 24">
+          <svg className="animate-spin h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
           </svg>
@@ -51,8 +50,11 @@ const RoleRoute: React.FC<{ allowedRoles: RoleName[]; children: React.ReactNode 
   const { role } = useAuth();
 
   if (role && !allowedRoles.includes(role)) {
-    // If cashier/staff attempts to open an admin/manager route, redirect smoothly to POS
-    return <Navigate to={role === 'STAFF' ? '/pos' : '/'} replace />;
+    const destination = role === 'STAFF' ? '/pos'
+      : role === 'WAREHOUSE' ? '/inventory'
+      : role === 'ADMIN' || role === 'MANAGER' ? '/admin'
+      : '/login';
+    return <Navigate to={destination} replace />;
   }
 
   return <>{children}</>;
@@ -63,22 +65,20 @@ export const App: React.FC = () => {
     <ErrorBoundary>
       <BrowserRouter>
         <AuthProvider>
-          <CartProvider>
             <ToastProvider>
               <Routes>
-                {/* 1. Kênh Cửa hàng Online công khai cho tất cả khách hàng (Không cần đăng nhập) */}
-                <Route element={<CartProvider><Outlet /></CartProvider>}>
-                  <Route path="/" element={<ShopPage />} />
-                  <Route path="/shop" element={<ShopPage />} />
-                  <Route path="/login" element={<LoginPage />} />
-                </Route>
+                <Route path="/" element={<Navigate to="/login" replace />} />
+                <Route path="/shop" element={<Navigate to="/login" replace />} />
+                <Route path="/login" element={<LoginPage />} />
 
                 {/* 3. Không gian làm việc nội bộ (Admin Dashboard, Thu ngân POS, Quản lý kho, Nhân viên...)
                     Chỉ xuất hiện và cho phép truy cập khi nhân viên/quản trị viên đăng nhập hợp lệ */}
                 <Route
                   element={
                     <ProtectedRoute>
-                      <AppLayout />
+                      <CartProvider>
+                        <AppLayout />
+                      </CartProvider>
                     </ProtectedRoute>
                   }
                 >
@@ -91,10 +91,14 @@ export const App: React.FC = () => {
                     }
                   />
                   <Route path="/dashboard" element={<Navigate to="/admin" replace />} />
+                  <Route path="/suppliers" element={<RoleRoute allowedRoles={['ADMIN', 'MANAGER', 'WAREHOUSE']}><SuppliersPage /></RoleRoute>} />
+                  <Route path="/purchase-costs" element={<RoleRoute allowedRoles={['ADMIN', 'MANAGER', 'WAREHOUSE']}><PurchaseCostsPage /></RoleRoute>} />
+                  <Route path="/supplier-prices" element={<Navigate to="/purchase-costs" replace />} />
+                  <Route path="/promotions" element={<RoleRoute allowedRoles={['ADMIN', 'MANAGER']}><PromotionsPage /></RoleRoute>} />
                   <Route
                     path="/pos"
                     element={
-                      <RoleRoute allowedRoles={['ADMIN', 'MANAGER', 'STAFF']}>
+                      <RoleRoute allowedRoles={['STAFF']}>
                         <PosPage />
                       </RoleRoute>
                     }
@@ -104,14 +108,6 @@ export const App: React.FC = () => {
                     element={
                       <RoleRoute allowedRoles={['ADMIN', 'MANAGER', 'STAFF', 'WAREHOUSE']}>
                         <ProductsPage />
-                      </RoleRoute>
-                    }
-                  />
-                  <Route
-                    path="/categories"
-                    element={
-                      <RoleRoute allowedRoles={['ADMIN', 'MANAGER']}>
-                        <CategoriesPage />
                       </RoleRoute>
                     }
                   />
@@ -128,22 +124,6 @@ export const App: React.FC = () => {
                     element={
                       <RoleRoute allowedRoles={['ADMIN', 'MANAGER', 'STAFF']}>
                         <SalesOrdersPage />
-                      </RoleRoute>
-                    }
-                  />
-                  <Route
-                    path="/suppliers"
-                    element={
-                      <RoleRoute allowedRoles={['ADMIN', 'MANAGER', 'WAREHOUSE']}>
-                        <SuppliersPage />
-                      </RoleRoute>
-                    }
-                  />
-                  <Route
-                    path="/customers"
-                    element={
-                      <RoleRoute allowedRoles={['ADMIN', 'MANAGER', 'STAFF']}>
-                        <CustomersPage />
                       </RoleRoute>
                     }
                   />
@@ -165,11 +145,9 @@ export const App: React.FC = () => {
                   />
                 </Route>
 
-                {/* 4. Điều hướng mặc định nếu gõ sai đường dẫn -> Về Cửa hàng Online */}
-                <Route path="*" element={<Navigate to="/" replace />} />
+                <Route path="*" element={<Navigate to="/login" replace />} />
               </Routes>
             </ToastProvider>
-          </CartProvider>
         </AuthProvider>
       </BrowserRouter>
     </ErrorBoundary>

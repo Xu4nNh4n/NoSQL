@@ -1,270 +1,115 @@
-import React, { useEffect, useState } from 'react';
-import { Plus, Edit2, Trash2, RefreshCw, Truck, Phone, Mail, MapPin } from 'lucide-react';
+import { Pagination, useListPage } from '../components/ui/Pagination';
+import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Plus, Pencil, Search, EyeOff, RotateCcw } from 'lucide-react';
 import { api } from '../api/client';
 import type { Supplier } from '../types';
-import { normalizeSupplier } from '../types';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
-import { Badge } from '../components/ui/Badge';
+import { Select } from '../components/ui/Select';
 import { Modal } from '../components/ui/Modal';
 import { Card } from '../components/ui/Card';
 import { useToast } from '../components/ui/Toast';
 
-export const SuppliersPage: React.FC = () => {
+export const SuppliersPage = () => {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
-  const [formData, setFormData] = useState<Partial<Supplier>>({
-    supplierName: '',
-    contactPerson: '',
-    phone: '',
-    email: '',
-    address: '',
-    active: true,
-  });
-
+  const [editing, setEditing] = useState<Supplier | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const [form, setForm] = useState({ supplierName: '', contactName: '', phone: '', address: '' });
+  const [formError, setFormError] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [busyId, setBusyId] = useState<number | null>(null);
+  const mutationLock = useRef(false);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [search, setSearch] = useState('');
+  const [status, setStatus] = useState('ALL');
   const { success, error } = useToast();
-
-  const fetchSuppliers = async () => {
-    setIsLoading(true);
+  const load = async () => {
+    setLoading(true); setLoadError('');
+    try { setSuppliers(await api.get<Supplier[]>('/suppliers')); }
+    catch (e) { setLoadError(e instanceof Error ? e.message : 'Không tải được nhà cung cấp'); }
+    finally { setLoading(false); }
+  };
+  useEffect(() => { void load(); }, []);
+  const openForm = (supplier: Supplier | null) => {
+    setEditing(supplier);
+    setForm({ supplierName: supplier?.supplierName || '', contactName: supplier?.contactName || '', phone: supplier?.phone || '', address: supplier?.address || '' });
+    setFormError(''); setIsOpen(true);
+  };
+  const save = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (mutationLock.current) return;
+    if (!form.supplierName.trim()) { setFormError('Vui lòng nhập tên nhà cung cấp'); return; }
+    mutationLock.current = true; setSaving(true); setFormError('');
     try {
-      const res = await api.get<any>('/suppliers?page=0&size=100');
-      const raw = Array.isArray(res) ? res : (res as any)?.content || [];
-      setSuppliers(raw.map(normalizeSupplier));
-    } catch {
-      error('Lỗi khi tải danh sách nhà cung cấp');
-    } finally {
-      setIsLoading(false);
-    }
+      const body = { supplierName: form.supplierName.trim(), contactName: form.contactName.trim() || null, phone: form.phone.trim() || null, address: form.address.trim() || null };
+      if (editing) await api.put('/suppliers/' + editing.supplierId, body);
+      else await api.post('/suppliers', body);
+      success(editing ? 'Đã cập nhật nhà cung cấp' : 'Đã thêm nhà cung cấp');
+      setIsOpen(false); await load();
+    } catch (e) { setFormError(e instanceof Error ? e.message : 'Không lưu được nhà cung cấp'); }
+    finally { mutationLock.current = false; setSaving(false); }
   };
-
-  useEffect(() => {
-    fetchSuppliers();
-  }, []);
-
-  const handleOpenCreate = () => {
-    setEditingSupplier(null);
-    setFormData({
-      supplierName: '',
-      contactPerson: '',
-      phone: '',
-      email: '',
-      address: '',
-      active: true,
-    });
-    setIsModalOpen(true);
-  };
-
-  const handleOpenEdit = (s: Supplier) => {
-    setEditingSupplier(s);
-    setFormData({
-      supplierName: s.supplierName,
-      contactPerson: s.contactPerson || '',
-      phone: s.phone || '',
-      email: s.email || '',
-      address: s.address || '',
-      active: s.active,
-    });
-    setIsModalOpen(true);
-  };
-
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const toggle = async (supplier: Supplier) => {
+    if (mutationLock.current) return;
+    if (supplier.isActive && !window.confirm('Ngừng nhập hàng từ ' + supplier.supplierName + '? Các lô và lịch sử đã nhập vẫn được giữ.')) return;
+    mutationLock.current = true; setBusyId(supplier.supplierId);
     try {
-      const payload = {
-        supplierName: formData.supplierName || '',
-        supplierPhone: formData.phone || (formData as any).supplierPhone || '',
-        supplierEmail: formData.email || (formData as any).supplierEmail || '',
-        supplierAddress: formData.address || (formData as any).supplierAddress || '',
-        isActive: formData.active ?? (formData as any).isActive ?? true,
-      };
-
-      if (editingSupplier) {
-        const suppId = editingSupplier.id || editingSupplier.supplierId;
-        await api.put(`/suppliers/${suppId}`, payload);
-        success('Cập nhật nhà cung cấp thành công');
-      } else {
-        await api.post('/suppliers', payload);
-        success('Thêm nhà cung cấp mới thành công');
-      }
-      setIsModalOpen(false);
-      fetchSuppliers();
-    } catch (err: unknown) {
-      if (err instanceof Error) error(err.message);
-    }
+      if (supplier.isActive) await api.delete('/suppliers/' + supplier.supplierId);
+      else await api.put('/suppliers/' + supplier.supplierId + '/restore');
+      success(supplier.isActive ? 'Đã ngừng nhập từ nhà cung cấp' : 'Đã cho phép nhập hàng trở lại');
+      await load();
+    } catch (e) { error(e instanceof Error ? e.message : 'Không đổi được trạng thái'); }
+    finally { mutationLock.current = false; setBusyId(null); }
   };
-
-  const handleDelete = async (id: number) => {
-    if (!window.confirm('Bạn có chắc muốn xóa nhà cung cấp này?')) return;
-    try {
-      await api.delete(`/suppliers/${id}`);
-      success('Đã xóa nhà cung cấp');
-      fetchSuppliers();
-    } catch (err: unknown) {
-      if (err instanceof Error) error(err.message);
-    }
-  };
-
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-gray-200/80 shadow-2xs">
-        <div>
-          <h2 className="text-base font-bold text-gray-900">Danh sách Nhà cung cấp</h2>
-          <p className="text-xs text-gray-500">Đối tác cung ứng hàng hóa cho chuỗi siêu thị</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            leftIcon={<RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />}
-            onClick={fetchSuppliers}
-          >
-            Tải lại
-          </Button>
-          <Button size="sm" variant="primary" leftIcon={<Plus className="w-3.5 h-3.5" />} onClick={handleOpenCreate}>
-            Thêm nhà cung cấp
-          </Button>
-        </div>
-      </div>
-
-      <Card>
-        <div className="overflow-x-auto -mx-5 -my-5">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-gray-50/75 border-b border-gray-200 text-gray-500 font-semibold uppercase tracking-wider">
-              <tr>
-                <th className="px-5 py-3">Mã NCC</th>
-                <th className="px-5 py-3">Tên Nhà Cung Cấp</th>
-                <th className="px-5 py-3">Người liên hệ</th>
-                <th className="px-5 py-3">Điện thoại / Email</th>
-                <th className="px-5 py-3">Địa chỉ</th>
-                <th className="px-5 py-3 text-center">Trạng thái</th>
-                <th className="px-5 py-3 text-center">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 bg-white">
-              {suppliers.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="text-center py-8 text-gray-400">
-                    {isLoading ? 'Đang tải dữ liệu...' : 'Chưa có nhà cung cấp nào'}
-                  </td>
-                </tr>
-              ) : (
-                suppliers.map((s) => (
-                  <tr key={s.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-5 py-3.5 font-mono text-gray-400">#{s.id}</td>
-                    <td className="px-5 py-3.5 font-semibold text-gray-900 flex items-center gap-2">
-                      <Truck className="w-4 h-4 text-emerald-600" />
-                      {s.supplierName}
-                    </td>
-                    <td className="px-5 py-3.5 text-gray-700">{s.contactPerson || '--'}</td>
-                    <td className="px-5 py-3.5 space-y-0.5">
-                      {s.phone && (
-                        <div className="flex items-center gap-1 text-gray-600">
-                          <Phone className="w-3 h-3 text-gray-400" />
-                          <span>{s.phone}</span>
-                        </div>
-                      )}
-                      {s.email && (
-                        <div className="flex items-center gap-1 text-gray-500">
-                          <Mail className="w-3 h-3 text-gray-400" />
-                          <span>{s.email}</span>
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-5 py-3.5 text-gray-500 max-w-[200px] truncate">
-                      {s.address ? (
-                        <span className="flex items-center gap-1">
-                          <MapPin className="w-3 h-3 text-gray-400 shrink-0" />
-                          {s.address}
-                        </span>
-                      ) : (
-                        '--'
-                      )}
-                    </td>
-                    <td className="px-5 py-3.5 text-center">
-                      <Badge variant={s.active ? 'success' : 'neutral'}>
-                        {s.active ? 'Đang hợp tác' : 'Tạm dừng'}
-                      </Badge>
-                    </td>
-                    <td className="px-5 py-3.5 text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => handleOpenEdit(s)}
-                          className="p-1.5 text-gray-400 hover:text-emerald-600 rounded-lg cursor-pointer"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(s.id)}
-                          className="p-1.5 text-gray-400 hover:text-rose-600 rounded-lg cursor-pointer"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </Card>
-
-      <Modal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        title={editingSupplier ? 'Chỉnh sửa nhà cung cấp' : 'Thêm nhà cung cấp mới'}
-        footer={
-          <>
-            <Button variant="outline" size="sm" onClick={() => setIsModalOpen(false)}>
-              Hủy
-            </Button>
-            <Button variant="primary" size="sm" onClick={handleSave}>
-              {editingSupplier ? 'Lưu thay đổi' : 'Thêm mới'}
-            </Button>
-          </>
-        }
-      >
-        <form onSubmit={handleSave} className="space-y-4">
-          <Input
-            label="Tên nhà cung cấp / Công ty"
-            value={formData.supplierName}
-            onChange={(e) => setFormData({ ...formData, supplierName: e.target.value })}
-            required
-            placeholder="Ví dụ: Công ty TNHH Nước Giải Khát ABC"
-          />
-          <div className="grid grid-cols-2 gap-3">
-            <Input
-              label="Người liên hệ đại diện"
-              value={formData.contactPerson}
-              onChange={(e) => setFormData({ ...formData, contactPerson: e.target.value })}
-              placeholder="Nguyễn Văn A"
-            />
-            <Input
-              label="Số điện thoại liên hệ"
-              value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              placeholder="0901234567"
-            />
-          </div>
-          <Input
-            label="Email"
-            type="email"
-            value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            placeholder="contact@supplier.vn"
-          />
-          <Input
-            label="Địa chỉ kho hàng / trụ sở"
-            value={formData.address}
-            onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-            placeholder="Khu công nghiệp Tân Bình, TP.HCM"
-          />
-        </form>
-      </Modal>
+  const keyword = search.trim().toLocaleLowerCase('vi');
+  const visible = suppliers.filter(s =>
+    (status === 'ALL' || s.isActive === (status === 'ACTIVE')) &&
+    [s.supplierName, s.contactName, s.phone, s.address, String(s.supplierId)].some(value => value?.toLocaleLowerCase('vi').includes(keyword)));
+  const pagination = useListPage(visible.sort((a, b) => b.supplierId - a.supplierId), JSON.stringify([search, status]));
+  const disabled = saving || busyId !== null;
+  return <div className="space-y-5">
+    <div className="flex flex-wrap items-start justify-between gap-3">
+      <div><h1 className="text-xl font-bold text-gray-900">Nhà cung cấp</h1>
+        <p className="mt-1 text-sm text-gray-600">Quản lý thông tin đối tác và chọn khi <Link to="/inventory" className="text-blue-700 underline">nhập lô hàng</Link>.</p></div>
+      <Button leftIcon={<Plus className="h-4 w-4" />} disabled={disabled || loading || Boolean(loadError)} onClick={() => openForm(null)}>Thêm nhà cung cấp</Button>
     </div>
-  );
+    <Card><div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-end">
+      <div className="flex-1"><Input label="Tìm nhà cung cấp" value={search} onChange={e => setSearch(e.target.value)} placeholder="Nhà cung cấp, người liên hệ, mã hoặc số điện thoại" leftIcon={<Search className="h-4 w-4" />} /></div>
+      <div className="sm:w-52"><Select label="Trạng thái" value={status} onChange={e => setStatus(e.target.value)} options={[{ value: 'ALL', label: 'Tất cả' }, { value: 'ACTIVE', label: 'Đang hợp tác' }, { value: 'INACTIVE', label: 'Ngừng nhập hàng' }]} /></div>
+    </div></Card>
+    <p className="text-xs text-gray-500">Ngừng nhập hàng sẽ chặn nhập lô mới từ nhà cung cấp đó. Các lô đã nhập vẫn được quản lý và bán theo điều kiện tồn kho, hạn dùng.</p>
+    {loadError ? <div role="alert" className="text-sm text-rose-700">{loadError} <Button variant="outline" onClick={load}>Tải lại</Button></div> :
+    <Card><div className="overflow-x-auto"><table className="w-full min-w-[720px] text-left text-sm">
+      <thead className="bg-gray-50 text-gray-600"><tr><th className="p-4">Mã</th><th className="p-4">Nhà cung cấp</th><th className="p-4">Số điện thoại</th><th className="p-4">Địa chỉ</th><th className="p-4">Trạng thái</th><th className="p-4">Thao tác</th></tr></thead>
+      <tbody className="divide-y divide-gray-100">{loading ? <tr><td colSpan={6} className="p-6 text-center">Đang tải...</td></tr> :
+        visible.length === 0 ? <tr><td colSpan={6} className="p-6 text-center text-gray-500">{suppliers.length === 0 ? 'Chưa có nhà cung cấp. Bấm Thêm nhà cung cấp để bắt đầu.' : 'Không có nhà cung cấp khớp bộ lọc.'}</td></tr> :
+        pagination.rows.map(s => <tr key={s.supplierId} className="hover:bg-gray-50">
+          <td className="p-4 text-gray-500">{s.supplierId}</td>
+          <td className="p-4"><button type="button" className="text-left font-semibold text-blue-700 hover:underline disabled:opacity-50" disabled={disabled} onClick={() => openForm(s)}>{s.supplierName}</button>
+            <p className="mt-1 text-xs text-gray-500">Liên hệ: {s.contactName || 'Chưa có'}</p></td>
+          <td className="p-4">{s.phone || '—'}</td><td className="max-w-xs break-words p-4">{s.address || '—'}</td>
+          <td className="p-4"><span className={'whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium ' + (s.isActive ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-600')}>{s.isActive ? 'Đang hợp tác' : 'Ngừng nhập hàng'}</span></td>
+          <td className="p-4"><div className="flex gap-2">
+            <Button variant="outline" size="sm" disabled={disabled} onClick={() => openForm(s)} leftIcon={<Pencil className="h-3.5 w-3.5" />}>Sửa</Button>
+            <Button variant={s.isActive ? 'outline' : 'primary'} size="sm" disabled={disabled} isLoading={busyId === s.supplierId} onClick={() => toggle(s)} leftIcon={s.isActive ? <EyeOff className="h-3.5 w-3.5" /> : <RotateCcw className="h-3.5 w-3.5" />}>{s.isActive ? 'Ngừng nhập' : 'Cho nhập lại'}</Button>
+          </div></td></tr>)}</tbody>
+    </table></div><Pagination {...pagination} /></Card>}
+    <Modal isOpen={isOpen} onClose={() => { if (!mutationLock.current) setIsOpen(false); }} title={editing ? 'Sửa nhà cung cấp' : 'Thêm nhà cung cấp'} maxWidth="lg" footer={<>
+      <Button variant="outline" disabled={saving} onClick={() => setIsOpen(false)}>Hủy</Button>
+      <Button type="submit" form="supplier-form" isLoading={saving}>{editing ? 'Lưu thay đổi' : 'Thêm nhà cung cấp'}</Button>
+    </>}>
+      <form id="supplier-form" onSubmit={save} className="space-y-4">
+        {formError && <p role="alert" className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{formError}</p>}
+        <fieldset disabled={saving} className="space-y-4">
+          <Input label="Tên nhà cung cấp" value={form.supplierName} onChange={e => setForm({ ...form, supplierName: e.target.value })} required maxLength={150} autoFocus />
+          <Input label="Người liên hệ (không bắt buộc)" value={form.contactName} onChange={e => setForm({ ...form, contactName: e.target.value })} maxLength={150} placeholder="Tên chủ hoặc nhân viên phụ trách nhập hàng" />
+          <Input label="Số điện thoại (không bắt buộc)" type="tel" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} maxLength={20} />
+          <Input label="Địa chỉ (không bắt buộc)" value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} maxLength={255} />
+        </fieldset>
+        {editing && <p className="text-xs text-gray-500">Thông tin trên các lô đã nhập được giữ theo lúc nhập hàng.</p>}
+      </form>
+    </Modal>
+  </div>;
 };

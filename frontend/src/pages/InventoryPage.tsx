@@ -1,8 +1,11 @@
+import { Pagination, useListPage } from '../components/ui/Pagination';
 import React, { useState, useEffect } from 'react';
 import {
   Plus,
   SlidersHorizontal,
   Calendar,
+  ChevronDown,
+  ChevronRight,
   AlertTriangle,
   RefreshCw,
   Search,
@@ -11,12 +14,12 @@ import { api } from '../api/client';
 import type {
   InventoryBatch,
   Product,
-  Supplier,
   InventoryBatchRequest,
   BatchAdjustmentRequest,
+  Supplier,
 } from '../types';
-import { normalizeProduct, normalizeSupplier } from '../types';
-import { formatDate, BATCH_STATUS_LABELS } from '../utils/formatters';
+import { normalizeProduct } from '../types';
+import { formatDate, formatVND, BATCH_STATUS_LABELS } from '../utils/formatters';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
@@ -57,6 +60,7 @@ export const InventoryPage: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
+  const [expandedProductIds, setExpandedProductIds] = useState<Set<number>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -66,12 +70,12 @@ export const InventoryPage: React.FC = () => {
   const [isReceiveOpen, setIsReceiveOpen] = useState(false);
   const [receiveData, setReceiveData] = useState<InventoryBatchRequest>({
     productId: 1,
-    supplierId: 1,
+    supplierId: 0,
     batchCode: '',
     quantity: 50,
     unitCost: 10000,
-    manufacturingDate: new Date().toISOString().split('T')[0],
-    expiryDate: new Date(Date.now() + 180 * 86400000).toISOString().split('T')[0],
+    manufacturingDate: '',
+    expiryDate: '',
   });
 
   // Adjustment Modal State
@@ -79,7 +83,6 @@ export const InventoryPage: React.FC = () => {
   const [selectedBatch, setSelectedBatch] = useState<InventoryBatch | null>(null);
   const [adjustData, setAdjustData] = useState<BatchAdjustmentRequest>({
     adjustmentQuantity: 0,
-    damagedQuantity: 0,
     reason: 'Kiểm kê định kỳ thực tế',
   });
 
@@ -89,10 +92,10 @@ export const InventoryPage: React.FC = () => {
     setIsLoading(true);
     setLoadError('');
     try {
-      const [prodList, supplierList, bList] = await Promise.all([
+      const [prodList, bList, supplierList] = await Promise.all([
         loadAllOptions('/products', normalizeProduct),
-        loadAllOptions('/suppliers', normalizeSupplier),
         api.get<any[]>('/inventory/batches'),
+        api.get<Supplier[]>('/suppliers'),
       ]);
       setProducts(prodList);
       setSuppliers(supplierList);
@@ -104,11 +107,10 @@ export const InventoryPage: React.FC = () => {
             productId: b.productId,
             productName: productsById.get(b.productId)?.name || '',
             skuCode: productsById.get(b.productId)?.skuCode || '',
-            supplierId: b.supplierId ?? 0,
+            supplierName: b.supplierName ?? '',
             batchCode: b.batchCode ?? b.code ?? '',
             receivedQuantity: b.receivedQuantity ?? b.received ?? 0,
             remainingQuantity: b.remainingQuantity ?? b.remaining ?? 0,
-            reservedQuantity: b.reservedQuantity ?? b.reserved ?? 0,
             damagedQuantity: b.damagedQuantity ?? b.damaged ?? 0,
             availableQuantity: b.availableQuantity ?? 0,
             unitCost: b.unitCost ?? 0,
@@ -133,16 +135,15 @@ export const InventoryPage: React.FC = () => {
 
   const handleOpenReceive = () => {
     const prodId = selectedProductId || products[0]?.id || 1;
-    const suppId = suppliers[0]?.id || 1;
     setReceiveData({
       productId: prodId,
-      supplierId: suppId,
+      supplierId: 0,
       // Backend assigns the next short numeric code when this is empty.
       batchCode: '',
       quantity: 50,
       unitCost: 10000,
-      manufacturingDate: new Date().toISOString().split('T')[0],
-      expiryDate: new Date(Date.now() + 180 * 86400000).toISOString().split('T')[0],
+      manufacturingDate: '',
+      expiryDate: '',
     });
     setIsReceiveOpen(true);
   };
@@ -150,7 +151,9 @@ export const InventoryPage: React.FC = () => {
   const handleReceiveBatch = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.post('/inventory/batches', receiveData);
+      await api.post('/inventory/batches', { ...receiveData,
+        manufacturingDate: receiveData.manufacturingDate || null,
+        expiryDate: receiveData.expiryDate || null });
       success('Đã nhập lô hàng mới vào kho thành công (chuẩn FEFO)');
       setIsReceiveOpen(false);
       await fetchBatchesAndOptions();
@@ -163,7 +166,6 @@ export const InventoryPage: React.FC = () => {
     setSelectedBatch(batch);
     setAdjustData({
       adjustmentQuantity: 0,
-      damagedQuantity: 0,
       reason: 'Kiểm kê kho thực tế',
     });
     setIsAdjustOpen(true);
@@ -188,7 +190,7 @@ export const InventoryPage: React.FC = () => {
 
   // Within each product, dated lots come first; tie-break like the FEFO allocation policy.
   const sortedBatches = [...batches].sort((a, b) => {
-    if (a.productId !== b.productId) return (a.skuCode || '').localeCompare(b.skuCode || '', 'vi', { numeric: true }) || a.productId - b.productId;
+    if (a.productId !== b.productId) return b.productId - a.productId;
     const expiryA = batchExpiryTime(a);
     const expiryB = batchExpiryTime(b);
     if (expiryA !== expiryB) return expiryA < expiryB ? -1 : 1;
@@ -199,12 +201,33 @@ export const InventoryPage: React.FC = () => {
     const matchesSearch =
       b.batchCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (b.productName && b.productName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (b.skuCode && b.skuCode.toLowerCase().includes(searchTerm.toLowerCase()));
+      (b.skuCode && b.skuCode.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (b.supplierName && b.supplierName.toLowerCase().includes(searchTerm.toLowerCase()));
 
     const matchesProduct = selectedProductId === null || b.productId === selectedProductId;
     const matchesStatus = statusFilter === 'ALL' || displayedBatchStatus(b) === statusFilter;
     return matchesSearch && matchesProduct && matchesStatus;
   });
+
+  const groupedBatches = Array.from(
+    filteredBatches.reduce((groups, batch) => {
+      const group = groups.get(batch.productId) || [];
+      group.push(batch);
+      groups.set(batch.productId, group);
+      return groups;
+    }, new Map<number, InventoryBatch[]>()).entries()
+  );
+
+  const pagination = useListPage(groupedBatches, JSON.stringify([selectedProductId, searchTerm, statusFilter]));
+
+  const toggleProductLots = (productId: number) => {
+    setExpandedProductIds((current) => {
+      const next = new Set(current);
+      if (next.has(productId)) next.delete(productId);
+      else next.add(productId);
+      return next;
+    });
+  };
 
   const productCount = new Set(batches.map((batch) => batch.productId)).size;
   const filteredProductCount = new Set(filteredBatches.map((batch) => batch.productId)).size;
@@ -219,7 +242,7 @@ export const InventoryPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Top Banner */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-gray-200/80 shadow-2xs">
+      <div className="page-heading">
         <div>
           <h2 className="text-base font-bold text-gray-900">Quản lý Kho & Lô hàng FEFO</h2>
           <p className="text-xs text-gray-500">
@@ -241,7 +264,7 @@ export const InventoryPage: React.FC = () => {
             variant="primary"
             leftIcon={<Plus className="w-3.5 h-3.5" />}
             onClick={handleOpenReceive}
-            disabled={isLoading || products.length === 0 || suppliers.length === 0 || !!loadError}
+            disabled={isLoading || products.length === 0 || !!loadError}
           >
             Nhập lô mới
           </Button>
@@ -305,25 +328,25 @@ export const InventoryPage: React.FC = () => {
           )}
         </div>
         <p className="mt-2 text-xs text-gray-500">
-          Mỗi dòng bên dưới là một lô nhập. Tồn khả dụng của sản phẩm là tổng hàng có thể bán từ các lô của sản phẩm đó.
+          Kho được nhóm theo sản phẩm. Mở từng sản phẩm để xem hạn dùng và kiểm kê riêng từng lô; tồn khả dụng là tổng hàng có thể bán của các lô.
           {selectedProduct && !loadError && !isLoading && (
             <> Tồn khả dụng của {selectedProduct.name}: <strong>{selectedProduct.availableQuantity}</strong> (tất cả lô).</>
           )}
         </p>
       </Card>
 
-      {/* Batches Table */}
-      <Card title="Danh sách lô hàng">
+      {/* Product groups with expandable batch details */}
+      <Card title="Kho theo sản phẩm & lô hàng">
         <div className="overflow-x-auto -mx-5 -my-5">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-gray-50/75 border-b border-gray-200 text-gray-500 font-semibold uppercase tracking-wider">
+          <table className="w-full min-w-[1040px] text-left text-sm">
+            <thead className="border-b border-gray-200 text-gray-600 font-medium">
               <tr>
-                <th className="px-4 py-3">Mã Lô (Batch)</th>
                 <th className="px-4 py-3">Sản phẩm</th>
+                <th className="px-4 py-3">Lô hàng</th>
                 <th className="px-4 py-3">Hạn sử dụng (FEFO)</th>
+                <th className="px-4 py-3 text-right">Giá nhập/đơn vị</th>
                 <th className="px-4 py-3 text-right">Nhập</th>
                 <th className="px-4 py-3 text-right">Tồn lại</th>
-                <th className="px-4 py-3 text-right">Đang giữ</th>
                 <th className="px-4 py-3 text-right">Hỏng</th>
                 <th className="px-4 py-3 text-right">Khả dụng</th>
                 <th className="px-4 py-3 text-center">Trạng thái</th>
@@ -338,74 +361,90 @@ export const InventoryPage: React.FC = () => {
                   </td>
                 </tr>
               ) : (
-                filteredBatches.map((b) => {
-                  const status = displayedBatchStatus(b);
-                  const isExpiringSoon = b.expiryDate && status === 'ACTIVE'
-                    && batchExpiryTime(b) - Date.now() < 30 * 86400000;
-                  const statusInfo = BATCH_STATUS_LABELS[status] || {
-                    label: status,
-                    color: 'text-gray-700',
-                    bg: 'bg-gray-50 border-gray-200',
-                  };
-
-                  return (
-                    <tr key={b.id} className="hover:bg-gray-50/50 transition-colors">
-                      <td className="px-4 py-3.5 font-mono font-medium text-emerald-800">
-                        {b.batchCode}
-                      </td>
+                pagination.rows.flatMap(([productId, lots]) => {
+                  const expanded = expandedProductIds.has(productId);
+                  const firstExpiry = lots.find((lot) => lot.expiryDate)?.expiryDate;
+                  const total = (field: 'receivedQuantity' | 'remainingQuantity' | 'damagedQuantity' | 'availableQuantity') =>
+                    lots.reduce((sum, lot) => sum + lot[field], 0);
+                  const groupRow = (
+                    <tr key={`product-${productId}`} className="bg-blue-50/40 hover:bg-blue-50/70">
                       <td className="px-4 py-3.5 text-gray-900">
-                        <div className="font-medium">{b.productName || `Sản phẩm #${b.productId}`}</div>
-                        <div className="mt-0.5 text-[11px] text-gray-500">SKU {b.skuCode || '—'}</div>
+                        <div className="font-semibold">{lots[0].productName || `Sản phẩm #${productId}`}</div>
+                        <div className="mt-0.5 text-[11px] text-gray-500">SKU {lots[0].skuCode || '—'}</div>
                       </td>
-                      <td className="px-4 py-3.5">
-                        <div className="flex items-center gap-1.5 font-semibold text-gray-800">
-                          <Calendar className="w-3.5 h-3.5 text-gray-400" />
-                          <span>{b.expiryDate ? formatDate(b.expiryDate) : 'Không có hạn dùng'}</span>
-                          {isExpiringSoon && (
-                            <span title="Hạn dùng dưới 30 ngày">
-                              <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
-                            </span>
-                          )}
-                        </div>
+                      <td className="px-4 py-3.5 text-gray-600">{lots.length} lô</td>
+                      <td className="px-4 py-3.5 font-medium text-gray-700">
+                        {firstExpiry ? formatDate(firstExpiry) : 'Không có hạn dùng'}
                       </td>
-                      <td className="px-4 py-3.5 text-right text-gray-500">{b.receivedQuantity}</td>
-                      <td className="px-4 py-3.5 text-right font-medium text-gray-700">
-                        {b.remainingQuantity}
-                      </td>
-                      <td className="px-4 py-3.5 text-right text-indigo-600 font-medium">
-                        {b.reservedQuantity}
-                      </td>
-                      <td className="px-4 py-3.5 text-right text-rose-600 font-medium">
-                        {b.damagedQuantity}
-                      </td>
-                      <td className="px-4 py-3.5 text-right font-bold text-emerald-700 text-sm">
-                        {b.availableQuantity}
-                      </td>
+                      <td className="px-4 py-3.5 text-right text-xs text-gray-500">Theo từng lô</td>
+                      <td className="px-4 py-3.5 text-right text-gray-500">{total('receivedQuantity')}</td>
+                      <td className="px-4 py-3.5 text-right font-medium text-gray-700">{total('remainingQuantity')}</td>
+                      <td className="px-4 py-3.5 text-right text-rose-600 font-medium">{total('damagedQuantity')}</td>
+                      <td className="px-4 py-3.5 text-right font-bold text-blue-700 text-sm">{total('availableQuantity')}</td>
+                      <td className="px-4 py-3.5 text-center text-gray-500">Tổng các lô</td>
                       <td className="px-4 py-3.5 text-center">
-                        <span
-                          className={`inline-flex px-2 py-0.5 rounded-full text-[11px] font-medium border ${statusInfo.bg} ${statusInfo.color}`}
-                        >
-                          {statusInfo.label}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3.5 text-center">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          leftIcon={<SlidersHorizontal className="w-3 h-3" />}
-                          onClick={() => handleOpenAdjust(b)}
-                        >
-                          Kiểm kê
+                        <Button size="sm" variant="outline" leftIcon={expanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />} onClick={() => toggleProductLots(productId)}>
+                          {expanded ? 'Ẩn lô' : 'Xem lô'}
                         </Button>
                       </td>
                     </tr>
                   );
+                  if (!expanded) return [groupRow];
+
+                  const lotRows = lots.map((b) => {
+                    const status = displayedBatchStatus(b);
+                    const isExpiringSoon = b.expiryDate && status === 'ACTIVE'
+                      && batchExpiryTime(b) - Date.now() < 30 * 86400000;
+                    const statusInfo = BATCH_STATUS_LABELS[status] || {
+                      label: status,
+                      color: 'text-gray-700',
+                      bg: 'bg-gray-50 border-gray-200',
+                    };
+                    return (
+                      <tr key={`batch-${b.id}`} className="bg-white hover:bg-gray-50/70">
+                        <td className="px-4 py-3.5 pl-9 text-gray-500">
+                          <div>↳ {b.productName || `Sản phẩm #${b.productId}`}</div>
+                          <div className="mt-1 text-xs">Nhà cung cấp: {b.supplierName || 'Chưa ghi nhận'}</div>
+                        </td>
+                        <td className="px-4 py-3.5 font-mono font-medium text-blue-800">{b.batchCode}</td>
+                        <td className="px-4 py-3.5">
+                          <div className="flex items-center gap-1.5 font-semibold text-gray-800">
+                            <Calendar className="w-3.5 h-3.5 text-gray-400" />
+                            <span>{b.expiryDate ? formatDate(b.expiryDate) : 'Không có hạn dùng'}</span>
+                            {isExpiringSoon && (
+                              <span title="Hạn dùng dưới 30 ngày">
+                                <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3.5 text-right whitespace-nowrap text-gray-700">{formatVND(b.unitCost)}</td>
+                        <td className="px-4 py-3.5 text-right text-gray-500">{b.receivedQuantity}</td>
+                        <td className="px-4 py-3.5 text-right font-medium text-gray-700">{b.remainingQuantity}</td>
+                        <td className="px-4 py-3.5 text-right text-rose-600 font-medium">{b.damagedQuantity}</td>
+                        <td className="px-4 py-3.5 text-right font-bold text-blue-700 text-sm">{b.availableQuantity}</td>
+                        <td className="px-4 py-3.5 text-center">
+                          <span className={`inline-flex px-2 py-0.5 rounded-full text-[11px] font-medium border ${statusInfo.bg} ${statusInfo.color}`}>
+                            {statusInfo.label}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3.5 text-center">
+                          <Button size="sm" variant="outline" leftIcon={<SlidersHorizontal className="w-3 h-3" />} onClick={() => handleOpenAdjust(b)}>
+                            Kiểm kê lô
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  });
+                  return [groupRow, ...lotRows];
                 })
               )}
             </tbody>
           </table>
         </div>
       </Card>
+
+      <Pagination {...pagination} />
 
       {/* Receive Batch Modal */}
       <Modal
@@ -418,13 +457,13 @@ export const InventoryPage: React.FC = () => {
             <Button variant="outline" size="sm" onClick={() => setIsReceiveOpen(false)}>
               Hủy
             </Button>
-            <Button variant="primary" size="sm" onClick={handleReceiveBatch}>
+            <Button variant="primary" size="sm" type="submit" form="receive-batch">
               Xác nhận nhập kho
             </Button>
           </>
         }
       >
-        <form onSubmit={handleReceiveBatch} className="space-y-4">
+        <form id="receive-batch" onSubmit={handleReceiveBatch} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <Select
               label="Sản phẩm nhập"
@@ -432,20 +471,16 @@ export const InventoryPage: React.FC = () => {
               onChange={(e) => setReceiveData({ ...receiveData, productId: Number(e.target.value) })}
               options={products.map((p: Product) => ({ value: p.id.toString(), label: `${p.name} (${p.skuCode})` }))}
             />
-            <Select
-              label="Nhà cung cấp"
-              value={receiveData.supplierId.toString()}
-              onChange={(e) => setReceiveData({ ...receiveData, supplierId: Number(e.target.value) })}
-              options={suppliers.map((s: Supplier) => ({ value: s.id.toString(), label: s.supplierName }))}
-            />
+            <Select label="Nhà cung cấp" value={String(receiveData.supplierId || '')}
+              onChange={(e) => setReceiveData({ ...receiveData, supplierId: Number(e.target.value) })} required
+              options={[{ value: '', label: 'Chọn nhà cung cấp' }, ...suppliers.filter(s => s.isActive).map(s => ({ value: String(s.supplierId), label: s.supplierName }))]} />
           </div>
 
           <div className="grid grid-cols-3 gap-3">
             <Input
-              label="Mã Lô (Lot code)"
+              label="Mã lô (để trống để tạo tự động)"
               value={receiveData.batchCode}
               onChange={(e) => setReceiveData({ ...receiveData, batchCode: e.target.value })}
-              required
             />
             <Input
               label="Số lượng nhập"
@@ -473,11 +508,10 @@ export const InventoryPage: React.FC = () => {
               onChange={(e) => setReceiveData({ ...receiveData, manufacturingDate: e.target.value })}
             />
             <Input
-              label="Hạn sử dụng (Bắt buộc cho FEFO)"
+              label="Hạn sử dụng (nếu có)"
               type="date"
               value={receiveData.expiryDate}
               onChange={(e) => setReceiveData({ ...receiveData, expiryDate: e.target.value })}
-              required
             />
           </div>
         </form>
@@ -493,46 +527,37 @@ export const InventoryPage: React.FC = () => {
             <Button variant="outline" size="sm" onClick={() => setIsAdjustOpen(false)}>
               Hủy
             </Button>
-            <Button variant="primary" size="sm" onClick={handleAdjustBatch}>
+            <Button variant="primary" size="sm" type="submit" form="adjust-batch">
               Lưu kết quả kiểm kê
             </Button>
           </>
         }
       >
-        <form onSubmit={handleAdjustBatch} className="space-y-4">
+        <form id="adjust-batch" onSubmit={handleAdjustBatch} className="space-y-4">
           <div className="p-3 bg-gray-50 rounded-lg text-xs space-y-1">
             <p>
               Sản phẩm: <span className="font-semibold text-gray-900">{selectedBatch?.productName}</span>
             </p>
             <p>
               Tồn khả dụng hiện tại:{' '}
-              <span className="font-bold text-emerald-700">{selectedBatch?.availableQuantity}</span>
+              <span className="font-bold text-blue-700">{selectedBatch?.availableQuantity}</span>
             </p>
             <p>
               Hạn dùng: <span className="font-medium">{formatDate(selectedBatch?.expiryDate)}</span>
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3">
             <Input
-              label="Số lượng chênh lệch (+ / -)"
+              label="Số lượng cần giảm khỏi lô"
               type="number"
+              min={1}
               value={adjustData.adjustmentQuantity}
               onChange={(e) =>
                 setAdjustData({ ...adjustData, adjustmentQuantity: Number(e.target.value) })
               }
-              helperText="Nhập số dương nếu thừa, số âm nếu hao hụt"
+              helperText="Nhập số món bị thiếu hoặc phải loại khỏi tồn bán được"
               required
-            />
-            <Input
-              label="Số lượng hỏng / cách ly thêm"
-              type="number"
-              min={0}
-              value={adjustData.damagedQuantity || 0}
-              onChange={(e) =>
-                setAdjustData({ ...adjustData, damagedQuantity: Number(e.target.value) })
-              }
-              helperText="Chuyển vào hàng cách ly"
             />
           </div>
 

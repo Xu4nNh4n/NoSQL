@@ -37,17 +37,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [updateProfile]);
 
   const logout = useCallback(async () => {
-    try {
-      const refreshToken = localStorage.getItem('refresh_token');
-      if (refreshToken) {
-        await api.post('/auth/logout', { refreshToken }, { skipAuth: true }).catch(() => {});
-      }
-    } finally {
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
-      localStorage.removeItem('auth_user');
-      setUser(null);
-    }
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token'); // Dọn khóa còn lại từ phiên bản cũ.
+    localStorage.removeItem('auth_user');
+    setUser(null);
   }, []);
 
   useEffect(() => {
@@ -71,7 +64,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const res = await api.post<LoginResponse>('/auth/login', { username, password }, { skipAuth: true });
     
     localStorage.setItem('access_token', res.accessToken);
-    localStorage.setItem('refresh_token', res.refreshToken);
+    localStorage.removeItem('refresh_token'); // Dọn khóa còn lại từ phiên bản cũ.
 
     const authUser: User = {
       id: res.userId,

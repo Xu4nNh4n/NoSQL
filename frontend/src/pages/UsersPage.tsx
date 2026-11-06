@@ -1,3 +1,4 @@
+import { Pagination, useListPage } from '../components/ui/Pagination';
 import React, { useState, useEffect } from 'react';
 import {
   UserPlus,
@@ -25,6 +26,20 @@ import { Badge } from '../components/ui/Badge';
 import { Modal } from '../components/ui/Modal';
 import { useToast } from '../components/ui/Toast';
 
+const EMPLOYEE_ROLES = new Set(['ADMIN', 'MANAGER', 'STAFF', 'WAREHOUSE']);
+type EmployeePage = { content: UserItem[]; totalPages: number };
+
+async function loadEmployees(): Promise<UserItem[]> {
+  const first = await api.get<EmployeePage | UserItem[]>('/users?employeesOnly=true&page=0&size=100');
+  if (Array.isArray(first)) return first;
+  const employees = [...first.content];
+  for (let page = 1; page < first.totalPages; page++) {
+    const next = await api.get<EmployeePage>(`/users?employeesOnly=true&page=${page}&size=100`);
+    employees.push(...next.content);
+  }
+  return employees;
+}
+
 export const UsersPage: React.FC = () => {
   const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<UserItem[]>([]);
@@ -49,7 +64,7 @@ export const UsersPage: React.FC = () => {
     password: '',
     email: '',
     phone: '',
-    roleId: 8, // Default STAFF
+    roleId: 0,
     isActive: true,
   });
 
@@ -59,7 +74,7 @@ export const UsersPage: React.FC = () => {
     password: '',
     email: '',
     phone: '',
-    roleId: 8,
+    roleId: 0,
     isActive: true,
   });
 
@@ -72,27 +87,24 @@ export const UsersPage: React.FC = () => {
     setIsLoading(true);
     try {
       const [usersRes, rolesRes] = await Promise.allSettled([
-        api.get<{ content: UserItem[] } | UserItem[]>('/users?page=0&size=100'),
+        loadEmployees(),
         api.get<RoleOption[]>('/roles'),
       ]);
 
       if (usersRes.status === 'fulfilled') {
-        const data = usersRes.value;
-        const list = Array.isArray(data) ? data : data.content || [];
-        setUsers(list);
+        setUsers(usersRes.value.filter((user) => EMPLOYEE_ROLES.has(user.roleName?.toUpperCase() || '')));
       } else {
-        error('Không thể tải danh sách tài khoản người dùng');
+        error('Không thể tải danh sách nhân viên');
       }
 
       if (rolesRes.status === 'fulfilled') {
-        setRoles(rolesRes.value);
-        if (rolesRes.value.length > 0 && !createForm.roleId) {
-          const staffRole = rolesRes.value.find((r) => r.roleName === 'STAFF') || rolesRes.value[0];
-          setCreateForm((prev) => ({ ...prev, roleId: staffRole.roleId }));
-        }
+        const employeeRoles = rolesRes.value.filter((role) => EMPLOYEE_ROLES.has(role.roleName.toUpperCase()));
+        setRoles(employeeRoles);
+        const staffRole = employeeRoles.find((role) => role.roleName === 'STAFF') || employeeRoles[0];
+        if (staffRole) setCreateForm((prev) => ({ ...prev, roleId: staffRole.roleId }));
       }
     } catch {
-      error('Lỗi khi nạp dữ liệu người dùng');
+      error('Lỗi khi nạp dữ liệu nhân viên');
     } finally {
       setIsLoading(false);
     }
@@ -124,6 +136,8 @@ export const UsersPage: React.FC = () => {
     return matchKw && matchRole && matchStatus;
   });
 
+  const pagination = useListPage(filteredUsers.sort((a, b) => b.userId - a.userId), JSON.stringify([searchKeyword, selectedRole, selectedStatus]));
+
   // KPI calculations
   const totalEmployees = users.length;
   const activeCount = users.filter((u) => u.isActive).length;
@@ -132,13 +146,14 @@ export const UsersPage: React.FC = () => {
 
   const handleOpenCreate = () => {
     const defaultRole = roles.find((r) => r.roleName === 'STAFF') || roles[0];
+    if (!defaultRole) { warning('Chưa tải được vai trò nhân viên. Vui lòng làm mới.'); return; }
     setCreateForm({
       fullName: '',
       username: '',
       password: '',
       email: '',
       phone: '',
-      roleId: defaultRole ? defaultRole.roleId : 8,
+      roleId: defaultRole.roleId,
       isActive: true,
     });
     setIsCreateOpen(true);
@@ -152,6 +167,10 @@ export const UsersPage: React.FC = () => {
     }
     if (createForm.password.length < 6) {
       warning('Mật khẩu phải có tối thiểu 6 ký tự');
+      return;
+    }
+    if (!roles.some((role) => role.roleId === createForm.roleId)) {
+      warning('Vui lòng chọn vai trò nhân viên hợp lệ');
       return;
     }
 
@@ -169,15 +188,16 @@ export const UsersPage: React.FC = () => {
   };
 
   const handleOpenEdit = (user: UserItem) => {
-    setEditingUser(user);
     const matchedRole = roles.find((r) => r.roleName === user.roleName);
+    if (!matchedRole) { warning('Chưa tải được vai trò của nhân viên. Vui lòng làm mới.'); return; }
+    setEditingUser(user);
     setEditForm({
       fullName: user.fullName || '',
       username: user.userName || '',
       password: '', // leave empty if no change
       email: user.email || '',
       phone: user.phone || '',
-      roleId: matchedRole ? matchedRole.roleId : roles[0]?.roleId || 8,
+      roleId: matchedRole.roleId,
       isActive: user.isActive,
     });
     setIsEditOpen(true);
@@ -192,6 +212,10 @@ export const UsersPage: React.FC = () => {
     }
     if (editForm.password && editForm.password.length < 6) {
       warning('Mật khẩu mới phải có tối thiểu 6 ký tự');
+      return;
+    }
+    if (!roles.some((role) => role.roleId === editForm.roleId)) {
+      warning('Vui lòng chọn vai trò nhân viên hợp lệ');
       return;
     }
 
@@ -227,13 +251,14 @@ export const UsersPage: React.FC = () => {
     }
     const newStatus = !user.isActive;
     const matchedRole = roles.find((r) => r.roleName === user.roleName);
+    if (!matchedRole) { warning('Chưa tải được vai trò của nhân viên. Vui lòng làm mới.'); return; }
     try {
       await api.put(`/users/${user.userId}`, {
         fullName: user.fullName,
         username: user.userName,
         email: user.email,
         phone: user.phone,
-        roleId: matchedRole?.roleId || 8,
+        roleId: matchedRole.roleId,
         isActive: newStatus,
       });
       success(
@@ -285,8 +310,8 @@ export const UsersPage: React.FC = () => {
         );
       case 'STAFF':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-            <ShoppingBag className="w-3 h-3 text-emerald-600" />
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+            <ShoppingBag className="w-3 h-3 text-blue-600" />
             Thu ngân (STAFF)
           </span>
         );
@@ -295,12 +320,6 @@ export const UsersPage: React.FC = () => {
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
             <Package className="w-3 h-3 text-amber-600" />
             Thủ kho (WAREHOUSE)
-          </span>
-        );
-      case 'CUSTOMER':
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-gray-50 text-gray-600 border border-gray-200">
-            Khách hàng
           </span>
         );
       default:
@@ -319,10 +338,10 @@ export const UsersPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Top Banner */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-gray-200/80 shadow-2xs">
+      <div className="page-heading">
         <div>
           <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
-            <ShieldCheck className="w-5 h-5 text-emerald-600" />
+            <ShieldCheck className="w-5 h-5 text-blue-600" />
             Quản lý Nhân viên & Phân quyền Tài khoản
           </h2>
           <p className="text-xs text-gray-500">
@@ -359,7 +378,7 @@ export const UsersPage: React.FC = () => {
 
         <Card>
           <span className="text-xs font-semibold text-gray-500 uppercase">Đang hoạt động</span>
-          <div className="mt-2 text-2xl font-bold text-emerald-700">{activeCount}</div>
+          <div className="mt-2 text-2xl font-bold text-blue-700">{activeCount}</div>
           <p className="text-[11px] text-gray-400 mt-0.5">Có thể đăng nhập và làm việc</p>
         </Card>
 
@@ -394,12 +413,11 @@ export const UsersPage: React.FC = () => {
               value={selectedRole}
               onChange={(e) => setSelectedRole(e.target.value)}
               options={[
-                { value: 'ALL', label: 'Tất cả các vai trò' },
+                { value: 'ALL', label: 'Tất cả vai trò nhân viên' },
                 { value: 'ADMIN', label: 'Quản trị viên (ADMIN)' },
                 { value: 'MANAGER', label: 'Quản lý cửa hàng (MANAGER)' },
                 { value: 'STAFF', label: 'Thu ngân / Bán hàng (STAFF)' },
                 { value: 'WAREHOUSE', label: 'Thủ kho (WAREHOUSE)' },
-                { value: 'CUSTOMER', label: 'Khách hàng' },
               ]}
             />
           </div>
@@ -420,7 +438,7 @@ export const UsersPage: React.FC = () => {
 
       {/* User Table */}
       <Card
-        title="Danh sách nhân viên & người dùng"
+        title="Danh sách nhân viên"
         headerAction={
           <span className="text-xs text-gray-500">
             Hiển thị {filteredUsers.length} / {users.length} tài khoản
@@ -428,8 +446,8 @@ export const UsersPage: React.FC = () => {
         }
       >
         <div className="overflow-x-auto -mx-5 -mb-5">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-gray-50/75 border-b border-gray-200 text-gray-500 font-semibold uppercase tracking-wider">
+          <table className="w-full min-w-[760px] text-left text-sm">
+            <thead className="border-b border-gray-200 text-gray-600 font-medium">
               <tr>
                 <th className="px-5 py-3">Nhân viên</th>
                 <th className="px-5 py-3">Liên hệ</th>
@@ -447,14 +465,14 @@ export const UsersPage: React.FC = () => {
                   </td>
                 </tr>
               ) : (
-                filteredUsers.map((u) => {
+                pagination.rows.map((u) => {
                   const isSelf = currentUser?.id === u.userId;
                   return (
                     <tr key={u.userId} className="hover:bg-gray-50/50 transition-colors">
                       {/* Name & Username */}
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 font-bold flex items-center justify-center text-xs uppercase shadow-2xs">
+                          <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-800 font-bold flex items-center justify-center text-xs uppercase shadow-2xs">
                             {getInitials(u.fullName)}
                           </div>
                           <div>
@@ -499,7 +517,7 @@ export const UsersPage: React.FC = () => {
                             type="button"
                             onClick={() => handleOpenEdit(u)}
                             title="Sửa thông tin"
-                            className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg cursor-pointer transition-colors"
+                            className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg cursor-pointer transition-colors"
                           >
                             <Edit2 className="w-3.5 h-3.5" />
                           </button>
@@ -513,7 +531,7 @@ export const UsersPage: React.FC = () => {
                                 ? 'text-gray-300 cursor-not-allowed'
                                 : u.isActive
                                 ? 'text-gray-400 hover:text-amber-600 hover:bg-amber-50'
-                                : 'text-gray-400 hover:text-emerald-600 hover:bg-emerald-50'
+                                : 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'
                             }`}
                           >
                             {u.isActive ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
@@ -541,6 +559,8 @@ export const UsersPage: React.FC = () => {
           </table>
         </div>
       </Card>
+
+      <Pagination {...pagination} />
 
       {/* Modal Thêm nhân viên */}
       <Modal
@@ -602,7 +622,6 @@ export const UsersPage: React.FC = () => {
               if (r.roleName === 'MANAGER') label = 'Quản lý cửa hàng (MANAGER) - Kho, sản phẩm, báo cáo';
               if (r.roleName === 'STAFF') label = 'Thu ngân / Bán hàng (STAFF) - Quầy POS & Đơn hàng';
               if (r.roleName === 'WAREHOUSE') label = 'Thủ kho (WAREHOUSE) - Quản lý lô FEFO & Nhập xuất';
-              if (r.roleName === 'CUSTOMER') label = 'Khách hàng';
               return { value: String(r.roleId), label };
             })}
           />
@@ -613,7 +632,7 @@ export const UsersPage: React.FC = () => {
               id="createActive"
               checked={createForm.isActive}
               onChange={(e) => setCreateForm({ ...createForm, isActive: e.target.checked })}
-              className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
             />
             <label htmlFor="createActive" className="text-xs text-gray-700 cursor-pointer font-medium">
               Kích hoạt tài khoản ngay sau khi tạo
@@ -686,7 +705,6 @@ export const UsersPage: React.FC = () => {
               if (r.roleName === 'MANAGER') label = 'Quản lý cửa hàng (MANAGER) - Kho, sản phẩm, báo cáo';
               if (r.roleName === 'STAFF') label = 'Thu ngân / Bán hàng (STAFF) - Quầy POS & Đơn hàng';
               if (r.roleName === 'WAREHOUSE') label = 'Thủ kho (WAREHOUSE) - Quản lý lô FEFO & Nhập xuất';
-              if (r.roleName === 'CUSTOMER') label = 'Khách hàng';
               return { value: String(r.roleId), label };
             })}
           />
@@ -697,7 +715,7 @@ export const UsersPage: React.FC = () => {
               id="editActive"
               checked={editForm.isActive}
               onChange={(e) => setEditForm({ ...editForm, isActive: e.target.checked })}
-              className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
             />
             <label htmlFor="editActive" className="text-xs text-gray-700 cursor-pointer font-medium">
               Tài khoản đang hoạt động

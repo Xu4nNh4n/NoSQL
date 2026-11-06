@@ -28,4 +28,3 @@
 - Lead time nhập hàng là tham số giả định; lợi nhuận lịch sử chưa tính vì thiếu đầy đủ cost allocation theo từng dòng bán.
 - Phân công nhóm, ảnh demo, rubric chính thức và tài liệu tham khảo phải được bổ sung bằng thông tin thực tế của nhóm/lớp.
 
-\n

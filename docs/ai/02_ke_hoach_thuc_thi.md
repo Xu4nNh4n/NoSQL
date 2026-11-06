@@ -24,4 +24,3 @@ Trạng thái cập nhật 14/10/2026. Các mốc dưới đây phân biệt ph�
 
 Code compile/build không chứng minh SQL đã chạy trên các nguồn. Thời gian `requestElapsedMs` chỉ là thời gian API đợi Drill, không có kiểm soát cache hay tải máy. Không gắn nhãn PASS/CHECK cho dữ liệu chưa chạy qua rule. Không tự đặt tên/đóng góp thành viên nhóm hay số liệu hiệu năng.
 
-\n

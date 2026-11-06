@@ -1,0 +1,160 @@
+{
+  "orders": 7000,
+  "range": {
+    "from": "2026-09-30",
+    "to": "2026-10-29"
+  },
+  "measuredAt": "2026-10-29T16:26:36.894998+00:00",
+  "method": "one warmup + three measured sequential runs; no cache flush; same SQL and fixed date range",
+  "options": [
+    {
+      "name": "exec.hashjoin.num_partitions",
+      "val": "4"
+    },
+    {
+      "name": "planner.width.max_per_node",
+      "val": "1"
+    }
+  ],
+  "reports": {
+    "SALES": {
+      "runs": [
+        {
+          "run": 0,
+          "warmup": true,
+          "queryId": "151c8c43-5afd-9782-4f5d-42a8d528b8f2",
+          "rows": null,
+          "success": false,
+          "profileTotalMs": 558,
+          "planningMs": 330,
+          "executionAfterQueueMs": 228,
+          "httpElapsedMs": 585.45,
+          "maxFragmentPeakBytes": 18913280,
+          "totalFragments": 10,
+          "error": null
+        },
+        {
+          "run": 1,
+          "warmup": false,
+          "queryId": "151c8c42-4c4e-1a33-10a2-0ff1c51a2401",
+          "rows": null,
+          "success": false,
+          "profileTotalMs": 476,
+          "planningMs": 308,
+          "executionAfterQueueMs": 168,
+          "httpElapsedMs": 486.06,
+          "maxFragmentPeakBytes": 18913280,
+          "totalFragments": 10,
+          "error": "RESOURCE ERROR: Drill Remote Exception\n\n"
+        },
+        {
+          "run": 2,
+          "warmup": false,
+          "queryId": "151c8c41-54a6-554b-8f95-67a2014e0dca",
+          "rows": null,
+          "success": false,
+          "profileTotalMs": 476,
+          "planningMs": 307,
+          "executionAfterQueueMs": 169,
+          "httpElapsedMs": 485.39,
+          "maxFragmentPeakBytes": 18913280,
+          "totalFragments": 10,
+          "error": null
+        },
+        {
+          "run": 3,
+          "warmup": false,
+          "queryId": "151c8c40-ec1a-f43b-c806-dfec5c36eba4",
+          "rows": null,
+          "success": false,
+          "profileTotalMs": 482,
+          "planningMs": 305,
+          "executionAfterQueueMs": 177,
+          "httpElapsedMs": 513.57,
+          "maxFragmentPeakBytes": 18913280,
+          "totalFragments": 10,
+          "error": null
+        }
+      ],
+      "successfulMeasuredRuns": 0,
+      "failedMeasuredRuns": 3,
+      "medianTotalMs": null,
+      "minTotalMs": null,
+      "maxTotalMs": null,
+      "medianPlanningMs": null,
+      "medianExecutionMs": null,
+      "medianMaxFragmentPeakBytes": null,
+      "representativeQueryId": "151c8c42-4c4e-1a33-10a2-0ff1c51a2401"
+    },
+    "CASH_FLOW": {
+      "runs": [
+        {
+          "run": 0,
+          "warmup": true,
+          "queryId": "151c8c40-3c8e-8c0a-7fc3-eeb3422f6bb0",
+          "rows": null,
+          "success": false,
+          "profileTotalMs": 5454,
+          "planningMs": 4773,
+          "executionAfterQueueMs": 681,
+          "httpElapsedMs": 5465.26,
+          "maxFragmentPeakBytes": 838000000,
+          "totalFragments": 5,
+          "error": "RESOURCE ERROR: Drill Remote Exception\n\n"
+        },
+        {
+          "run": 1,
+          "warmup": false,
+          "queryId": "151c8c3a-d951-c605-92af-883d83bc99aa",
+          "rows": null,
+          "success": false,
+          "profileTotalMs": 5246,
+          "planningMs": 4706,
+          "executionAfterQueueMs": 540,
+          "httpElapsedMs": 5274.22,
+          "maxFragmentPeakBytes": 838000000,
+          "totalFragments": 5,
+          "error": "SYSTEM ERROR: Drill Remote Exception\n\n\nPlease, refer to logs for more information.\n"
+        },
+        {
+          "run": 2,
+          "warmup": false,
+          "queryId": "151c8c36-035e-19d0-c03f-7fb2a221003a",
+          "rows": null,
+          "success": false,
+          "profileTotalMs": 4874,
+          "planningMs": 4335,
+          "executionAfterQueueMs": 539,
+          "httpElapsedMs": 4894.79,
+          "maxFragmentPeakBytes": 838000000,
+          "totalFragments": 5,
+          "error": null
+        },
+        {
+          "run": 3,
+          "warmup": false,
+          "queryId": "151c8c31-2e6b-2fd4-f1f8-3e3d6c218cb6",
+          "rows": 30,
+          "success": true,
+          "profileTotalMs": 7711,
+          "planningMs": 5375,
+          "executionAfterQueueMs": 2336,
+          "httpElapsedMs": 7722.66,
+          "maxFragmentPeakBytes": 839620480,
+          "totalFragments": 5,
+          "error": null
+        }
+      ],
+      "successfulMeasuredRuns": 1,
+      "failedMeasuredRuns": 2,
+      "medianTotalMs": 7711,
+      "minTotalMs": 7711,
+      "maxTotalMs": 7711,
+      "medianPlanningMs": 5375,
+      "medianExecutionMs": 2336,
+      "medianMaxFragmentPeakBytes": 839620480,
+      "representativeQueryId": "151c8c31-2e6b-2fd4-f1f8-3e3d6c218cb6"
+    }
+  },
+  "orderLines": 17496
+}

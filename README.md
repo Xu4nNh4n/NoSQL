@@ -1,60 +1,89 @@
 # Phân tích dữ liệu siêu thị đa nguồn bằng Apache Drill
 
-Ứng dụng gồm POS, đơn online COD/chuyển khoản thủ công, nhập kho theo lô/FEFO, hủy đơn, trả từng món và hoàn tiền. Các nghiệp vụ tạo dữ liệu đầu vào cho đề tài Big Data; phạm vi hiện tại sử dụng MySQL, MongoDB Atlas, Astra DB/Cassandra và Apache Drill.
+Ứng dụng POS gồm bán tại quầy, kho theo lô/FEFO, trả từng món, hoàn tiền và khuyến mãi. Shop online đã ra khỏi phạm vi. Backend Spring Boot chạy trên host, frontend React/Vite chạy riêng; Docker Compose phục vụ Drill và Cassandra local.
 
-| Thành phần | Vai trò thực tế |
+Tình trạng bàn giao 2026-10-30: source hiện đang dừng, các owner vẫn đang hoàn thiện thay đổi. Nội dung dưới đây mô tả mã nguồn đã đọc, không chứng nhận triển khai thành công. Chưa kiểm chứng runtime ba nhóm SQL đa nguồn, kết nối nguồn, migration, báo cáo giá nhập thực tế, khuyến mãi hoặc ghi POS_LOG. Không yêu cầu seed/reset dữ liệu; đợt cập nhật tài liệu này không khởi động dịch vụ, chạy SQL hay ghi database.
+
+| Nguồn/thành phần | Vai trò trong source hiện tại |
 |---|---|
-| MySQL `supermarket_api` | Nguồn giao dịch chính: sản phẩm, đơn/chi tiết đơn, thanh toán, lô hàng, xuất/nhập kho và Outbox |
-| MongoDB `supermarket_catalog.products_catalog` | Catalog đồng bộ theo SKU, thuộc tính sản phẩm linh hoạt; không quyết định tồn kho hay thanh toán |
-| Astra/Cassandra `supermarket_analytics.business_events_by_day` | Sự kiện nghiệp vụ, chia partition theo ngày UTC |
-| JSON → Parquet/Snappy | Bản xuất sự kiện theo ngày để Drill phân tích; Parquet được công bố qua manifest |
-| Apache Drill 1.21.2 | Truy vấn MySQL/MongoDB trực tiếp và các file JSON/Parquet; Cassandra đi qua bản xuất, không kết nối trực tiếp |
-| Spring Boot / React | Backend gửi SQL cố định qua Drill REST; frontend hiển thị biểu đồ và đối soát |
+| MySQL `supermarket_api` | Giao dịch POS, giá/khuyến mãi, lô hàng, thanh toán và Outbox; schema mới có 12 bảng |
+| Cassandra `supermarket_analytics.business_events_by_day` | Sự kiện chia partition theo ngày UTC; dispatcher ghi qua đích `ASTRA`; SQL Drill đọc trực tiếp qua `cassandra_source` |
+| Giá nhập thực tế theo lô (MySQL) | Drill JOIN `inventory_batches` + `products` + `suppliers`, dùng `unit_cost` đã lưu khi nhập hàng; không cần CSV báo giá |
+| JSON `analytics/pos-payments/<UTC-date>/<eventId>.json` | Log thanh toán/hoàn tiền do `POS_LOG` ghi; đối chiếu với sổ MySQL |
+| Apache Drill | SQL qua JDBC MySQL, plugin Cassandra và workspace JSON; backend gọi Drill REST |
 
-Luồng: thao tác bán hàng → giao dịch MySQL và Outbox → dispatcher đồng bộ catalog/sự kiện → xuất Astra ra JSON → chuyển Parquet → Drill → API → giao diện. Đồng bộ và bản xuất có độ trễ; bảng đối soát giúp phát hiện dữ liệu thiếu hoặc lệch tiền.
+MongoDB đã được gỡ khỏi luồng tích hợp hiện tại. Không cần Mongo URI trong `.env.example`. Các tài liệu, seed, SQL demo và benchmark cũ có thể vẫn mô tả MongoDB hoặc đường export Cassandra → JSON → Parquet; đó là kiến trúc lịch sử, không phải bằng chứng cho source mới.
 
-## Chạy dự án
+## Lịch sử tồn kho chốt ngày
 
-Cần Java 21, MySQL, Node.js và Docker. Sao chép `.env.example` thành `.env` nếu chưa có và điền cấu hình; backend nạp file này qua `spring.config.import`. Giữ timezone backend nhất quán với dữ liệu MySQL đã ghi. Đường dẫn bundle Astra nên dùng dấu `/` trong `.env`. Không ghi thông tin tài khoản thực vào tài liệu.
+`database/cassandra/stock-daily-snapshots.cql` là DDL thủ công cho bảng snapshot, chưa được chạy. Dữ liệu chỉ được dựng khi ADMIN gọi `POST /api/integrations/cassandra/stock-snapshots?from=YYYY-MM-DD&to=YYYY-MM-DD`; không có scheduler tự ghi. API từ chối kỳ chưa kết thúc hoặc lịch sử không giải thích được số dư lô. Trang **Lịch sử kho** chỉ đọc snapshot qua Drill và không tự tạo dữ liệu. Snapshot phản ánh lượng còn lại vật lý theo sản phẩm, không đồng nghĩa tồn khả dụng sau khi xét hạn dùng/trạng thái lô.
 
-1. Tạo database MySQL `supermarket_api`, cấu hình `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`. Liquibase tạo/cập nhật bảng khi backend chạy; không import schema cũ đè lên migration. `SQL/seed-current-schema.sql` là dữ liệu nền, chạy sau migration khi cần.
-2. Cấu hình MongoDB URI có database `supermarket_catalog`; Astra dùng application token, secure-connect bundle và keyspace `supermarket_analytics`. Script tham khảo trong `database/mongodb` và `database/cassandra`.
-3. Chạy Drill rồi backend/frontend bằng các terminal riêng:
+## Schema và migration bắt buộc trước khi khởi động
+
+`SQL/schema.sql` định nghĩa 12 bảng: `roles`, `users`, `suppliers`, `products`, `promotions`, `inventory_batches`, `stock_movements`, `sales_orders`, `sales_order_items`, `sales_order_returns`, `payment_records`, `data_sync_outbox`.
+
+Bảng mới `promotions` lưu khuyến mãi theo sản phẩm và khoảng hiệu lực. `sales_order_items.net_unit_price` lưu đơn giá thực thu, làm tròn HALF_UP trước khi nhân số lượng; `promotion_snapshot` lưu thông tin khuyến mãi tại lúc bán. Các dòng hóa đơn cũ được giữ `net_unit_price = NULL` theo migration để bảo toàn cách phân bổ hoàn tiền cũ. Thời gian hiệu lực khuyến mãi dùng giờ Việt Nam `Asia/Ho_Chi_Minh`.
+
+Chọn đúng một đường chuẩn bị schema, thực hiện thủ công trước khi khởi động backend:
+
+- Database POS cũ: sao lưu, chọn database `supermarket_api` trong MySQL client rồi chạy một lần [SQL/migrations/2026-10-30-promotions.sql](SQL/migrations/2026-10-30-promotions.sql). Migration này chưa được thực thi trong đợt công việc này; MySQL DDL tự commit.
+- Database mới, trống: dùng [SQL/schema.sql](SQL/schema.sql) thay cho migration. Không chạy lại schema trên database đang dùng và không chạy migration sau schema mới.
+
+Backend không tự áp dụng migration. Không có yêu cầu seed, reset hay nạp lại dữ liệu. Không chạy lại script seed/benchmark cũ: client tạo đơn hiện phải gửi `quoteToken`, còn script cũ có thể thiếu token và giả định schema/kiến trúc đã bỏ.
+
+## Khởi động sau khi hoàn tất schema thủ công
+
+Cần Java 21, MySQL, Node.js và Docker. Các lệnh sau chỉ là hướng dẫn cho lần vận hành sau khi người vận hành hoàn tất migration hoặc tạo schema mới; chưa được chạy để xác minh source hiện tại.
+
+Sao chép `.env.example` thành `.env` nếu chưa có, điền `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET` và cấu hình Cassandra/Drill. Backend đọc `.env` ở thư mục cha qua `spring.config.import`. Giữ timezone JVM/MySQL nhất quán với dữ liệu đã lưu. Chạy Maven từ `backend/`.
 
 ```powershell
+# Tại thư mục gốc, chỉ sau bước schema thủ công:
+docker compose up -d cassandra
 docker compose up -d --build drill
-.\mvnw.cmd -Dmaven.test.skip=true spring-boot:run
+powershell -ExecutionPolicy Bypass -File .\drill\configure-storage.ps1
+
+# Terminal backend:
+cd backend
+.\mvnw.cmd '-Dmaven.test.skip=true' spring-boot:run
+
+# Terminal riêng, bắt đầu tại thư mục gốc:
 cd frontend
 npm run dev
 ```
 
-Cấu hình storage từ terminal tại thư mục gốc: `powershell -ExecutionPolicy Bypass -File .\drill\configure-storage.ps1`. Drill Web Console: http://localhost:8047; backend: http://localhost:8080; OpenAPI: `/v3/api-docs`. Docker Compose hiện chỉ chạy Drill.
+Cassandra phải có keyspace/bảng phù hợp trước khi dùng chức năng sự kiện; file tham chiếu là `database/cassandra/local-schema.cql`, không phải lệnh seed tự động. Chế độ local dùng `CASSANDRA_MODE=LOCAL`, host `127.0.0.1`, cổng `9042`, datacenter `datacenter1`; token/bundle chỉ dành cho Astra. Backend mặc định cổng 8080, OpenAPI `/v3/api-docs`; Drill dùng `DRILL_HTTP_PORT` (8048 trong `.env.example`). Địa chỉ Cassandra trong container Drill cấu hình riêng bằng `DRILL_CASSANDRA_HOST`.
 
-## Báo cáo và frontend
+Compose giới hạn Cassandra 2 GiB (heap 768 MiB, young generation 128 MiB), Drill 3 GiB (heap 1 GiB, direct memory 1 GiB, code cache 128 MiB). Đây là trần cấu hình, không phải số đo runtime; chưa tính Docker VM, MySQL, backend và frontend. Cassandra dùng profile `local-cassandra`, không tự restart; có thể dừng khi không dùng bằng `docker compose stop cassandra`. Volume `cassandra-data` và `drill-data` giữ dữ liệu/cấu hình; không xóa volume để cập nhật source.
 
-Các API bên dưới dành cho ADMIN/MANAGER, dùng JWT. Khoảng ngày tối đa 31 ngày, tham số `from`/`to` theo ISO `yyyy-MM-dd` và UTC. Tồn kho luôn tính theo ngày nghiệp vụ hiện tại của backend.
+## UI và hợp đồng client
 
-| API | Mục đích |
+- `/promotions`: ADMIN/MANAGER quản lý khuyến mãi; route đã có trong `frontend/src/App.tsx`, chưa xác minh UI runtime.
+- `/purchase-costs`: trang giá nhập thực tế qua `GET /api/analytics/purchase-costs`, dùng Drill đọc MySQL `inventory_batches` + `products` + `suppliers`. Giá là `inventory_batches.unit_cost` của lô đã nhập, không phải báo giá tương lai hoặc giá bán. Không cần nhập CSV. Route/API đã được triển khai. Báo cáo đã chạy thành công qua Drill trên dữ liệu hiện có; kết quả gồm giá từng lô và chênh lệch so với lô trước. Backend/frontend build thành công, chưa chạy bộ test.
+- `/pos`: client gọi `POST /api/orders/quote`, hiển thị báo giá, rồi gửi `quoteToken` nhận được cùng request `POST /api/orders`. Token là bắt buộc cho mọi client tạo đơn, kể cả công cụ/script. Backend khóa sản phẩm và tính lại giá; token thiếu hoặc khác báo giá hiện tại sẽ bị từ chối, cần lấy lại báo giá và xác nhận.
+
+Tính năng CSV báo giá đã bị loại bỏ: gỡ backend import/template và dependency Commons CSV, bỏ workspace `business` cùng format `csvh` trong cấu hình Drill. CSV và archive do người dùng tạo được giữ nguyên trên đĩa, không còn là nguồn của luồng thay thế; không xóa hay nạp lại chúng. Query/controller CSV đã được thay bằng báo cáo giá nhập lô MySQL. Hợp đồng `quoteToken` của POS vẫn giữ nguyên.
+
+## Ba nhóm báo cáo Drill và log thanh toán
+
+| Nhóm trong source | Nguồn và giới hạn xác minh |
 |---|---|
-| `GET /api/analytics/dashboard?from=...&to=...` | Drill tổng hợp toàn bộ sổ thanh toán theo ngày và thống kê tồn FEFO; không giới hạn 100 đơn |
-| `GET /api/analytics/inventory?page=0&size=50` | Tồn khả dụng, hết hạn và cách ly |
-| `GET /api/analytics/cash-flow?from=...&to=...` | Tiền thu/hoàn từ bản xuất sự kiện Astra |
-| `GET /api/analytics/reconciliation?from=...&to=...` | So sánh tiền, số giao dịch MySQL/Astra và tổng đơn/chi tiết đơn; `PASS`/`CHECK` |
-| `GET /api/integrations/status` | Trạng thái hàng đợi đồng bộ; không phải kiểm tra sức khỏe Drill |
-| `POST /api/integrations/catalog/sync` | Xếp catalog vào Outbox |
-| `POST /api/integrations/dispatch` | Gửi dữ liệu đang chờ |
-| `POST /api/integrations/astra/events/export?date=...` | Xuất một ngày sự kiện Astra ra JSON |
+| Báo cáo sự kiện/dòng tiền/đối soát | MySQL + Cassandra trực tiếp qua `cassandra_source`; `DrillAnalyticsService` không dùng export JSON/Parquet cho nguồn sự kiện hiện tại. Chưa thử kết nối, kiểu dữ liệu, predicate partition hay kết quả runtime; đường trực tiếp chỉ cấu hình cho OPERATIONS |
+| Giá nhập thực tế | `/purchase-costs` → `GET /api/analytics/purchase-costs` → Drill JOIN MySQL `inventory_batches` + `products` + `suppliers`; đã chạy thành công qua Drill trên dữ liệu hiện có |
+| Đối chiếu log POS | JSON + MySQL trong `MultisourceAnalyticsService.paymentLog`; cần log thực do dispatcher ghi, chưa chạy SQL. MATCH theo dòng không chứng nhận log đầy đủ hoặc timestamp bằng nhau |
 
-Tiền thu ròng = PAYMENT − REFUND; đây là dòng tiền, không đồng nghĩa lợi nhuận hay doanh thu kế toán. Dashboard mặc định 7 ngày UTC, đọc sổ MySQL qua Drill; báo cáo dòng tiền đọc sự kiện đã xuất nên có thể chậm hơn. Nếu Drill lỗi, KPI hiển thị chưa có số liệu thay vì số 0. `dataSources` trong cash-flow/reconciliation cho biết từng ngày dùng `JSON` hay `PARQUET`.
+`DataSyncPublisher` xếp sự kiện vào `ASTRA`; riêng `PAYMENT_RECEIVED`/`REFUND_CONFIRMED` còn có bản `POS_LOG` với event key độc lập ổn định `POSLOG-<key>` và cùng event UUID. Dispatcher xử lý `POS_LOG` kể cả khi Astra tắt. `PosPaymentLogWriter.write(JsonNode)` chỉ ghi khi được gọi, không tạo dữ liệu ban đầu; thư mục cấu hình bằng `integration.pos-payment-log-directory`, mặc định `../analytics/pos-payments` khi chạy từ backend.
 
-Chuyển một ngày đã xuất thành Parquet:
+Writer kiểm tra UUID, epoch milliseconds, ngày UTC, ID và metadata JSON; ghi một file cho mỗi UUID trong partition UTC bằng temp file rồi atomic move. Replay giống nhau không ghi lại; payload khác (kể cả metadata, qua `payload_sha256`) hoặc UUID ở partition khác gây lỗi. Có khóa giữa các writer cùng phối hợp. Atomic move không được hỗ trợ thì thất bại, không hạ xuống ghi không atomic. Lỗi được đưa về dispatcher để retry; không nuốt lỗi. Chưa có lần ghi log, replay, xung đột hoặc thử lỗi được thực hiện để xác minh runtime trong đợt này.
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\drill\curate-events-parquet.ps1 -Date 2026-10-08
-```
+Tiền thu ròng = PAYMENT − REFUND, không đồng nghĩa lợi nhuận hay doanh thu kế toán. Partition sự kiện/log là UTC; các khoảng báo cáo hiện dùng ngày nghiệp vụ Việt Nam và chuyển sang UTC trong SQL. Khi thiếu nguồn, không suy diễn báo cáo rỗng thành kiểm chứng thành công.
 
-Script tạo bảng phiên bản mới, chuẩn hóa kiểu, loại event mẫu và gộp event trùng ID; chỉ công bố manifest khi JSON không thay đổi trong lúc xử lý. Backend chọn Parquet khi SHA-256 khớp JSON hiện tại; nếu JSON có dữ liệu mới thì dùng JSON cho tới lần chuyển đổi tiếp theo. Bảng phiên bản cũ được giữ để không làm gián đoạn truy vấn đang đọc; cần quản lý dung lượng nếu chạy chuyển đổi nhiều lần. Hash được tính khi chọn nguồn, nên vẫn có chi phí đọc JSON trên host.
+## Tài liệu và mã nguồn
 
-SQL demo JOIN MySQL/MongoDB/sự kiện nằm trong `drill/analytics-queries.sql`; SQL đối soát mẫu trong `drill/reconciliation-queries.sql`. Mẫu đối soát cố định ngày 2026-10-08. Script cấu hình storage cố định JDBC/session MySQL ở UTC để đọc TIMESTAMP đúng mốc của Astra.
+- `backend/`: Spring Boot, Maven wrapper; `frontend/`: React/Vite.
+- `SQL/`: schema/migration thủ công; `database/`: công cụ và bộ dữ liệu lịch sử, cần rà soát trước khi dùng.
+- `analytics/`, `drill/`: file phân tích và cấu hình Drill. Sự tồn tại của code export/Parquet không chứng nhận đã tạo snapshot mới.
+- [Kế hoạch triển khai](docs/KE_HOACH_TRIEN_KHAI_BIGDATA.md): tình trạng code và các bước xác minh còn lại.
+- [Chỉ mục tài liệu](docs/README.md), `docs/ai/`, `docs/benchmark/`: tài liệu lịch sử; benchmark theo kiến trúc cũ không đại diện cho ba nhóm SQL hiện tại. Không chạy lại seed để tái tạo benchmark trước khi sửa hợp đồng quoteToken và có yêu cầu nạp dữ liệu riêng.
 
-Tài liệu thực trạng, rubric và việc còn lại: [docs/README.md](docs/README.md). Dữ liệu nhiều ngày, benchmark và slide/phân công nhóm vẫn cần minh chứng; không xem việc build thành công là đã kiểm thử nghiệp vụ.
+Đăng nhập dùng access JWT, không refresh token. Frontend gặp 401 ở API bảo vệ thì xóa phiên và yêu cầu đăng nhập lại; logout xử lý tại trình duyệt. JWT đã cấp không tự mất hiệu lực ngay khi logout/đổi mật khẩu.

@@ -23,7 +23,7 @@ export const NativeWeeklySalesChart: React.FC<NativeWeeklySalesChartProps> = ({
     return (
       <div className="h-64 flex items-center justify-center bg-gray-50/50 rounded-xl border border-dashed border-gray-200">
         <div className="flex items-center gap-2 text-sm text-gray-500">
-          <svg className="animate-spin h-5 w-5 text-emerald-600" fill="none" viewBox="0 0 24 24">
+          <svg className="animate-spin h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
           </svg>
@@ -50,7 +50,7 @@ export const NativeWeeklySalesChart: React.FC<NativeWeeklySalesChartProps> = ({
       {/* Tooltip */}
       {hoveredIndex !== null && data[hoveredIndex] && (
         <div className="absolute top-2 right-4 bg-slate-900 text-white text-xs px-3 py-1.5 rounded-lg shadow-md z-10 pointer-events-none transition-all">
-          <p className="font-semibold text-emerald-400">{data[hoveredIndex].dayLabel} ({data[hoveredIndex].dateStr})</p>
+          <p className="font-semibold text-blue-400">{data[hoveredIndex].dayLabel} ({data[hoveredIndex].dateStr})</p>
           <p>Tiền đã thu: {formatVND(data[hoveredIndex].revenue)}</p>
           <p className="text-gray-300">Lượt thu tiền: {data[hoveredIndex].orderCount}</p>
         </div>
@@ -100,7 +100,7 @@ export const NativeWeeklySalesChart: React.FC<NativeWeeklySalesChartProps> = ({
                   y="10"
                   width={barWidth + 28}
                   height={chartHeight + 25}
-                  fill={isHovered ? '#F0FDF4' : 'transparent'}
+                  fill={isHovered ? '#EFF6FF' : 'transparent'}
                   rx="6"
                   className="transition-colors"
                 />
@@ -111,7 +111,7 @@ export const NativeWeeklySalesChart: React.FC<NativeWeeklySalesChartProps> = ({
                   y={y}
                   width={barWidth}
                   height={barHeight}
-                  fill={isHovered ? '#15803D' : '#16A34A'}
+                  fill={isHovered ? '#1D4ED8' : '#2563EB'}
                   rx="4"
                   className="transition-all duration-200"
                 />
@@ -122,7 +122,7 @@ export const NativeWeeklySalesChart: React.FC<NativeWeeklySalesChartProps> = ({
                   y={chartHeight + 30}
                   textAnchor="middle"
                   className={`text-[11px] font-medium ${
-                    isHovered ? 'fill-emerald-700 font-semibold' : 'fill-gray-500'
+                    isHovered ? 'fill-blue-700 font-semibold' : 'fill-gray-500'
                   }`}
                 >
                   {item.dayLabel}

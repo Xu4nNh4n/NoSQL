@@ -1,6 +1,6 @@
 # Bộ dữ liệu mô phỏng cho Apache Drill
 
-`generate.py` sinh dữ liệu cục bộ có seed mặc định `421014`, khoảng 6 tháng, 200 SKU, 10 nhóm hàng, đơn POS/online, COD/chuyển khoản, hủy, trả một phần/toàn phần, thanh toán, hoàn tiền, tồn theo hai lô và sự kiện theo ngày. Tập mặc định nhắm khoảng 100.000 event; con số thực tế được ghi vào `manifest.json` vì số event phụ thuộc số dòng món và tỷ lệ trả. Script chỉ ghi file, không kết nối MySQL/MongoDB/Astra.
+`generate.py` sinh dữ liệu cục bộ có seed mặc định `421014`, khoảng 6 tháng, 200 SKU, 10 nhóm hàng, đơn POS, thanh toán tiền mặt/chuyển khoản tại quầy, hủy, trả, thanh toán, hoàn tiền, tồn theo hai lô và sự kiện theo ngày. Tập mặc định nhắm khoảng 100.000 event; con số thực tế được ghi vào `manifest.json` vì số event phụ thuộc số dòng món và tỷ lệ trả. Script chỉ ghi file, không kết nối MySQL/MongoDB/Astra. Bộ mô phỏng đã sinh trước đây có thể vẫn chứa giao dịch ONLINE; giữ nguyên bộ cũ và sinh dataset ID/thư mục mới cho dữ liệu POS-only.
 
 Từ thư mục gốc project, sinh bộ mặc định:
 
@@ -25,4 +25,3 @@ Drill storage file có workspace `analytics.simulation` trỏ tới `/analytics/
 
 Đây là dữ liệu tổng hợp để minh họa pipeline và quy mô, không phải dữ liệu bán hàng thật. Kho được tạo nhất quán ở snapshot và đơn hủy không xuất kho; các dòng hàng thành công có phân bổ lô, FEFO theo lô sắp hết hạn trước; trả hàng khôi phục về lô đã xuất. Giá khuyến mãi cấp đơn không được mô phỏng. Bộ này chưa kết nối Astra và không chứng minh hiệu năng thật. Chạy benchmark hoặc QA cần được người phụ trách thực hiện riêng.
 
-\n

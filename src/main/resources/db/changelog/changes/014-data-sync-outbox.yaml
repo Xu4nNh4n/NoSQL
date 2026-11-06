@@ -1,8 +1,0 @@
-databaseChangeLog:
-  - changeSet:
-      id: 051-data-sync-outbox
-      author: codex
-      changes:
-        - sqlFile:
-            path: db/changelog/changes/014-data-sync-outbox.sql
-            splitStatements: true

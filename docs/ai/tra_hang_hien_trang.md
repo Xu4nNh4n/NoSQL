@@ -1,5 +1,7 @@
 # Hiện trạng trả hàng POS
 
+Đây là mốc khảo sát trước khi sửa. Sau khi người dùng chốt trả theo số lượng từng món, source đã thay đổi theo [thiết kế](tra_hang_thiet_ke.md); xem [kết quả mới](tra_hang_ket_qua.md) thay cho các hạn chế cũ mô tả bên dưới.
+
 Ngày khảo sát: 2026-10-16. Tài liệu này mô tả code hiện tại; chưa thay đổi chính sách hay code trả hàng.
 
 ## Luồng đang chạy trong code

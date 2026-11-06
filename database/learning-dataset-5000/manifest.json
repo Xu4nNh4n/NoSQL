@@ -1,0 +1,62 @@
+{
+  "datasetName": "learning-dataset-5000",
+  "description": "Bộ dữ liệu học tập quy mô 5,000 hóa đơn POS chuẩn Bách Hóa Xanh và vận hành siêu thị đa nguồn Big Data (60 ngày)",
+  "generatedAt": "2026-10-30T18:46:25.551788+07:00",
+  "businessDateRange": {
+    "startDate": "2026-09-01",
+    "endDate": "2026-10-30",
+    "totalDays": 60,
+    "periods": [
+      {
+        "period": "Tháng 9/2026",
+        "startDate": "2026-09-01",
+        "endDate": "2026-09-30",
+        "passedDays": 30,
+        "totalDays": 30
+      },
+      {
+        "period": "Tháng 10/2026",
+        "startDate": "2026-10-01",
+        "endDate": "2026-10-30",
+        "passedDays": 30,
+        "totalDays": 30
+      }
+    ]
+  },
+  "customerProfiles": {
+    "totalOrders": 5000,
+    "anonymousOrders": 4286,
+    "namedOrders": 714,
+    "anonymousPercent": 85.7
+  },
+  "inventoryStatus": {
+    "soldOutProducts": [
+      {
+        "sku": "8",
+        "name": "Sữa chua có đường 100g",
+        "stock": 0
+      },
+      {
+        "sku": "20",
+        "name": "Chảo chống dính 24cm",
+        "stock": 0
+      }
+    ],
+    "lowStockProducts": [
+      {
+        "sku": "7",
+        "name": "Cà phê sữa hòa tan 16g*10",
+        "stock": 8,
+        "reorderPoint": 15
+      }
+    ]
+  },
+  "summary": {
+    "totalOrdersInSystem": 5000,
+    "totalReturns": 40,
+    "totalInventoryBatches": 64,
+    "reconciliationOverall": "PASS",
+    "month9QueryId": "151b7c6e-bb49-f81b-6491-28e7f68c5f6f",
+    "month10QueryId": "151b7c6e-c6c9-e1c6-5a01-c21e627c5c22"
+  }
+}

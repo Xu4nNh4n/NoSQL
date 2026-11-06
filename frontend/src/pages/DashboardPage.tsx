@@ -13,7 +13,7 @@ import {
 import { api } from '../api/client';
 import type { Product, DashboardReport, IntegrationStatus } from '../types';
 import { normalizeProduct } from '../types';
-import { formatVND } from '../utils/formatters';
+import { formatVND, vietnamDateKey } from '../utils/formatters';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
@@ -31,7 +31,7 @@ export const DashboardPage: React.FC = () => {
     setIsLoading(true);
     setReportError('');
     try {
-      const to = new Date();
+      const to = new Date(vietnamDateKey() + 'T00:00:00Z');
       const from = new Date(to);
       from.setUTCDate(from.getUTCDate() - 6);
       const [reportRes, lowStockRes, syncRes] = await Promise.allSettled([
@@ -70,10 +70,10 @@ export const DashboardPage: React.FC = () => {
   const lowStockCount = report ? Number(rows[0]?.low_stock_count ?? 0) : '—';
   const outOfStockCount = report ? Number(rows[0]?.out_of_stock_count ?? 0) : '—';
 
-  // Drill aggregates the complete ledger; dates and the chart use UTC consistently.
+  // Drill aggregates the complete ledger; dates and the chart use Vietnam calendar dates.
   const chartData: DaySalesData[] = React.useMemo(() => {
     const dayNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
-    const today = new Date().toISOString().slice(0, 10);
+    const today = vietnamDateKey();
     return (report?.rows ?? []).map((row) => {
       const d = typeof row.event_date === 'number'
         ? new Date(row.event_date) : new Date(`${String(row.event_date).slice(0, 10)}T00:00:00Z`);
@@ -89,11 +89,11 @@ export const DashboardPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Top Banner: Actions & Refresh */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-gray-200/80 shadow-2xs">
+      <div className="page-heading">
         <div>
           <h2 className="text-base font-bold text-gray-900">Tổng quan hoạt động siêu thị</h2>
           <p className="text-xs text-gray-500">
-            Tổng hợp toàn bộ giao dịch 7 ngày UTC qua Apache Drill; tồn kho hiện tại theo FEFO
+            Tổng hợp toàn bộ giao dịch 7 ngày Việt Nam qua Apache Drill; tồn kho hiện tại theo FEFO
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -124,28 +124,28 @@ export const DashboardPage: React.FC = () => {
       {/* 4 KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1: Total Sales */}
-        <Card className="hover:border-emerald-300 transition-colors">
+        <Card className="hover:border-blue-300 transition-colors">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
               Tổng tiền đã thu
             </span>
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
               <DollarSign className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-3">
             <div className="text-xl font-bold text-gray-900">{report ? formatVND(totalCollected) : '—'}</div>
-            <p className="text-[11px] text-gray-400 mt-0.5">Tiền thu trong 7 ngày UTC</p>
+            <p className="text-[11px] text-gray-400 mt-0.5">Tiền thu trong 7 ngày Việt Nam</p>
           </div>
         </Card>
 
         {/* Card 2: Net Revenue */}
-        <Card className="hover:border-emerald-300 transition-colors">
+        <Card className="hover:border-blue-300 transition-colors">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
               Tiền thu ròng
             </span>
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
               <TrendingUp className="w-4 h-4" />
             </div>
           </div>
@@ -192,7 +192,7 @@ export const DashboardPage: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <Card
-            title="Tiền đã thu trong 7 ngày UTC"
+            title="Tiền đã thu trong 7 ngày Việt Nam"
             action={
               <span className="text-xs text-gray-500 font-medium">
                 Lượt thu tiền: {report ? paymentCount : '—'}
@@ -208,7 +208,7 @@ export const DashboardPage: React.FC = () => {
             <div className="space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-gray-100">
                 <div className="flex items-center gap-2 text-xs text-gray-700">
-                  <Database className="w-4 h-4 text-emerald-600" />
+                  <Database className="w-4 h-4 text-blue-600" />
                   <span>MySQL Chính (Source of Truth)</span>
                 </div>
                 <Badge variant={integrationStatus?.mysqlConnected ? 'success' : 'warning'}>
@@ -218,20 +218,20 @@ export const DashboardPage: React.FC = () => {
 
               <div className="space-y-2 text-xs">
                 <div className="flex justify-between text-gray-600">
-                  <span>Outbox MongoDB:</span>
+                  <span>Outbox POS_LOG (JSON):</span>
                   <span className="font-semibold text-gray-800">
-                    {integrationStatus?.mongodbPendingOutbox ?? integrationStatus?.mongodb?.pending ?? 0} chờ / {integrationStatus?.mongodbSentOutbox ?? integrationStatus?.mongodb?.sent ?? 0} đã gửi
+                    {integrationStatus?.posLog?.pending ?? '—'} chờ / {integrationStatus?.posLog?.sent ?? '—'} đã ghi
                   </span>
                 </div>
                 <div className="flex justify-between text-gray-600">
-                  <span>Outbox Astra DB:</span>
+                  <span>Outbox ASTRA (Cassandra):</span>
                   <span className="font-semibold text-gray-800">
-                    {integrationStatus?.astraPendingOutbox ?? integrationStatus?.astra?.pending ?? 0} chờ / {integrationStatus?.astraSentOutbox ?? integrationStatus?.astra?.sent ?? 0} đã gửi
+                    {integrationStatus?.astraPendingOutbox ?? integrationStatus?.astra?.pending ?? '—'} chờ / {integrationStatus?.astraSentOutbox ?? integrationStatus?.astra?.sent ?? '—'} đã gửi
                   </span>
                 </div>
                 <div className="flex justify-between text-gray-600">
                   <span>Apache Drill:</span>
-                  <span className="font-medium text-emerald-700">
+                  <span className="font-medium text-blue-700">
                     {report ? 'Đã nhận báo cáo' : 'Chưa có báo cáo'}
                   </span>
                 </div>
@@ -268,8 +268,8 @@ export const DashboardPage: React.FC = () => {
         }
       >
         <div className="overflow-x-auto -mx-5 -mb-5">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-gray-50/75 border-b border-gray-200 text-gray-500 font-semibold uppercase tracking-wider">
+          <table className="w-full min-w-[640px] text-left text-sm">
+            <thead className="border-b border-gray-200 text-gray-600 font-medium">
               <tr>
                 <th className="px-5 py-3">Sản phẩm</th>
                 <th className="px-5 py-3">Mã SKU</th>

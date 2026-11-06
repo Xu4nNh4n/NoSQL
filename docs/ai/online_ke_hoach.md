@@ -32,26 +32,27 @@
 
 **Files dự kiến:** `src/main/resources/db/changelog/changes/015-reconcile-product-inventory.*`, cấu hình test liên quan; các test đang lỗi theo báo cáo Surefire.
 
-- [ ] Dùng root-cause từ baseline để làm changeset reconcile chạy trên MySQL và profile H2 bằng nhánh SQL tương thích theo DB, không đổi semantics.
-- [ ] Sửa setup/mock của các test POS/service đang lỗi chỉ khi xác nhận test fixture không còn phản ánh interface hiện tại; không thay hành vi sản phẩm để ép test xanh.
-- [ ] Chạy Maven tests và compile; lưu kết quả mới làm baseline đã hiệu chỉnh trước khi gỡ online.
-- [ ] Lưu lại đúng nhóm test chạy, failure/error và lý do nếu vẫn còn lỗi; không gỡ code phụ thuộc test đó khi chưa hiểu.
+- [x] Xác định H2 test profile vốn tạo schema bằng Hibernate; tắt Liquibase riêng trong profile test để changeset MySQL-only không chạy trên H2. Production Liquibase không đổi.
+- [x] Đồng bộ các fixture cũ với interface hiện tại mà không đổi nghiệp vụ; chỉ bỏ test gọi các method không còn tồn tại. Test chưa xanh.
+- [x] Maven main compile thành công. Lượt chạy test mới nhất dừng ở JUnit discovery do class `CustomerAccountServiceImplTest` đã bị gỡ nhưng bytecode cũ vẫn còn trong `target/test-classes`; không xóa thư mục build theo ràng buộc an toàn. Log `moc_truoc_khi_go_online/maven-test-pos-only-rerun.txt`.
+- [x] Ghi nhận cả kết quả H2 test khởi tạo app riêng lẻ thành công lẫn suite chưa sạch; không xóa code dựa trên suite chưa hiểu.
 
 ## Task 2: Tắt entrypoint Shop và Cart API
 
 **Files:** `frontend/src/App.tsx`, `Sidebar.tsx`, `Header.tsx`, `contexts/CartContext.tsx`, `pages/ShopPage.tsx`, `components/shop/*`, `controller/CartController.java`, `service/CartService.java`, `service/Impl/CartServiceImpl.java`, entity/repository/DTO Cart và test tương ứng, security/config.
 
-- [ ] Bỏ đường dẫn Shop và menu/nút shop; `/` đi đến trang đăng nhập hoặc khu vực POS theo trạng thái/role, không redirect sang route bị xóa.
-- [ ] Gỡ Cart provider và chỉ gỡ Cart API khi `rg` xác nhận không còn caller POS.
-- [ ] Tắt đăng ký/login khách hàng online; giữ role và dữ liệu khách cũ, giữ `CustomerController` và trang khách dùng tại POS.
-- [ ] Compile frontend/backend, kiểm tra route và endpoint công khai; chưa drop bảng `carts`/`cart_items`.
+- [x] Bỏ Shop khỏi route/menu/header; `/` và `/shop` điều hướng đăng nhập. `CartProvider` vẫn bao quanh khu vực nhân viên vì POS dùng giỏ React cục bộ.
+- [x] Gỡ Shop-only Cart API/service/model/DTO và test của module; không drop bảng/migration Cart lịch sử.
+- [x] Gỡ public registration của khách hàng; giữ role, customer profile, đăng nhập nội bộ và tra cứu khách tại POS.
+- [x] Gỡ component Shop/nhận hàng online khỏi giao diện đơn; build frontend thành công. API mapping online đã bỏ; compile backend thành công.
 
 ## Task 3: Thu gọn vòng đời đơn về POS
 
 **Files:** `SalesOrderController`, `SalesOrderService`, `SalesOrderServiceImpl`, `SalesOrderRepository`, `SalesOrder`, `SalesOrderResponse`, request DTOs, `OrderReceiptService`, `OrderReceiptCompletionJob`, `UnpaidOrderExpiryJob`, `application.properties`, test SalesOrder.
 
-- [ ] Loại endpoint tạo đơn online, customer order list, thanh toán chuyển khoản online, ship/deliver/delivery-failed và xác nhận nhận hàng online.
-- [ ] Chỉ cho tạo đơn mới `IN_STORE`; giữ thao tác POS, hóa đơn, hủy đúng trạng thái, trả/hoàn hiện tại đến khi có thiết kế POS được chốt.
+- [x] Loại mapping customer order list, xác nhận nhận hàng, thanh toán online, ship/deliver/delivery-failed.
+- [x] Chặn `POST /orders` với `orderType` khác `IN_STORE`; danh sách và truy vấn vận hành chỉ gồm đơn POS. Hủy/hoàn trực tiếp của đơn online lịch sử bị từ chối.
+- [ ] Dọn service/job/DTO xử lý giao nhận còn sót sau khi test baseline và báo cáo kiểm chứng ổn định; giữ job hết hạn để giải phóng reservation đơn online lịch sử.
 - [ ] Tắt job hết hạn/nhả reservation nếu sau khi trace xác nhận không còn luồng POS tạo reservation; giữ hàm hoàn kho phục vụ hủy POS.
 - [ ] Đóng quyền truy cập đơn online lịch sử theo chính sách endpoint được xác minh; không sửa/xóa bản ghi lịch sử.
 - [ ] Không sửa `returnSalesOrder`, bảng trả, trả theo số lượng, giá hoàn hoặc giao diện trả POS trong task này.
@@ -60,9 +61,9 @@
 
 **Files:** `OperationalAnalyticsService`, `DrillAnalyticsService`, `AstraAnalyticsService` nếu cần, `AnalyticsController`, frontend `OperationalAnalyticsPage`, `CashFlowReportsPage`, `DashboardPage`, `DrillReportExplanation`, `drill/analytics-queries.sql`, script Curate/Parquet.
 
-- [ ] Bỏ báo cáo so sánh kênh nếu không còn ý nghĩa; đổi trang và diễn giải sang câu hỏi POS.
-- [ ] Thêm điều kiện `order_type='IN_STORE'` vào báo cáo order/item/subtotal/đơn.
-- [ ] Đối soát thanh toán/hoàn cần join `payment_records.order_id` với `sales_orders.order_id` để loại giao dịch online lịch sử; chọn tên database đúng theo dataset.
+- [x] Đổi phần báo cáo giờ/kênh và diễn giải thành phân tích POS theo giờ/phương thức thanh toán.
+- [x] Thêm điều kiện `order_type='IN_STORE'` vào báo cáo order/item/subtotal/đơn.
+- [x] Đối soát thanh toán/hoàn nối `payment_records.order_id` và event `order_id` với đơn `IN_STORE` trong cả Drill service lẫn SQL mẫu.
 - [ ] Giữ stock movement không thuộc đơn và event lịch sử online. Giữ nguyên JSON/Parquet; không chạy CTAS ghi đè. Nếu tạo Parquet mới, xuất vào một thư mục/version mới và ghi manifest/hash.
 - [ ] Chỉ kết luận báo cáo tương đương sau khi Docker/Drill chạy được và so sánh các chỉ tiêu POS trước/sau trên cùng query window.
 
@@ -70,17 +71,17 @@
 
 **Files:** `database/simulation/generate.py`, `database/simulation/README.md`, `SQL/seed-current-schema.sql`, docs SQL/Big Data phụ thuộc kênh.
 
-- [ ] Generator mới chỉ sinh giao dịch IN_STORE với hình thức thanh toán POS hiện được code hỗ trợ; giữ hủy/trả/kho/lô/events phù hợp.
-- [ ] Seed tạo hồ sơ khách dùng tại quầy nếu cần, không tạo customer login shop.
+- [x] Generator mới chỉ sinh đơn `IN_STORE`, dùng tiền mặt hoặc chuyển khoản tại quầy; giữ các bộ dữ liệu cũ nguyên trạng.
+- [x] Seed tạo hồ sơ khách dùng tại quầy không gắn customer login.
 - [ ] Không ghi đè dataset `sim-421014-100000-2026-10-14` hoặc event/Parquet trước đây.
 
 ## Task 6: Xác minh và báo cáo
 
-- [ ] Chạy frontend build, backend compile/test; phân biệt baseline đã biết với regression mới.
+- [x] Frontend build exit 0; backend main compile exit 0. Test-source compile qua nhưng Surefire/JUnit discovery chưa chạy test vì bytecode `CustomerAccountServiceImplTest` cũ còn trong `target/test-classes`.
 - [ ] Khi Docker/Drill hoạt động, gọi API dashboard/cash flow/reconciliation/operational và chạy SQL Drill trước/sau cho cùng ngày; so sánh từng số POS, không ép quality thành PASS.
 - [ ] Xác minh endpoint/route online đã bị tắt, POS vẫn tạo/đọc/hủy hóa đơn, dữ liệu lịch sử và event files còn nguyên.
-- [ ] Ghi `docs/ai/go_online_ket_qua.md` và `docs/ai/bao_cao_tom_tat.md`, kèm bằng chứng, chỗ chưa chạy, rủi ro.
+- [x] Ghi `docs/ai/go_online_ket_qua.md` và `docs/ai/bao_cao_tom_tat.md`, kèm bằng chứng, chỗ chưa chạy, rủi ro.
 
 ## Handoff và giới hạn hiện tại
 
-Người dùng đã chọn thực thi bỏ online và tạo nhánh riêng. Baseline test hiện lỗi 4/83; task 1 phải xử lý nguồn gốc hoặc ghi rõ blocker trước khi gỡ code phụ thuộc. Docker daemon chưa hoạt động, vì vậy chưa thể chạy mốc Drill. Không xóa code phân tích/event có thể ảnh hưởng số liệu cho tới khi có truy vấn baseline và so sánh. Phần POS return chỉ được thiết kế sau khi hỏi từng câu; chưa triển khai ở nhánh này trước khi có lựa chọn.
+Đã tạo nhánh riêng, tắt entrypoint Shop/online, gỡ module Cart/đăng ký khách, xác nhận nhận hàng và lọc luồng mới/báo cáo về POS. Frontend build và Maven main compile đã qua. JUnit discovery đang bị bytecode test cũ trong `target/test-classes` chặn; Docker/Drill chưa hoạt động, nên chưa đủ căn cứ để xóa các method giao hàng còn lại trong `SalesOrderServiceImpl` hoặc xác nhận số liệu trước/sau. Dữ liệu giao dịch, changeset, JSON/Parquet và cột schema đều được giữ. Phần POS return chỉ được thiết kế sau khi hỏi từng câu; chưa triển khai trước khi có lựa chọn.

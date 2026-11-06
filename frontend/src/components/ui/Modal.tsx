@@ -55,15 +55,17 @@ export const Modal: React.FC<ModalProps> = ({
         <div
           role="dialog"
           aria-modal="true"
+          aria-labelledby="app-modal-title"
           className={`relative transform overflow-hidden rounded-xl bg-white text-left shadow-xl transition-all w-full my-8 border border-gray-200 ${maxWidthStyles[effectiveWidth]}`}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
           <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
-            <h3 className="text-base font-semibold text-gray-900">{title}</h3>
+            <h3 id="app-modal-title" className="text-base font-semibold text-gray-900">{title}</h3>
             <button
               type="button"
               onClick={onClose}
+              aria-label="Đóng hộp thoại"
               className="text-gray-400 hover:text-gray-600 rounded-lg p-1 transition-colors cursor-pointer"
             >
               <X className="w-5 h-5" />

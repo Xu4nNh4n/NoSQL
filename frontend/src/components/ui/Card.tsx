@@ -11,7 +11,7 @@ interface CardProps {
 export const Card: React.FC<CardProps> = ({ children, className = '', title, action, headerAction }) => {
   const rightAction = action || headerAction;
   return (
-    <div className={`bg-white border border-gray-200/80 rounded-xl shadow-xs overflow-hidden ${className}`}>
+    <section className={`bg-white border border-gray-200 rounded-lg overflow-hidden ${className}`}>
       {title && (
         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
           <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
@@ -19,6 +19,6 @@ export const Card: React.FC<CardProps> = ({ children, className = '', title, act
         </div>
       )}
       <div className="p-5">{children}</div>
-    </div>
+    </section>
   );
 };

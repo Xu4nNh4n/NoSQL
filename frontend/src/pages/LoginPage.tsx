@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Store, Lock, User, AlertCircle, ArrowLeft } from 'lucide-react';
+import { Store, Lock, User, AlertCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 
 export const LoginPage: React.FC = () => {
-  const [username, setUsername] = useState('seed_admin');
-  const [password, setPassword] = useState('password');
+  const [username, setUsername] = useState('admin');
+  const [password, setPassword] = useState('123456');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
@@ -24,6 +24,8 @@ export const LoginPage: React.FC = () => {
         navigate('/pos');
       } else if (res.role === 'ADMIN' || res.role === 'MANAGER') {
         navigate('/admin');
+      } else if (res.role === 'WAREHOUSE') {
+        navigate('/inventory');
       } else {
         navigate('/');
       }
@@ -44,23 +46,11 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAF9] flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white border border-gray-200/80 rounded-2xl shadow-sm p-8">
-        {/* Quay lại Cửa hàng Online */}
-        <div className="mb-4">
-          <button
-            type="button"
-            onClick={() => navigate('/')}
-            className="text-xs text-emerald-700 hover:text-emerald-800 font-medium inline-flex items-center gap-1 cursor-pointer transition-colors"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            Quay lại Cửa hàng Online
-          </button>
-        </div>
-
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+      <div className="w-full max-w-md bg-white border border-gray-200 rounded-xl p-6 sm:p-8">
         {/* Brand */}
         <div className="text-center mb-8">
-          <div className="inline-flex w-12 h-12 rounded-xl bg-emerald-600 items-center justify-center text-white mb-3 shadow-sm">
+          <div className="inline-flex w-12 h-12 rounded-xl bg-blue-600 items-center justify-center text-white mb-3 shadow-sm">
             <Store className="w-6 h-6" />
           </div>
           <h1 className="text-xl font-bold text-gray-900">HỆ THỐNG SIÊU THỊ & POS</h1>
@@ -112,27 +102,27 @@ export const LoginPage: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <button
               type="button"
-              onClick={() => handleFillDemo('seed_admin', 'password')}
-              className="p-2 text-left rounded-lg border border-gray-200 hover:border-emerald-300 hover:bg-emerald-50/50 transition-colors text-xs cursor-pointer"
+              onClick={() => handleFillDemo('admin', '123456')}
+              className="p-2 text-left rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50/50 transition-colors text-xs cursor-pointer"
             >
               <div className="font-semibold text-gray-800">Quản trị (ADMIN)</div>
-              <div className="text-[10px] text-gray-500 font-mono">seed_admin / password</div>
+              <div className="text-[10px] text-gray-500 font-mono">admin / 123456</div>
             </button>
             <button
               type="button"
-              onClick={() => handleFillDemo('seed_staff', 'password')}
-              className="p-2 text-left rounded-lg border border-gray-200 hover:border-emerald-300 hover:bg-emerald-50/50 transition-colors text-xs cursor-pointer"
+              onClick={() => handleFillDemo('nhanvien', '123456')}
+              className="p-2 text-left rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50/50 transition-colors text-xs cursor-pointer"
             >
               <div className="font-semibold text-gray-800">Thu ngân (STAFF)</div>
-              <div className="text-[10px] text-gray-500 font-mono">seed_staff / password</div>
+              <div className="text-[10px] text-gray-500 font-mono">nhanvien / 123456</div>
             </button>
             <button
               type="button"
-              onClick={() => handleFillDemo('seed_customer', 'password')}
-              className="p-2 text-left rounded-lg border border-gray-200 hover:border-emerald-300 hover:bg-emerald-50/50 transition-colors text-xs cursor-pointer"
+              onClick={() => handleFillDemo('kho', '123456')}
+              className="p-2 text-left rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50/50 transition-colors text-xs cursor-pointer"
             >
-              <div className="font-semibold text-gray-800">Khách hàng (SHOP)</div>
-              <div className="text-[10px] text-gray-500 font-mono">seed_customer / password</div>
+              <div className="font-semibold text-gray-800">Thủ kho (WAREHOUSE)</div>
+              <div className="text-[10px] text-gray-500 font-mono">kho / 123456</div>
             </button>
           </div>
         </div>

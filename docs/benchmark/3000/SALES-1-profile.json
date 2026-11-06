@@ -1,0 +1,1795 @@
+{
+  "id": {
+    "part1": 1521249275238614502,
+    "part2": -784584970002031265
+  },
+  "type": 1,
+  "start": 1793290199671,
+  "end": 1793290200168,
+  "query": "WITH sale_lines AS (SELECT o.order_id, o.created_at, o.order_type, o.payment_method, i.product_id, i.unit_price, i.quantity - COALESCE(i.returned_quantity, 0) AS net_quantity FROM mysql_source.supermarket_api.sales_order_items i JOIN mysql_source.supermarket_api.sales_orders o ON o.order_id = i.order_id WHERE o.created_at >= TIMESTAMP '2026-09-29 17:00:00' AND o.created_at < TIMESTAMP '2026-10-29 17:00:00' AND o.order_type = 'IN_STORE' AND o.status IN ('PAID','PARTIALLY_RETURNED','RETURNED')), catalog AS (SELECT sku, MAX(name) AS name, MAX(categoryName) AS category_name, COUNT(*) AS catalog_count FROM mongo_source.supermarket_catalog.products_catalog GROUP BY sku), sales AS (SELECT p.product_id, p.sku_code AS sku, COALESCE(m.name, p.name) AS product_name, COALESCE(m.category_name, 'Chưa có catalog MongoDB') AS category_name, COALESCE(m.catalog_count, 0) AS catalog_count, SUM(l.net_quantity) AS net_quantity, SUM(l.net_quantity * l.unit_price) AS net_sales_amount FROM sale_lines l JOIN mysql_source.supermarket_api.products p ON p.product_id = l.product_id LEFT JOIN catalog m ON CAST(p.sku_code AS VARCHAR) = m.sku GROUP BY p.product_id, p.sku_code, COALESCE(m.name, p.name), COALESCE(m.category_name, 'Chưa có catalog MongoDB'), m.catalog_count HAVING SUM(l.net_quantity) > 0), totals AS (SELECT SUM(net_quantity) AS total_quantity FROM sales) SELECT s.*, CASE WHEN t.total_quantity > 0 THEN 100.0 * s.net_quantity / t.total_quantity ELSE 0 END AS quantity_share_percent FROM sales s CROSS JOIN totals t ORDER BY net_quantity DESC, sku LIMIT 20",
+  "plan": "00-00    Screen : rowType = RecordType(BIGINT product_id, VARCHAR(50) sku, ANY product_name, ANY category_name, BIGINT catalog_count, BIGINT net_quantity, DECIMAL(38, 2) net_sales_amount, DECIMAL(38, 16) quantity_share_percent): rowcount = 20.0, cumulative cost = {8.470000593E9 rows, 2.032578800457955E11 cpu, 0.0 io, 5.8982408433664E12 network, 1.1616000197120001E11 memory}, id = 772376\n00-01      Project(product_id=[$0], sku=[$1], product_name=[$2], category_name=[$3], catalog_count=[$4], net_quantity=[$5], net_sales_amount=[$6], quantity_share_percent=[$7]) : rowType = RecordType(BIGINT product_id, VARCHAR(50) sku, ANY product_name, ANY category_name, BIGINT catalog_count, BIGINT net_quantity, DECIMAL(38, 2) net_sales_amount, DECIMAL(38, 16) quantity_share_percent): rowcount = 20.0, cumulative cost = {8.470000591E9 rows, 2.032578800437955E11 cpu, 0.0 io, 5.8982408433664E12 network, 1.1616000197120001E11 memory}, id = 772375\n00-02        SelectionVectorRemover : rowType = RecordType(BIGINT product_id, VARCHAR(50) sku, ANY product_name, ANY category_name, BIGINT catalog_count, BIGINT net_quantity, DECIMAL(38, 2) net_sales_amount, DECIMAL(38, 16) quantity_share_percent): rowcount = 20.0, cumulative cost = {8.470000571E9 rows, 2.032578798837955E11 cpu, 0.0 io, 5.8982408433664E12 network, 1.1616000197120001E11 memory}, id = 772372\n00-03          Limit(fetch=[20]) : rowType = RecordType(BIGINT product_id, VARCHAR(50) sku, ANY product_name, ANY category_name, BIGINT catalog_count, BIGINT net_quantity, DECIMAL(38, 2) net_sales_amount, DECIMAL(38, 16) quantity_share_percent): rowcount = 20.0, cumulative cost = {8.470000551E9 rows, 2.032578798637955E11 cpu, 0.0 io, 5.8982408433664E12 network, 1.1616000197120001E11 memory}, id = 772371\n00-04            SingleMergeExchange(sort0=[5 DESC], sort1=[1]) : rowType = RecordType(BIGINT product_id, VARCHAR(50) sku, ANY product_name, ANY category_name, BIGINT catalog_count, BIGINT net_quantity, DECIMAL(38, 2) net_sales_amount, DECIMAL(38, 16) quantity_share_percent): rowcount = 20.0, cumulative cost = {8.470000531E9 rows, 2.032578797837955E11 cpu, 0.0 io, 5.8982408433664E12 network, 1.1616000197120001E11 memory}, id = 772370\n01-01              OrderedMuxExchange(sort0=[5 DESC], sort1=[1]) : rowType = RecordType(BIGINT product_id, VARCHAR(50) sku, ANY product_name, ANY category_name, BIGINT catalog_count, BIGINT net_quantity, DECIMAL(38, 2) net_sales_amount, DECIMAL(38, 16) quantity_share_percent): rowcount = 20.0, cumulative cost = {8.470000511E9 rows, 2.032578796237955E11 cpu, 0.0 io, 5.8982401880064E12 network, 1.1616000197120001E11 memory}, id = 772369\n02-01                SelectionVectorRemover : rowType = RecordType(BIGINT product_id, VARCHAR(50) sku, ANY product_name, ANY category_name, BIGINT catalog_count, BIGINT net_quantity, DECIMAL(38, 2) net_sales_amount, DECIMAL(38, 16) quantity_share_percent): rowcount = 20.0, cumulative cost = {8.470000491E9 rows, 2.032578796037955E11 cpu, 0.0 io, 5.8982401880064E12 network, 1.1616000197120001E11 memory}, id = 772368\n02-02                  Limit(fetch=[20]) : rowType = RecordType(BIGINT product_id, VARCHAR(50) sku, ANY product_name, ANY category_name, BIGINT catalog_count, BIGINT net_quantity, DECIMAL(38, 2) net_sales_amount, DECIMAL(38, 16) quantity_share_percent): rowcount = 20.0, cumulative cost = {8.470000471E9 rows, 2.032578795837955E11 cpu, 0.0 io, 5.8982401880064E12 network, 1.1616000197120001E11 memory}, id = 772367\n02-03                    SelectionVectorRemover : rowType = RecordType(BIGINT product_id, VARCHAR(50) sku, ANY product_name, ANY category_name, BIGINT catalog_count, BIGINT net_quantity, DECIMAL(38, 2) net_sales_amount, DECIMAL(38, 16) quantity_share_percent): rowcount = 5000000.0, cumulative cost = {8.470000451E9 rows, 2.032578795037955E11 cpu, 0.0 io, 5.8982401880064E12 network, 1.1616000197120001E11 memory}, id = 772366\n02-04                      TopN(limit=[20]) : rowType = RecordType(BIGINT product_id, VARCHAR(50) sku, ANY product_name, ANY category_name, BIGINT catalog_count, BIGINT net_quantity, DECIMAL(38, 2) net_sales_amount, DECIMAL(38, 16) quantity_share_percent): rowcount = 5000000.0, cumulative cost = {8.465000451E9 rows, 2.032528795037955E11 cpu, 0.0 io, 5.8982401880064E12 network, 1.1616000197120001E11 memory}, id = 772365\n02-05                        HashToRandomExchange(dist0=[[$5]], dist1=[[$1]]) : rowType = RecordType(BIGINT product_id, VARCHAR(50) sku, ANY product_name, ANY category_name, BIGINT catalog_count, BIGINT net_quantity, DECIMAL(38, 2) net_sales_amount, DECIMAL(38, 16) quantity_share_percent): rowcount = 5000000.0, cumulative cost = {8.460000451E9 rows, 2.0308000238E11 cpu, 0.0 io, 5.8982401880064E12 network, 1.1616000197120001E11 memory}, id = 772364\n03-01                          Project(product_id=[$0], sku=[$1], product_name=[$2], category_name=[$3], catalog_count=[$4], net_quantity=[$5], net_sales_amount=[$6], quantity_share_percent=[CASE(>($7, 0), /(*(100.0:DECIMAL(4, 1), $5), $7), 0)]) : rowType = RecordType(BIGINT product_id, VARCHAR(50) sku, ANY product_name, ANY category_name, BIGINT catalog_count, BIGINT net_quantity, DECIMAL(38, 2) net_sales_amount, DECIMAL(38, 16) quantity_share_percent): rowcount = 5000000.0, cumulative cost = {8.455000451E9 rows, 2.0302000238E11 cpu, 0.0 io, 5.7344001880064E12 network, 1.1616000197120001E11 memory}, id = 772363\n03-02                            NestedLoopJoin(condition=[true], joinType=[inner]) : rowType = RecordType(BIGINT product_id, VARCHAR(50) sku, ANY product_name, ANY category_name, BIGINT catalog_count, BIGINT net_quantity, DECIMAL(38, 2) net_sales_amount, BIGINT total_quantity): rowcount = 5000000.0, cumulative cost = {8.450000451E9 rows, 2.0296500238E11 cpu, 0.0 io, 5.7344001880064E12 network, 1.1616000197120001E11 memory}, id = 772362\n03-04                              Project(product_id=[$0], sku=[$1], product_name=[$2], category_name=[$3], catalog_count=[CASE(IS NOT NULL($4), $4, 0)], net_quantity=[$5], net_sales_amount=[$6]) : rowType = RecordType(BIGINT product_id, VARCHAR(50) sku, ANY product_name, ANY category_name, BIGINT catalog_count, BIGINT net_quantity, DECIMAL(38, 2) net_sales_amount): rowcount = 5000000.0, cumulative cost = {4.220000224E9 rows, 1.00475001176E11 cpu, 0.0 io, 2.8672000917504E12 network, 5.8080000985600006E10 memory}, id = 772347\n03-05                                SelectionVectorRemover : rowType = RecordType(BIGINT product_id, VARCHAR(50) sku, ANY product_name, ANY category_name, BIGINT catalog_count, BIGINT net_quantity, DECIMAL(38, 2) net_sales_amount): rowcount = 5000000.0, cumulative cost = {4.215000224E9 rows, 1.00425001176E11 cpu, 0.0 io, 2.8672000917504E12 network, 5.8080000985600006E10 memory}, id = 772346\n03-06                                  Filter(condition=[>($5, 0)]) : rowType = RecordType(BIGINT product_id, VARCHAR(50) sku, ANY product_name, ANY category_name, BIGINT catalog_count, BIGINT net_quantity, DECIMAL(38, 2) net_sales_amount): rowcount = 5000000.0, cumulative cost = {4.210000224E9 rows, 1.00420001176E11 cpu, 0.0 io, 2.8672000917504E12 network, 5.8080000985600006E10 memory}, id = 772345\n03-07                                    HashAgg(group=[{0, 1, 2, 3, 4}], net_quantity=[$SUM0($5)], net_sales_amount=[$SUM0($6)]) : rowType = RecordType(BIGINT product_id, VARCHAR(50) sku, ANY product_name, ANY category_name, BIGINT catalog_count, BIGINT net_quantity, DECIMAL(38, 2) net_sales_amount): rowcount = 1.0E7, cumulative cost = {4.200000224E9 rows, 1.00360001176E11 cpu, 0.0 io, 2.8672000917504E12 network, 5.8080000985600006E10 memory}, id = 772344\n03-08                                      HashToRandomExchange(dist0=[[$0]], dist1=[[$1]], dist2=[[$2]], dist3=[[$3]], dist4=[[$4]]) : rowType = RecordType(BIGINT product_id, VARCHAR(50) sku, ANY product_name, ANY category_name, BIGINT catalog_count, BIGINT net_quantity, DECIMAL(38, 2) net_sales_amount): rowcount = 1.0E8, cumulative cost = {4.100000224E9 rows, 9.3960001176E10 cpu, 0.0 io, 2.8672000917504E12 network, 5.2800000985600006E10 memory}, id = 772343\n04-01                                        HashAgg(group=[{0, 1, 2, 3, 4}], net_quantity=[$SUM0($5)], net_sales_amount=[$SUM0($6)]) : rowType = RecordType(BIGINT product_id, VARCHAR(50) sku, ANY product_name, ANY category_name, BIGINT catalog_count, BIGINT net_quantity, DECIMAL(38, 2) net_sales_amount): rowcount = 1.0E8, cumulative cost = {4.000000224E9 rows, 9.3000001176E10 cpu, 0.0 io, 91750.39999999998 network, 5.2800000985600006E10 memory}, id = 772342\n04-02                                          Project(product_id=[$2], sku=[$4], product_name=[CASE(IS NOT NULL($7), $7, $3)], category_name=[CASE(IS NOT NULL($8), $8, u&'Ch\\01b0a c\\00f3 catalog MongoDB')], catalog_count=[$9], net_quantity=[$1], $f6=[*($1, $0)]) : rowType = RecordType(BIGINT product_id, VARCHAR(50) sku, ANY product_name, ANY category_name, BIGINT catalog_count, INTEGER net_quantity, DECIMAL(28, 2) $f6): rowcount = 1.0E9, cumulative cost = {3.000000224E9 rows, 2.9000001176E10 cpu, 0.0 io, 91750.39999999998 network, 985.6000000000001 memory}, id = 772341\n04-03                                            HashJoin(condition=[=($5, $6)], joinType=[left], semi-join: =[false]) : rowType = RecordType(DECIMAL(18, 2) unit_price, INTEGER net_quantity, BIGINT product_id0, VARCHAR(150) name, VARCHAR(50) sku_code, VARCHAR(65535) sku_code0, ANY sku, ANY name0, ANY category_name, BIGINT catalog_count): rowcount = 1.0E9, cumulative cost = {2.000000224E9 rows, 1.3000001176E10 cpu, 0.0 io, 91750.39999999998 network, 985.6000000000001 memory}, id = 772340\n04-05                                              Jdbc(sql=[SELECT `t0`.`unit_price`, `t0`.`net_quantity`, `products`.`product_id` AS `product_id0`, `products`.`name`, `products`.`sku_code`, CAST(`products`.`sku_code` AS CHAR(255)) AS `sku_code0` FROM (SELECT `t`.`order_id`, `t`.`created_at`, `t`.`order_type`, `t`.`payment_method`, `sales_order_items`.`product_id`, `sales_order_items`.`unit_price`, `sales_order_items`.`quantity` - `sales_order_items`.`returned_quantity` AS `net_quantity` FROM `supermarket_api`.`sales_order_items` INNER JOIN (SELECT * FROM `supermarket_api`.`sales_orders` WHERE `created_at` >= TIMESTAMP '2026-09-29 17:00:00' AND `created_at` < TIMESTAMP '2026-10-29 17:00:00' AND `order_type` = 'IN_STORE' AND `status` IN ('PAID', 'PARTIALLY_RETURNED', 'RETURNED')) AS `t` ON `sales_order_items`.`order_id` = `t`.`order_id`) AS `t0` INNER JOIN `supermarket_api`.`products` ON `t0`.`product_id` = `products`.`product_id` ]) : rowType = RecordType(DECIMAL(18, 2) unit_price, INTEGER net_quantity, BIGINT product_id0, VARCHAR(150) name, VARCHAR(50) sku_code, VARCHAR(65535) sku_code0): rowcount = 1.0E9, cumulative cost = {1.0E9 rows, 1.0E9 cpu, 0.0 io, 0.0 network, 0.0 memory}, id = 771993\n04-04                                              Project(sku=[$0], name0=[$1], category_name=[$2], catalog_count=[$3]) : rowType = RecordType(ANY sku, ANY name0, ANY category_name, BIGINT catalog_count): rowcount = 56.0, cumulative cost = {168.0 rows, 728.0 cpu, 0.0 io, 91750.39999999998 network, 0.0 memory}, id = 772339\n04-06                                                BroadcastExchange : rowType = RecordType(ANY sku, ANY name, ANY category_name, BIGINT catalog_count): rowcount = 56.0, cumulative cost = {112.0 rows, 504.0 cpu, 0.0 io, 91750.39999999998 network, 0.0 memory}, id = 772338\n06-01                                                  Plugin(groupScan=[MongoGroupScan [MongoScanSpec=MongoScanSpec [dbName=\"supermarket_catalog\", collectionName=\"products_catalog\", operations=[{\"$project\": {\"sku\": 1, \"name\": 1, \"categoryName\": 1}}, {\"$group\": {\"_id\": \"$sku\", \"name\": {\"$max\": \"$name\"}, \"category_name\": {\"$max\": \"$categoryName\"}, \"catalog_count\": {\"$sum\": 1}}}, {\"$project\": {\"sku\": \"$_id\", \"name\": \"$name\", \"category_name\": \"$category_name\", \"catalog_count\": \"$catalog_count\"}}]], columns=[`sku`, `name`, `category_name`, `catalog_count`], useAggregate=true]]) : rowType = RecordType(ANY sku, ANY name, ANY category_name, BIGINT catalog_count): rowcount = 56.0, cumulative cost = {56.0 rows, 56.0 cpu, 0.0 io, 0.0 network, 0.0 memory}, id = 772003\n03-03                              BroadcastExchange : rowType = RecordType(BIGINT total_quantity): rowcount = 1.0, cumulative cost = {4.225000227E9 rows, 1.00490001204E11 cpu, 0.0 io, 2.867200096256E12 network, 5.8080000985600006E10 memory}, id = 772361\n05-01                                StreamAgg(group=[{}], total_quantity=[SUM($0)]) : rowType = RecordType(BIGINT total_quantity): rowcount = 1.0, cumulative cost = {4.225000226E9 rows, 1.00490001196E11 cpu, 0.0 io, 2.8672000958464E12 network, 5.8080000985600006E10 memory}, id = 772360\n05-02                                  UnionExchange : rowType = RecordType(BIGINT total_quantity): rowcount = 1.0, cumulative cost = {4.225000225E9 rows, 1.00490001184E11 cpu, 0.0 io, 2.8672000958464E12 network, 5.8080000985600006E10 memory}, id = 772359\n07-01                                    StreamAgg(group=[{}], total_quantity=[SUM($0)]) : rowType = RecordType(BIGINT total_quantity): rowcount = 1.0, cumulative cost = {4.225000224E9 rows, 1.00490001176E11 cpu, 0.0 io, 2.8672000917504E12 network, 5.8080000985600006E10 memory}, id = 772358\n07-02                                      Project(net_quantity=[$5]) : rowType = RecordType(BIGINT net_quantity): rowcount = 5000000.0, cumulative cost = {4.220000224E9 rows, 1.00430001176E11 cpu, 0.0 io, 2.8672000917504E12 network, 5.8080000985600006E10 memory}, id = 772357\n07-03                                        SelectionVectorRemover : rowType = RecordType(BIGINT product_id, VARCHAR(50) sku, ANY product_name, ANY category_name, BIGINT catalog_count, BIGINT net_quantity, DECIMAL(38, 2) net_sales_amount): rowcount = 5000000.0, cumulative cost = {4.215000224E9 rows, 1.00425001176E11 cpu, 0.0 io, 2.8672000917504E12 network, 5.8080000985600006E10 memory}, id = 772356\n07-04                                          Filter(condition=[>($5, 0)]) : rowType = RecordType(BIGINT product_id, VARCHAR(50) sku, ANY product_name, ANY category_name, BIGINT catalog_count, BIGINT net_quantity, DECIMAL(38, 2) net_sales_amount): rowcount = 5000000.0, cumulative cost = {4.210000224E9 rows, 1.00420001176E11 cpu, 0.0 io, 2.8672000917504E12 network, 5.8080000985600006E10 memory}, id = 772355\n07-05                                            HashAgg(group=[{0, 1, 2, 3, 4}], net_quantity=[$SUM0($5)], net_sales_amount=[$SUM0($6)]) : rowType = RecordType(BIGINT product_id, VARCHAR(50) sku, ANY product_name, ANY category_name, BIGINT catalog_count, BIGINT net_quantity, DECIMAL(38, 2) net_sales_amount): rowcount = 1.0E7, cumulative cost = {4.200000224E9 rows, 1.00360001176E11 cpu, 0.0 io, 2.8672000917504E12 network, 5.8080000985600006E10 memory}, id = 772354\n07-06                                              HashToRandomExchange(dist0=[[$0]], dist1=[[$1]], dist2=[[$2]], dist3=[[$3]], dist4=[[$4]]) : rowType = RecordType(BIGINT product_id, VARCHAR(50) sku, ANY product_name, ANY category_name, BIGINT catalog_count, BIGINT net_quantity, DECIMAL(38, 2) net_sales_amount): rowcount = 1.0E8, cumulative cost = {4.100000224E9 rows, 9.3960001176E10 cpu, 0.0 io, 2.8672000917504E12 network, 5.2800000985600006E10 memory}, id = 772353\n08-01                                                HashAgg(group=[{0, 1, 2, 3, 4}], net_quantity=[$SUM0($5)], net_sales_amount=[$SUM0($6)]) : rowType = RecordType(BIGINT product_id, VARCHAR(50) sku, ANY product_name, ANY category_name, BIGINT catalog_count, BIGINT net_quantity, DECIMAL(38, 2) net_sales_amount): rowcount = 1.0E8, cumulative cost = {4.000000224E9 rows, 9.3000001176E10 cpu, 0.0 io, 91750.39999999998 network, 5.2800000985600006E10 memory}, id = 772352\n08-02                                                  Project(product_id=[$2], sku=[$4], product_name=[CASE(IS NOT NULL($7), $7, $3)], category_name=[CASE(IS NOT NULL($8), $8, u&'Ch\\01b0a c\\00f3 catalog MongoDB')], catalog_count=[$9], net_quantity=[$1], $f6=[*($1, $0)]) : rowType = RecordType(BIGINT product_id, VARCHAR(50) sku, ANY product_name, ANY category_name, BIGINT catalog_count, INTEGER net_quantity, DECIMAL(28, 2) $f6): rowcount = 1.0E9, cumulative cost = {3.000000224E9 rows, 2.9000001176E10 cpu, 0.0 io, 91750.39999999998 network, 985.6000000000001 memory}, id = 772351\n08-03                                                    HashJoin(condition=[=($5, $6)], joinType=[left], semi-join: =[false]) : rowType = RecordType(DECIMAL(18, 2) unit_price, INTEGER net_quantity, BIGINT product_id0, VARCHAR(150) name, VARCHAR(50) sku_code, VARCHAR(65535) sku_code0, ANY sku, ANY name0, ANY category_name, BIGINT catalog_count): rowcount = 1.0E9, cumulative cost = {2.000000224E9 rows, 1.3000001176E10 cpu, 0.0 io, 91750.39999999998 network, 985.6000000000001 memory}, id = 772350\n08-05                                                      Jdbc(sql=[SELECT `t0`.`unit_price`, `t0`.`net_quantity`, `products`.`product_id` AS `product_id0`, `products`.`name`, `products`.`sku_code`, CAST(`products`.`sku_code` AS CHAR(255)) AS `sku_code0` FROM (SELECT `t`.`order_id`, `t`.`created_at`, `t`.`order_type`, `t`.`payment_method`, `sales_order_items`.`product_id`, `sales_order_items`.`unit_price`, `sales_order_items`.`quantity` - `sales_order_items`.`returned_quantity` AS `net_quantity` FROM `supermarket_api`.`sales_order_items` INNER JOIN (SELECT * FROM `supermarket_api`.`sales_orders` WHERE `created_at` >= TIMESTAMP '2026-09-29 17:00:00' AND `created_at` < TIMESTAMP '2026-10-29 17:00:00' AND `order_type` = 'IN_STORE' AND `status` IN ('PAID', 'PARTIALLY_RETURNED', 'RETURNED')) AS `t` ON `sales_order_items`.`order_id` = `t`.`order_id`) AS `t0` INNER JOIN `supermarket_api`.`products` ON `t0`.`product_id` = `products`.`product_id` ]) : rowType = RecordType(DECIMAL(18, 2) unit_price, INTEGER net_quantity, BIGINT product_id0, VARCHAR(150) name, VARCHAR(50) sku_code, VARCHAR(65535) sku_code0): rowcount = 1.0E9, cumulative cost = {1.0E9 rows, 1.0E9 cpu, 0.0 io, 0.0 network, 0.0 memory}, id = 772015\n08-04                                                      Project(sku=[$0], name0=[$1], category_name=[$2], catalog_count=[$3]) : rowType = RecordType(ANY sku, ANY name0, ANY category_name, BIGINT catalog_count): rowcount = 56.0, cumulative cost = {168.0 rows, 728.0 cpu, 0.0 io, 91750.39999999998 network, 0.0 memory}, id = 772349\n08-06                                                        BroadcastExchange : rowType = RecordType(ANY sku, ANY name, ANY category_name, BIGINT catalog_count): rowcount = 56.0, cumulative cost = {112.0 rows, 504.0 cpu, 0.0 io, 91750.39999999998 network, 0.0 memory}, id = 772348\n09-01                                                          Plugin(groupScan=[MongoGroupScan [MongoScanSpec=MongoScanSpec [dbName=\"supermarket_catalog\", collectionName=\"products_catalog\", operations=[{\"$project\": {\"sku\": 1, \"name\": 1, \"categoryName\": 1}}, {\"$group\": {\"_id\": \"$sku\", \"name\": {\"$max\": \"$name\"}, \"category_name\": {\"$max\": \"$categoryName\"}, \"catalog_count\": {\"$sum\": 1}}}, {\"$project\": {\"sku\": \"$_id\", \"name\": \"$name\", \"category_name\": \"$category_name\", \"catalog_count\": \"$catalog_count\"}}]], columns=[`sku`, `name`, `category_name`, `catalog_count`], useAggregate=true]]) : rowType = RecordType(ANY sku, ANY name, ANY category_name, BIGINT catalog_count): rowcount = 56.0, cumulative cost = {56.0 rows, 56.0 cpu, 0.0 io, 0.0 network, 0.0 memory}, id = 772025\n",
+  "foreman": {
+    "address": "0459438e1437",
+    "userPort": 31010,
+    "controlPort": 31011,
+    "dataPort": 31012,
+    "version": "1.21.2",
+    "state": 0
+  },
+  "state": 2,
+  "totalFragments": 10,
+  "finishedFragments": 9,
+  "fragmentProfile": [
+    {
+      "majorFragmentId": 0,
+      "minorFragmentProfile": [
+        {
+          "state": 3,
+          "minorFragmentId": 0,
+          "operatorProfile": [
+            {
+              "inputProfile": [
+                {
+                  "records": 20,
+                  "batches": 3,
+                  "schemas": 0
+                }
+              ],
+              "operatorId": 4,
+              "operatorType": 8,
+              "setupNanos": 1061691,
+              "processNanos": 1371457,
+              "peakLocalMemoryAllocated": 1232896,
+              "metric": [
+                {
+                  "metricId": 0,
+                  "longValue": 0
+                },
+                {
+                  "metricId": 1,
+                  "longValue": 1
+                }
+              ],
+              "waitNanos": 6088041,
+              "operatorTypeName": "MERGING_RECEIVER"
+            },
+            {
+              "inputProfile": [
+                {
+                  "records": 20,
+                  "batches": 2,
+                  "schemas": 2
+                }
+              ],
+              "operatorId": 3,
+              "operatorType": 7,
+              "setupNanos": 59709,
+              "processNanos": 816470,
+              "peakLocalMemoryAllocated": 1228864,
+              "waitNanos": 0,
+              "operatorTypeName": "LIMIT"
+            },
+            {
+              "inputProfile": [
+                {
+                  "records": 20,
+                  "batches": 2,
+                  "schemas": 2
+                }
+              ],
+              "operatorId": 2,
+              "operatorType": 14,
+              "setupNanos": 33178,
+              "processNanos": 114332,
+              "peakLocalMemoryAllocated": 1228800,
+              "waitNanos": 0,
+              "operatorTypeName": "SELECTION_VECTOR_REMOVER"
+            },
+            {
+              "inputProfile": [
+                {
+                  "records": 20,
+                  "batches": 2,
+                  "schemas": 1
+                }
+              ],
+              "operatorId": 1,
+              "operatorType": 10,
+              "setupNanos": 418845,
+              "processNanos": 120658,
+              "peakLocalMemoryAllocated": 1228800,
+              "waitNanos": 0,
+              "operatorTypeName": "PROJECT"
+            },
+            {
+              "inputProfile": [
+                {
+                  "records": 20,
+                  "batches": 2,
+                  "schemas": 1
+                }
+              ],
+              "operatorId": 0,
+              "operatorType": 13,
+              "setupNanos": 0,
+              "processNanos": 52276,
+              "peakLocalMemoryAllocated": 0,
+              "waitNanos": 319488,
+              "operatorTypeName": "SCREEN"
+            }
+          ],
+          "startTime": 1793290200024,
+          "endTime": 1793290200167,
+          "memoryUsed": 0,
+          "maxMemoryUsed": 5232896,
+          "endpoint": {
+            "address": "0459438e1437",
+            "userPort": 31010,
+            "controlPort": 31011,
+            "dataPort": 31012,
+            "version": "1.21.2",
+            "state": 0
+          },
+          "lastUpdate": 1793290200168,
+          "lastProgress": 1793290200168
+        }
+      ]
+    },
+    {
+      "majorFragmentId": 6,
+      "minorFragmentProfile": [
+        {
+          "state": 3,
+          "minorFragmentId": 0,
+          "operatorProfile": [
+            {
+              "inputProfile": [
+                {
+                  "records": 56,
+                  "batches": 2,
+                  "schemas": 1
+                }
+              ],
+              "operatorId": 1,
+              "operatorType": 47,
+              "setupNanos": 0,
+              "processNanos": 3793927,
+              "peakLocalMemoryAllocated": 180224,
+              "waitNanos": 0,
+              "operatorTypeName": "MONGO_SUB_SCAN"
+            },
+            {
+              "inputProfile": [
+                {
+                  "records": 56,
+                  "batches": 1,
+                  "schemas": 1
+                }
+              ],
+              "operatorId": 0,
+              "operatorType": 1,
+              "setupNanos": 0,
+              "processNanos": 57940,
+              "peakLocalMemoryAllocated": 180224,
+              "metric": [
+                {
+                  "metricId": 0,
+                  "longValue": 1
+                },
+                {
+                  "metricId": 1,
+                  "longValue": 3268
+                }
+              ],
+              "waitNanos": 805329,
+              "operatorTypeName": "BROADCAST_SENDER"
+            }
+          ],
+          "startTime": 1793290200025,
+          "endTime": 1793290200031,
+          "memoryUsed": 0,
+          "maxMemoryUsed": 2000256,
+          "endpoint": {
+            "address": "0459438e1437",
+            "userPort": 31010,
+            "controlPort": 31011,
+            "dataPort": 31012,
+            "version": "1.21.2",
+            "state": 1,
+            "httpPort": 8047
+          },
+          "lastUpdate": 1793290200031,
+          "lastProgress": 1793290200031
+        }
+      ]
+    },
+    {
+      "majorFragmentId": 7,
+      "minorFragmentProfile": [
+        {
+          "state": 3,
+          "minorFragmentId": 0,
+          "operatorProfile": [
+            {
+              "inputProfile": [
+                {
+                  "records": 56,
+                  "batches": 2,
+                  "schemas": 1
+                }
+              ],
+              "operatorId": 6,
+              "operatorType": 11,
+              "setupNanos": 0,
+              "processNanos": 77898,
+              "peakLocalMemoryAllocated": 8192,
+              "metric": [
+                {
+                  "metricId": 0,
+                  "longValue": 0
+                },
+                {
+                  "metricId": 1,
+                  "longValue": 1
+                }
+              ],
+              "waitNanos": 48209351,
+              "operatorTypeName": "UNORDERED_RECEIVER"
+            },
+            {
+              "inputProfile": [
+                {
+                  "records": 56,
+                  "batches": 2,
+                  "schemas": 1
+                }
+              ],
+              "operatorId": 5,
+              "operatorType": 3,
+              "setupNanos": 589658,
+              "processNanos": 38182196,
+              "peakLocalMemoryAllocated": 44565244,
+              "metric": [
+                {
+                  "metricId": 0,
+                  "longValue": 524288
+                },
+                {
+                  "metricId": 3,
+                  "longValue": 0
+                },
+                {
+                  "metricId": 14,
+                  "longValue": 86
+                },
+                {
+                  "metricId": 4,
+                  "longValue": 8
+                },
+                {
+                  "metricId": 12,
+                  "longValue": 8
+                },
+                {
+                  "metricId": 15,
+                  "longValue": 56
+                },
+                {
+                  "metricId": 1,
+                  "longValue": 56
+                },
+                {
+                  "metricId": 11,
+                  "longValue": 112
+                },
+                {
+                  "metricId": 9,
+                  "longValue": 4715
+                },
+                {
+                  "metricId": 10,
+                  "longValue": 85
+                },
+                {
+                  "metricId": 13,
+                  "longValue": 602
+                },
+                {
+                  "metricId": 7,
+                  "longValue": 0
+                },
+                {
+                  "metricId": 2,
+                  "longValue": 0
+                },
+                {
+                  "metricId": 5,
+                  "longValue": 0
+                },
+                {
+                  "metricId": 8,
+                  "longValue": 2
+                }
+              ],
+              "waitNanos": 0,
+              "operatorTypeName": "HASH_AGGREGATE"
+            },
+            {
+              "inputProfile": [
+                {
+                  "records": 56,
+                  "batches": 9,
+                  "schemas": 1
+                }
+              ],
+              "operatorId": 4,
+              "operatorType": 2,
+              "setupNanos": 312910,
+              "processNanos": 162140,
+              "peakLocalMemoryAllocated": 3474160,
+              "waitNanos": 0,
+              "operatorTypeName": "FILTER"
+            },
+            {
+              "inputProfile": [
+                {
+                  "records": 56,
+                  "batches": 9,
+                  "schemas": 1
+                }
+              ],
+              "operatorId": 3,
+              "operatorType": 14,
+              "setupNanos": 12358,
+              "processNanos": 78699,
+              "peakLocalMemoryAllocated": 3474128,
+              "waitNanos": 0,
+              "operatorTypeName": "SELECTION_VECTOR_REMOVER"
+            },
+            {
+              "inputProfile": [
+                {
+                  "records": 56,
+                  "batches": 9,
+                  "schemas": 1
+                }
+              ],
+              "operatorId": 2,
+              "operatorType": 10,
+              "setupNanos": 171294,
+              "processNanos": 296590,
+              "peakLocalMemoryAllocated": 32768,
+              "waitNanos": 0,
+              "operatorTypeName": "PROJECT"
+            },
+            {
+              "inputProfile": [
+                {
+                  "records": 56,
+                  "batches": 9,
+                  "schemas": 1
+                }
+              ],
+              "operatorId": 1,
+              "operatorType": 15,
+              "setupNanos": 255617,
+              "processNanos": 93786,
+              "peakLocalMemoryAllocated": 36992,
+              "waitNanos": 0,
+              "operatorTypeName": "STREAMING_AGGREGATE"
+            },
+            {
+              "inputProfile": [
+                {
+                  "records": 1,
+                  "batches": 2,
+                  "schemas": 2
+                }
+              ],
+              "operatorId": 0,
+              "operatorType": 0,
+              "setupNanos": 0,
+              "processNanos": 84238,
+              "peakLocalMemoryAllocated": 36864,
+              "metric": [
+                {
+                  "metricId": 0,
+                  "longValue": 9
+                }
+              ],
+              "waitNanos": 719015,
+              "operatorTypeName": "SINGLE_SENDER"
+            }
+          ],
+          "startTime": 1793290200025,
+          "endTime": 1793290200160,
+          "memoryUsed": 0,
+          "maxMemoryUsed": 50567548,
+          "endpoint": {
+            "address": "0459438e1437",
+            "userPort": 31010,
+            "controlPort": 31011,
+            "dataPort": 31012,
+            "version": "1.21.2",
+            "state": 1,
+            "httpPort": 8047
+          },
+          "lastUpdate": 1793290200160,
+          "lastProgress": 1793290200160
+        }
+      ]
+    },
+    {
+      "majorFragmentId": 2,
+      "minorFragmentProfile": [
+        {
+          "state": 3,
+          "minorFragmentId": 0,
+          "operatorProfile": [
+            {
+              "inputProfile": [
+                {
+                  "records": 56,
+                  "batches": 2,
+                  "schemas": 1
+                }
+              ],
+              "operatorId": 5,
+              "operatorType": 11,
+              "setupNanos": 0,
+              "processNanos": 69523,
+              "peakLocalMemoryAllocated": 8192,
+              "metric": [
+                {
+                  "metricId": 0,
+                  "longValue": 0
+                },
+                {
+                  "metricId": 1,
+                  "longValue": 1
+                }
+              ],
+              "waitNanos": 7939287,
+              "operatorTypeName": "UNORDERED_RECEIVER"
+            },
+            {
+              "inputProfile": [
+                {
+                  "records": 56,
+                  "batches": 2,
+                  "schemas": 1
+                }
+              ],
+              "operatorId": 4,
+              "operatorType": 16,
+              "setupNanos": 0,
+              "processNanos": 760114,
+              "peakLocalMemoryAllocated": 339968,
+              "waitNanos": 0,
+              "operatorTypeName": "TOP_N_SORT"
+            },
+            {
+              "inputProfile": [
+                {
+                  "records": 20,
+                  "batches": 2,
+                  "schemas": 2
+                }
+              ],
+              "operatorId": 3,
+              "operatorType": 14,
+              "setupNanos": 36647,
+              "processNanos": 90237,
+              "peakLocalMemoryAllocated": 339968,
+              "waitNanos": 0,
+              "operatorTypeName": "SELECTION_VECTOR_REMOVER"
+            },
+            {
+              "inputProfile": [
+                {
+                  "records": 20,
+                  "batches": 2,
+                  "schemas": 1
+                }
+              ],
+              "operatorId": 2,
+              "operatorType": 7,
+              "setupNanos": 5930,
+              "processNanos": 474170,
+              "peakLocalMemoryAllocated": 339968,
+              "waitNanos": 0,
+              "operatorTypeName": "LIMIT"
+            },
+            {
+              "inputProfile": [
+                {
+                  "records": 20,
+                  "batches": 2,
+                  "schemas": 1
+                }
+              ],
+              "operatorId": 1,
+              "operatorType": 14,
+              "setupNanos": 9180,
+              "processNanos": 47463,
+              "peakLocalMemoryAllocated": 339968,
+              "waitNanos": 0,
+              "operatorTypeName": "SELECTION_VECTOR_REMOVER"
+            },
+            {
+              "inputProfile": [
+                {
+                  "records": 20,
+                  "batches": 2,
+                  "schemas": 1
+                }
+              ],
+              "operatorId": 0,
+              "operatorType": 0,
+              "setupNanos": 0,
+              "processNanos": 127341,
+              "peakLocalMemoryAllocated": 213984,
+              "metric": [
+                {
+                  "metricId": 0,
+                  "longValue": 1862
+                }
+              ],
+              "waitNanos": 376935,
+              "operatorTypeName": "SINGLE_SENDER"
+            }
+          ],
+          "startTime": 1793290200025,
+          "endTime": 1793290200164,
+          "memoryUsed": 0,
+          "maxMemoryUsed": 6000000,
+          "endpoint": {
+            "address": "0459438e1437",
+            "userPort": 31010,
+            "controlPort": 31011,
+            "dataPort": 31012,
+            "version": "1.21.2",
+            "state": 1,
+            "httpPort": 8047
+          },
+          "lastUpdate": 1793290200164,
+          "lastProgress": 1793290200164
+        }
+      ]
+    },
+    {
+      "majorFragmentId": 9,
+      "minorFragmentProfile": [
+        {
+          "state": 3,
+          "minorFragmentId": 0,
+          "operatorProfile": [
+            {
+              "inputProfile": [
+                {
+                  "records": 56,
+                  "batches": 2,
+                  "schemas": 1
+                }
+              ],
+              "operatorId": 1,
+              "operatorType": 47,
+              "setupNanos": 0,
+              "processNanos": 3733267,
+              "peakLocalMemoryAllocated": 180224,
+              "waitNanos": 0,
+              "operatorTypeName": "MONGO_SUB_SCAN"
+            },
+            {
+              "inputProfile": [
+                {
+                  "records": 56,
+                  "batches": 1,
+                  "schemas": 1
+                }
+              ],
+              "operatorId": 0,
+              "operatorType": 1,
+              "setupNanos": 0,
+              "processNanos": 90868,
+              "peakLocalMemoryAllocated": 180224,
+              "metric": [
+                {
+                  "metricId": 0,
+                  "longValue": 1
+                },
+                {
+                  "metricId": 1,
+                  "longValue": 3268
+                }
+              ],
+              "waitNanos": 836623,
+              "operatorTypeName": "BROADCAST_SENDER"
+            }
+          ],
+          "startTime": 1793290200025,
+          "endTime": 1793290200031,
+          "memoryUsed": 0,
+          "maxMemoryUsed": 2000256,
+          "endpoint": {
+            "address": "0459438e1437",
+            "userPort": 31010,
+            "controlPort": 31011,
+            "dataPort": 31012,
+            "version": "1.21.2",
+            "state": 1,
+            "httpPort": 8047
+          },
+          "lastUpdate": 1793290200031,
+          "lastProgress": 1793290200031
+        }
+      ]
+    },
+    {
+      "majorFragmentId": 4,
+      "minorFragmentProfile": [
+        {
+          "state": 3,
+          "minorFragmentId": 0,
+          "operatorProfile": [
+            {
+              "inputProfile": [
+                {
+                  "records": 0,
+                  "batches": 0,
+                  "schemas": 0
+                }
+              ],
+              "operatorId": 5,
+              "operatorType": 44,
+              "setupNanos": 0,
+              "processNanos": 36297937,
+              "peakLocalMemoryAllocated": 1138688,
+              "waitNanos": 0,
+              "operatorTypeName": "JDBC_SCAN"
+            },
+            {
+              "inputProfile": [
+                {
+                  "records": 56,
+                  "batches": 1,
+                  "schemas": 1
+                }
+              ],
+              "operatorId": 6,
+              "operatorType": 11,
+              "setupNanos": 0,
+              "processNanos": 44520,
+              "peakLocalMemoryAllocated": 0,
+              "metric": [
+                {
+                  "metricId": 0,
+                  "longValue": 0
+                },
+                {
+                  "metricId": 1,
+                  "longValue": 1
+                }
+              ],
+              "waitNanos": 12943,
+              "operatorTypeName": "UNORDERED_RECEIVER"
+            },
+            {
+              "inputProfile": [
+                {
+                  "records": 56,
+                  "batches": 1,
+                  "schemas": 1
+                }
+              ],
+              "operatorId": 4,
+              "operatorType": 10,
+              "setupNanos": 323020,
+              "processNanos": 31589,
+              "peakLocalMemoryAllocated": 4096,
+              "waitNanos": 0,
+              "operatorTypeName": "PROJECT"
+            },
+            {
+              "inputProfile": [
+                {
+                  "records": 7496,
+                  "batches": 2,
+                  "schemas": 1
+                },
+                {
+                  "records": 56,
+                  "batches": 1,
+                  "schemas": 1
+                }
+              ],
+              "operatorId": 3,
+              "operatorType": 4,
+              "setupNanos": 0,
+              "processNanos": 8885889,
+              "peakLocalMemoryAllocated": 12043968,
+              "metric": [
+                {
+                  "metricId": 0,
+                  "longValue": 262144
+                },
+                {
+                  "metricId": 13,
+                  "longValue": 3256
+                },
+                {
+                  "metricId": 15,
+                  "longValue": 112
+                },
+                {
+                  "metricId": 2,
+                  "longValue": 0
+                },
+                {
+                  "metricId": 10,
+                  "longValue": 68
+                },
+                {
+                  "metricId": 5,
+                  "longValue": 0
+                },
+                {
+                  "metricId": 4,
+                  "longValue": 4
+                },
+                {
+                  "metricId": 7,
+                  "longValue": 0
+                },
+                {
+                  "metricId": 19,
+                  "longValue": 7496
+                },
+                {
+                  "metricId": 17,
+                  "longValue": 487240
+                },
+                {
+                  "metricId": 3,
+                  "longValue": 0
+                },
+                {
+                  "metricId": 1,
+                  "longValue": 56
+                },
+                {
+                  "metricId": 16,
+                  "longValue": 2
+                },
+                {
+                  "metricId": 12,
+                  "longValue": 2
+                },
+                {
+                  "metricId": 18,
+                  "longValue": 130
+                },
+                {
+                  "metricId": 8,
+                  "longValue": 2
+                },
+                {
+                  "metricId": 11,
+                  "longValue": 7496
+                },
+                {
+                  "metricId": 14,
+                  "longValue": 59
+                },
+                {
+                  "metricId": 9,
+                  "longValue": 253341
+                }
+              ],
+              "waitNanos": 0,
+              "operatorTypeName": "HASH_JOIN"
+            },
+            {
+              "inputProfile": [
+                {
+                  "records": 7496,
+                  "batches": 2,
+                  "schemas": 1
+                }
+              ],
+              "operatorId": 2,
+              "operatorType": 10,
+              "setupNanos": 1031715,
+              "processNanos": 1135429,
+              "peakLocalMemoryAllocated": 2514944,
+              "waitNanos": 0,
+              "operatorTypeName": "PROJECT"
+            },
+            {
+              "inputProfile": [
+                {
+                  "records": 7496,
+                  "batches": 2,
+                  "schemas": 1
+                }
+              ],
+              "operatorId": 1,
+              "operatorType": 3,
+              "setupNanos": 620184,
+              "processNanos": 37655535,
+              "peakLocalMemoryAllocated": 44565200,
+              "metric": [
+                {
+                  "metricId": 0,
+                  "longValue": 524288
+                },
+                {
+                  "metricId": 12,
+                  "longValue": 8
+                },
+                {
+                  "metricId": 3,
+                  "longValue": 0
+                },
+                {
+                  "metricId": 8,
+                  "longValue": 2
+                },
+                {
+                  "metricId": 10,
+                  "longValue": 84
+                },
+                {
+                  "metricId": 1,
+                  "longValue": 56
+                },
+                {
+                  "metricId": 13,
+                  "longValue": 588
+                },
+                {
+                  "metricId": 4,
+                  "longValue": 8
+                },
+                {
+                  "metricId": 9,
+                  "longValue": 624191
+                },
+                {
+                  "metricId": 2,
+                  "longValue": 0
+                },
+                {
+                  "metricId": 14,
+                  "longValue": 84
+                },
+                {
+                  "metricId": 15,
+                  "longValue": 56
+                },
+                {
+                  "metricId": 11,
+                  "longValue": 14992
+                },
+                {
+                  "metricId": 7,
+                  "longValue": 0
+                }
+              ],
+              "waitNanos": 0,
+              "operatorTypeName": "HASH_AGGREGATE"
+            },
+            {
+              "inputProfile": [
+                {
+                  "records": 56,
+                  "batches": 9,
+                  "schemas": 1
+                }
+              ],
+              "operatorId": 0,
+              "operatorType": 6,
+              "setupNanos": 694455,
+              "processNanos": 1094048,
+              "peakLocalMemoryAllocated": 118784,
+              "metric": [
+                {
+                  "metricId": 0,
+                  "longValue": 2
+                },
+                {
+                  "metricId": 4,
+                  "longValue": 1
+                },
+                {
+                  "metricId": 3,
+                  "longValue": 56
+                },
+                {
+                  "metricId": 6,
+                  "longValue": 1
+                },
+                {
+                  "metricId": 5,
+                  "longValue": 4731
+                },
+                {
+                  "metricId": 1,
+                  "longValue": 56
+                },
+                {
+                  "metricId": 2,
+                  "longValue": 56
+                },
+                {
+                  "metricId": 7,
+                  "doubleValue": 968750000.0
+                }
+              ],
+              "waitNanos": 748623,
+              "operatorTypeName": "HASH_PARTITION_SENDER"
+            }
+          ],
+          "startTime": 1793290200025,
+          "endTime": 1793290200121,
+          "memoryUsed": 0,
+          "maxMemoryUsed": 61612032,
+          "endpoint": {
+            "address": "0459438e1437",
+            "userPort": 31010,
+            "controlPort": 31011,
+            "dataPort": 31012,
+            "version": "1.21.2",
+            "state": 1,
+            "httpPort": 8047
+          },
+          "lastUpdate": 1793290200121,
+          "lastProgress": 1793290200121
+        }
+      ]
+    },
+    {
+      "majorFragmentId": 1,
+      "minorFragmentProfile": [
+        {
+          "state": 3,
+          "minorFragmentId": 0,
+          "operatorProfile": [
+            {
+              "inputProfile": [
+                {
+                  "records": 20,
+                  "batches": 3,
+                  "schemas": 0
+                }
+              ],
+              "operatorId": 1,
+              "operatorType": 8,
+              "setupNanos": 778429,
+              "processNanos": 453903,
+              "peakLocalMemoryAllocated": 1232896,
+              "metric": [
+                {
+                  "metricId": 0,
+                  "longValue": 0
+                },
+                {
+                  "metricId": 1,
+                  "longValue": 1
+                }
+              ],
+              "waitNanos": 8140626,
+              "operatorTypeName": "MERGING_RECEIVER"
+            },
+            {
+              "inputProfile": [
+                {
+                  "records": 20,
+                  "batches": 2,
+                  "schemas": 2
+                }
+              ],
+              "operatorId": 0,
+              "operatorType": 0,
+              "setupNanos": 0,
+              "processNanos": 171122,
+              "peakLocalMemoryAllocated": 1228800,
+              "metric": [
+                {
+                  "metricId": 0,
+                  "longValue": 1862
+                }
+              ],
+              "waitNanos": 657472,
+              "operatorTypeName": "SINGLE_SENDER"
+            }
+          ],
+          "startTime": 1793290200024,
+          "endTime": 1793290200165,
+          "memoryUsed": 0,
+          "maxMemoryUsed": 2232896,
+          "endpoint": {
+            "address": "0459438e1437",
+            "userPort": 31010,
+            "controlPort": 31011,
+            "dataPort": 31012,
+            "version": "1.21.2",
+            "state": 1,
+            "httpPort": 8047
+          },
+          "lastUpdate": 1793290200165,
+          "lastProgress": 1793290200165
+        }
+      ]
+    },
+    {
+      "majorFragmentId": 8,
+      "minorFragmentProfile": [
+        {
+          "state": 3,
+          "minorFragmentId": 0,
+          "operatorProfile": [
+            {
+              "inputProfile": [
+                {
+                  "records": 0,
+                  "batches": 0,
+                  "schemas": 0
+                }
+              ],
+              "operatorId": 5,
+              "operatorType": 44,
+              "setupNanos": 0,
+              "processNanos": 36219080,
+              "peakLocalMemoryAllocated": 1138688,
+              "waitNanos": 0,
+              "operatorTypeName": "JDBC_SCAN"
+            },
+            {
+              "inputProfile": [
+                {
+                  "records": 56,
+                  "batches": 1,
+                  "schemas": 1
+                }
+              ],
+              "operatorId": 6,
+              "operatorType": 11,
+              "setupNanos": 0,
+              "processNanos": 43908,
+              "peakLocalMemoryAllocated": 0,
+              "metric": [
+                {
+                  "metricId": 0,
+                  "longValue": 0
+                },
+                {
+                  "metricId": 1,
+                  "longValue": 1
+                }
+              ],
+              "waitNanos": 9662,
+              "operatorTypeName": "UNORDERED_RECEIVER"
+            },
+            {
+              "inputProfile": [
+                {
+                  "records": 56,
+                  "batches": 1,
+                  "schemas": 1
+                }
+              ],
+              "operatorId": 4,
+              "operatorType": 10,
+              "setupNanos": 323372,
+              "processNanos": 29944,
+              "peakLocalMemoryAllocated": 4096,
+              "waitNanos": 0,
+              "operatorTypeName": "PROJECT"
+            },
+            {
+              "inputProfile": [
+                {
+                  "records": 7496,
+                  "batches": 2,
+                  "schemas": 1
+                },
+                {
+                  "records": 56,
+                  "batches": 1,
+                  "schemas": 1
+                }
+              ],
+              "operatorId": 3,
+              "operatorType": 4,
+              "setupNanos": 0,
+              "processNanos": 7989591,
+              "peakLocalMemoryAllocated": 12043968,
+              "metric": [
+                {
+                  "metricId": 0,
+                  "longValue": 262144
+                },
+                {
+                  "metricId": 16,
+                  "longValue": 2
+                },
+                {
+                  "metricId": 18,
+                  "longValue": 130
+                },
+                {
+                  "metricId": 13,
+                  "longValue": 3256
+                },
+                {
+                  "metricId": 2,
+                  "longValue": 0
+                },
+                {
+                  "metricId": 1,
+                  "longValue": 56
+                },
+                {
+                  "metricId": 10,
+                  "longValue": 68
+                },
+                {
+                  "metricId": 5,
+                  "longValue": 0
+                },
+                {
+                  "metricId": 9,
+                  "longValue": 253341
+                },
+                {
+                  "metricId": 7,
+                  "longValue": 0
+                },
+                {
+                  "metricId": 4,
+                  "longValue": 4
+                },
+                {
+                  "metricId": 12,
+                  "longValue": 2
+                },
+                {
+                  "metricId": 14,
+                  "longValue": 59
+                },
+                {
+                  "metricId": 3,
+                  "longValue": 0
+                },
+                {
+                  "metricId": 15,
+                  "longValue": 112
+                },
+                {
+                  "metricId": 11,
+                  "longValue": 7496
+                },
+                {
+                  "metricId": 17,
+                  "longValue": 487240
+                },
+                {
+                  "metricId": 19,
+                  "longValue": 7496
+                },
+                {
+                  "metricId": 8,
+                  "longValue": 2
+                }
+              ],
+              "waitNanos": 0,
+              "operatorTypeName": "HASH_JOIN"
+            },
+            {
+              "inputProfile": [
+                {
+                  "records": 7496,
+                  "batches": 2,
+                  "schemas": 1
+                }
+              ],
+              "operatorId": 2,
+              "operatorType": 10,
+              "setupNanos": 1031494,
+              "processNanos": 1242634,
+              "peakLocalMemoryAllocated": 2514944,
+              "waitNanos": 0,
+              "operatorTypeName": "PROJECT"
+            },
+            {
+              "inputProfile": [
+                {
+                  "records": 7496,
+                  "batches": 2,
+                  "schemas": 1
+                }
+              ],
+              "operatorId": 1,
+              "operatorType": 3,
+              "setupNanos": 614413,
+              "processNanos": 38684199,
+              "peakLocalMemoryAllocated": 44565200,
+              "metric": [
+                {
+                  "metricId": 0,
+                  "longValue": 524288
+                },
+                {
+                  "metricId": 9,
+                  "longValue": 624191
+                },
+                {
+                  "metricId": 3,
+                  "longValue": 0
+                },
+                {
+                  "metricId": 12,
+                  "longValue": 8
+                },
+                {
+                  "metricId": 2,
+                  "longValue": 0
+                },
+                {
+                  "metricId": 4,
+                  "longValue": 8
+                },
+                {
+                  "metricId": 8,
+                  "longValue": 2
+                },
+                {
+                  "metricId": 15,
+                  "longValue": 56
+                },
+                {
+                  "metricId": 7,
+                  "longValue": 0
+                },
+                {
+                  "metricId": 14,
+                  "longValue": 84
+                },
+                {
+                  "metricId": 10,
+                  "longValue": 84
+                },
+                {
+                  "metricId": 1,
+                  "longValue": 56
+                },
+                {
+                  "metricId": 13,
+                  "longValue": 588
+                },
+                {
+                  "metricId": 11,
+                  "longValue": 14992
+                }
+              ],
+              "waitNanos": 0,
+              "operatorTypeName": "HASH_AGGREGATE"
+            },
+            {
+              "inputProfile": [
+                {
+                  "records": 56,
+                  "batches": 9,
+                  "schemas": 1
+                }
+              ],
+              "operatorId": 0,
+              "operatorType": 6,
+              "setupNanos": 732464,
+              "processNanos": 965783,
+              "peakLocalMemoryAllocated": 118784,
+              "metric": [
+                {
+                  "metricId": 0,
+                  "longValue": 2
+                },
+                {
+                  "metricId": 4,
+                  "longValue": 1
+                },
+                {
+                  "metricId": 6,
+                  "longValue": 1
+                },
+                {
+                  "metricId": 5,
+                  "longValue": 4731
+                },
+                {
+                  "metricId": 2,
+                  "longValue": 56
+                },
+                {
+                  "metricId": 1,
+                  "longValue": 56
+                },
+                {
+                  "metricId": 3,
+                  "longValue": 56
+                },
+                {
+                  "metricId": 7,
+                  "doubleValue": 968750000.0
+                }
+              ],
+              "waitNanos": 851723,
+              "operatorTypeName": "HASH_PARTITION_SENDER"
+            }
+          ],
+          "startTime": 1793290200025,
+          "endTime": 1793290200121,
+          "memoryUsed": 0,
+          "maxMemoryUsed": 61612032,
+          "endpoint": {
+            "address": "0459438e1437",
+            "userPort": 31010,
+            "controlPort": 31011,
+            "dataPort": 31012,
+            "version": "1.21.2",
+            "state": 1,
+            "httpPort": 8047
+          },
+          "lastUpdate": 1793290200121,
+          "lastProgress": 1793290200121
+        }
+      ]
+    },
+    {
+      "majorFragmentId": 5,
+      "minorFragmentProfile": [
+        {
+          "state": 3,
+          "minorFragmentId": 0,
+          "operatorProfile": [
+            {
+              "inputProfile": [
+                {
+                  "records": 1,
+                  "batches": 2,
+                  "schemas": 1
+                }
+              ],
+              "operatorId": 2,
+              "operatorType": 11,
+              "setupNanos": 0,
+              "processNanos": 30979,
+              "peakLocalMemoryAllocated": 256,
+              "metric": [
+                {
+                  "metricId": 0,
+                  "longValue": 0
+                },
+                {
+                  "metricId": 1,
+                  "longValue": 1
+                }
+              ],
+              "waitNanos": 85705333,
+              "operatorTypeName": "UNORDERED_RECEIVER"
+            },
+            {
+              "inputProfile": [
+                {
+                  "records": 1,
+                  "batches": 2,
+                  "schemas": 1
+                }
+              ],
+              "operatorId": 1,
+              "operatorType": 15,
+              "setupNanos": 589541,
+              "processNanos": 68157,
+              "peakLocalMemoryAllocated": 37120,
+              "waitNanos": 0,
+              "operatorTypeName": "STREAMING_AGGREGATE"
+            },
+            {
+              "inputProfile": [
+                {
+                  "records": 1,
+                  "batches": 2,
+                  "schemas": 2
+                }
+              ],
+              "operatorId": 0,
+              "operatorType": 1,
+              "setupNanos": 0,
+              "processNanos": 68867,
+              "peakLocalMemoryAllocated": 36864,
+              "metric": [
+                {
+                  "metricId": 0,
+                  "longValue": 1
+                },
+                {
+                  "metricId": 1,
+                  "longValue": 9
+                }
+              ],
+              "waitNanos": 415464,
+              "operatorTypeName": "BROADCAST_SENDER"
+            }
+          ],
+          "startTime": 1793290200025,
+          "endTime": 1793290200160,
+          "memoryUsed": 0,
+          "maxMemoryUsed": 3000000,
+          "endpoint": {
+            "address": "0459438e1437",
+            "userPort": 31010,
+            "controlPort": 31011,
+            "dataPort": 31012,
+            "version": "1.21.2",
+            "state": 1,
+            "httpPort": 8047
+          },
+          "lastUpdate": 1793290200160,
+          "lastProgress": 1793290200160
+        }
+      ]
+    },
+    {
+      "majorFragmentId": 3,
+      "minorFragmentProfile": [
+        {
+          "state": 3,
+          "minorFragmentId": 0,
+          "operatorProfile": [
+            {
+              "inputProfile": [
+                {
+                  "records": 56,
+                  "batches": 2,
+                  "schemas": 1
+                }
+              ],
+              "operatorId": 8,
+              "operatorType": 11,
+              "setupNanos": 0,
+              "processNanos": 78569,
+              "peakLocalMemoryAllocated": 8192,
+              "metric": [
+                {
+                  "metricId": 0,
+                  "longValue": 0
+                },
+                {
+                  "metricId": 1,
+                  "longValue": 1
+                }
+              ],
+              "waitNanos": 41388439,
+              "operatorTypeName": "UNORDERED_RECEIVER"
+            },
+            {
+              "inputProfile": [
+                {
+                  "records": 56,
+                  "batches": 2,
+                  "schemas": 1
+                }
+              ],
+              "operatorId": 7,
+              "operatorType": 3,
+              "setupNanos": 869920,
+              "processNanos": 29685718,
+              "peakLocalMemoryAllocated": 44565244,
+              "metric": [
+                {
+                  "metricId": 0,
+                  "longValue": 524288
+                },
+                {
+                  "metricId": 14,
+                  "longValue": 86
+                },
+                {
+                  "metricId": 2,
+                  "longValue": 0
+                },
+                {
+                  "metricId": 11,
+                  "longValue": 112
+                },
+                {
+                  "metricId": 10,
+                  "longValue": 85
+                },
+                {
+                  "metricId": 1,
+                  "longValue": 56
+                },
+                {
+                  "metricId": 5,
+                  "longValue": 0
+                },
+                {
+                  "metricId": 7,
+                  "longValue": 0
+                },
+                {
+                  "metricId": 12,
+                  "longValue": 8
+                },
+                {
+                  "metricId": 8,
+                  "longValue": 2
+                },
+                {
+                  "metricId": 13,
+                  "longValue": 602
+                },
+                {
+                  "metricId": 3,
+                  "longValue": 0
+                },
+                {
+                  "metricId": 4,
+                  "longValue": 8
+                },
+                {
+                  "metricId": 9,
+                  "longValue": 4715
+                },
+                {
+                  "metricId": 15,
+                  "longValue": 56
+                }
+              ],
+              "waitNanos": 0,
+              "operatorTypeName": "HASH_AGGREGATE"
+            },
+            {
+              "inputProfile": [
+                {
+                  "records": 56,
+                  "batches": 9,
+                  "schemas": 1
+                }
+              ],
+              "operatorId": 6,
+              "operatorType": 2,
+              "setupNanos": 419943,
+              "processNanos": 137033,
+              "peakLocalMemoryAllocated": 3474160,
+              "waitNanos": 0,
+              "operatorTypeName": "FILTER"
+            },
+            {
+              "inputProfile": [
+                {
+                  "records": 56,
+                  "batches": 9,
+                  "schemas": 1
+                }
+              ],
+              "operatorId": 5,
+              "operatorType": 14,
+              "setupNanos": 10832,
+              "processNanos": 129991,
+              "peakLocalMemoryAllocated": 3474128,
+              "waitNanos": 0,
+              "operatorTypeName": "SELECTION_VECTOR_REMOVER"
+            },
+            {
+              "inputProfile": [
+                {
+                  "records": 56,
+                  "batches": 9,
+                  "schemas": 1
+                }
+              ],
+              "operatorId": 4,
+              "operatorType": 10,
+              "setupNanos": 548827,
+              "processNanos": 243963,
+              "peakLocalMemoryAllocated": 3146528,
+              "waitNanos": 0,
+              "operatorTypeName": "PROJECT"
+            },
+            {
+              "inputProfile": [
+                {
+                  "records": 1,
+                  "batches": 2,
+                  "schemas": 1
+                }
+              ],
+              "operatorId": 3,
+              "operatorType": 11,
+              "setupNanos": 0,
+              "processNanos": 26726,
+              "peakLocalMemoryAllocated": 256,
+              "metric": [
+                {
+                  "metricId": 0,
+                  "longValue": 0
+                },
+                {
+                  "metricId": 1,
+                  "longValue": 1
+                }
+              ],
+              "waitNanos": 7629571,
+              "operatorTypeName": "UNORDERED_RECEIVER"
+            },
+            {
+              "inputProfile": [
+                {
+                  "records": 56,
+                  "batches": 9,
+                  "schemas": 1
+                },
+                {
+                  "records": 1,
+                  "batches": 2,
+                  "schemas": 1
+                }
+              ],
+              "operatorId": 2,
+              "operatorType": 35,
+              "setupNanos": 0,
+              "processNanos": 1071065,
+              "peakLocalMemoryAllocated": 7143680,
+              "metric": [
+                {
+                  "metricId": 0,
+                  "longValue": 8
+                },
+                {
+                  "metricId": 3,
+                  "longValue": 56
+                },
+                {
+                  "metricId": 5,
+                  "longValue": 5
+                },
+                {
+                  "metricId": 9,
+                  "longValue": 0
+                },
+                {
+                  "metricId": 4,
+                  "longValue": 2
+                },
+                {
+                  "metricId": 11,
+                  "longValue": 0
+                },
+                {
+                  "metricId": 10,
+                  "longValue": 0
+                },
+                {
+                  "metricId": 8,
+                  "longValue": 0
+                },
+                {
+                  "metricId": 2,
+                  "longValue": 85
+                },
+                {
+                  "metricId": 7,
+                  "longValue": 1
+                },
+                {
+                  "metricId": 1,
+                  "longValue": 590
+                },
+                {
+                  "metricId": 6,
+                  "longValue": 9
+                }
+              ],
+              "waitNanos": 0,
+              "operatorTypeName": "NESTED_LOOP_JOIN"
+            },
+            {
+              "inputProfile": [
+                {
+                  "records": 56,
+                  "batches": 2,
+                  "schemas": 1
+                }
+              ],
+              "operatorId": 1,
+              "operatorType": 10,
+              "setupNanos": 1663783,
+              "processNanos": 151126,
+              "peakLocalMemoryAllocated": 6554176,
+              "waitNanos": 0,
+              "operatorTypeName": "PROJECT"
+            },
+            {
+              "inputProfile": [
+                {
+                  "records": 56,
+                  "batches": 2,
+                  "schemas": 1
+                }
+              ],
+              "operatorId": 0,
+              "operatorType": 6,
+              "setupNanos": 699118,
+              "processNanos": 431747,
+              "peakLocalMemoryAllocated": 137216,
+              "metric": [
+                {
+                  "metricId": 0,
+                  "longValue": 2
+                },
+                {
+                  "metricId": 4,
+                  "longValue": 1
+                },
+                {
+                  "metricId": 2,
+                  "longValue": 56
+                },
+                {
+                  "metricId": 1,
+                  "longValue": 56
+                },
+                {
+                  "metricId": 6,
+                  "longValue": 1
+                },
+                {
+                  "metricId": 3,
+                  "longValue": 56
+                },
+                {
+                  "metricId": 5,
+                  "longValue": 5235
+                },
+                {
+                  "metricId": 7,
+                  "doubleValue": 5000000.0
+                }
+              ],
+              "waitNanos": 468879,
+              "operatorTypeName": "HASH_PARTITION_SENDER"
+            }
+          ],
+          "startTime": 1793290200025,
+          "endTime": 1793290200162,
+          "memoryUsed": 0,
+          "maxMemoryUsed": 55549856,
+          "endpoint": {
+            "address": "0459438e1437",
+            "userPort": 31010,
+            "controlPort": 31011,
+            "dataPort": 31012,
+            "version": "1.21.2",
+            "state": 1,
+            "httpPort": 8047
+          },
+          "lastUpdate": 1793290200162,
+          "lastProgress": 1793290200162
+        }
+      ]
+    }
+  ],
+  "user": "anonymous",
+  "optionsJson": "[ {\n  \"kind\" : \"BOOLEAN\",\n  \"accessibleScopes\" : \"ALL\",\n  \"name\" : \"planner.enable_file_listing_limit0_optimization\",\n  \"bool_val\" : false,\n  \"scope\" : \"QUERY\"\n} ]",
+  "planEnd": 1793290200024,
+  "queueWaitEnd": 1793290200024,
+  "totalCost": 7386250500.0,
+  "queueName": "Unknown",
+  "queryId": "151c9027-e96b-05e6-f51c-98206eeb1d5f",
+  "scannedPlugins": [
+    "mongo_source",
+    "mysql_source"
+  ]
+}

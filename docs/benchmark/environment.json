@@ -1,0 +1,11 @@
+{
+  "cpu": "13th Gen Intel(R) Core(TM) i5-13420H",
+  "logicalProcessors": 12,
+  "hostRamGiB": 15.71,
+  "drillContainerMemoryBytes": 3221225472,
+  "drillMemorySettings": [
+    "DRILL_MAX_DIRECT_MEMORY=1024M",
+    "DRILL_HEAP=1024M"
+  ],
+  "note": "Local illustrative experiment; same SQL/date range, warm runs, no container restart between measured stages."
+}

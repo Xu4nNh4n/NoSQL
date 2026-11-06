@@ -3,15 +3,15 @@ import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
   Package,
-  Layers,
   Boxes,
   ShoppingCart,
   Receipt,
-  Truck,
-  Users,
   BarChart3,
   Store,
   UserCheck,
+  Truck,
+  Tags,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -33,16 +33,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onCloseMobile })
     {
       title: 'BÁN HÀNG & THU NGÂN',
       items: [
-        { to: '/pos', label: 'Thu ngân tại quầy (POS)', icon: ShoppingCart, roles: ['ADMIN', 'MANAGER', 'STAFF'] },
+        { to: '/pos', label: 'Thu ngân tại quầy (POS)', icon: ShoppingCart, roles: ['STAFF'] },
+        { to: '/promotions', label: 'Khuyến mãi', icon: Tags, roles: ['ADMIN', 'MANAGER'] },
         { to: '/orders', label: 'Quản lý đơn & Trả hàng', icon: Receipt, roles: ['ADMIN', 'MANAGER', 'STAFF'] },
-        { to: '/customers', label: 'Khách hàng & Thành viên', icon: Users, roles: ['ADMIN', 'MANAGER', 'STAFF'] },
       ],
     },
     {
       title: 'QUẢN LÝ HÀNG HÓA',
       items: [
         { to: '/products', label: 'Sản phẩm & Giá bán', icon: Package, roles: ['ADMIN', 'MANAGER', 'STAFF', 'WAREHOUSE'] },
-        { to: '/categories', label: 'Danh mục ngành hàng', icon: Layers, roles: ['ADMIN', 'MANAGER'] },
         { to: '/inventory', label: 'Kho & Lô hàng FEFO', icon: Boxes, roles: ['ADMIN', 'MANAGER', 'WAREHOUSE'] },
       ],
     },
@@ -50,6 +49,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onCloseMobile })
       title: 'ĐỐI TÁC & NHẬP HÀNG',
       items: [
         { to: '/suppliers', label: 'Nhà cung cấp', icon: Truck, roles: ['ADMIN', 'MANAGER', 'WAREHOUSE'] },
+        { to: '/purchase-costs', label: 'Giá nhập theo lô', icon: FileSpreadsheet, roles: ['ADMIN', 'MANAGER', 'WAREHOUSE'] },
       ],
     },
     {
@@ -64,19 +64,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onCloseMobile })
         { to: '/users', label: 'Quản lý nhân viên', icon: UserCheck, roles: ['ADMIN'] },
       ],
     },
-    {
-      title: 'KÊNH TRỰC TUYẾN',
-      items: [
-        { to: '/', label: 'Cửa hàng Online (Khách xem)', icon: Store, roles: ['ADMIN', 'MANAGER', 'STAFF', 'CUSTOMER'] },
-      ],
-    },
   ];
 
   return (
     <>
       {/* Mobile backdrop */}
       {isMobileOpen && (
-        <div
+        <button
+          type="button"
+          aria-label="Đóng điều hướng"
           className="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-2xs lg:hidden"
           onClick={onCloseMobile}
         />
@@ -84,18 +80,20 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onCloseMobile })
 
       {/* Sidebar container */}
       <aside
+        id="main-navigation"
+        aria-label="Điều hướng chính"
         className={`fixed top-0 bottom-0 left-0 z-40 w-64 bg-white border-r border-gray-200/80 flex flex-col transition-transform duration-200 ease-in-out lg:translate-x-0 ${
           isMobileOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         {/* Brand header */}
         <div className="h-16 flex items-center gap-3 px-5 border-b border-gray-100 bg-white">
-          <div className="w-9 h-9 rounded-lg bg-emerald-600 flex items-center justify-center text-white shadow-xs">
+          <div className="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-xs">
             <Store className="w-5 h-5" />
           </div>
           <div>
             <h1 className="text-sm font-bold text-gray-900 tracking-tight leading-none">SUPERMARKET</h1>
-            <p className="text-[11px] text-emerald-700 font-medium tracking-wide mt-0.5">Inventory & POS System</p>
+            <p className="text-xs text-gray-500 mt-1">Bán hàng · Kho · Phân tích</p>
           </div>
         </div>
 
@@ -121,12 +119,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onCloseMobile })
                         to={item.to}
                         onClick={onCloseMobile}
                         className={({ isActive }) =>
-                          `flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                          `flex min-h-10 items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 ${
                             isActive
-                              ? 'bg-emerald-50 text-emerald-700 font-semibold'
+                              ? 'bg-slate-100 text-slate-950 font-semibold'
                               : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                           }`
                         }
+                        aria-label={item.label}
                       >
                         <Icon className="w-4 h-4 shrink-0" />
                         <span>{item.label}</span>
@@ -141,7 +140,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onCloseMobile })
 
         {/* Footer info */}
         <div className="p-3 border-t border-gray-100 text-center bg-gray-50/50">
-          <p className="text-[11px] text-gray-400">Phiên bản Retail v2.6 • Spring Boot 3</p>
+          <p className="text-xs text-gray-500">Quản lý siêu thị tại quầy</p>
         </div>
       </aside>
     </>

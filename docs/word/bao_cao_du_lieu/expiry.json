@@ -1,0 +1,111 @@
+{
+  "queryId": "151c99ed-15ea-167a-5a56-8a2b741cc170",
+  "columns": [
+    "sku",
+    "product_name",
+    "category_name",
+    "batch_code",
+    "expiry_date",
+    "remaining_quantity",
+    "available_quantity",
+    "unit_cost",
+    "value_at_risk"
+  ],
+  "metadata": [
+    "VARCHAR(38, 0)",
+    "VARCHAR",
+    "VARCHAR",
+    "VARCHAR(38, 0)",
+    "DATE(10, 0)",
+    "INT(10, 0)",
+    "INT(10, 0)",
+    "VARDECIMAL(18, 2)",
+    "VARDECIMAL(28, 2)"
+  ],
+  "attemptedAutoLimit": 500,
+  "rows": [
+    {
+      "sku": "52",
+      "product_name": "Cam vàng túi 1kg",
+      "category_name": "Trái cây đóng gói",
+      "batch_code": "POS1000-01-46-1",
+      "expiry_date": 1793750400000,
+      "remaining_quantity": 35,
+      "available_quantity": 35,
+      "unit_cost": 31500.0,
+      "value_at_risk": 1102500.0
+    },
+    {
+      "sku": "53",
+      "product_name": "Chuối túi 1kg",
+      "category_name": "Trái cây đóng gói",
+      "batch_code": "POS1000-01-47-1",
+      "expiry_date": 1793750400000,
+      "remaining_quantity": 34,
+      "available_quantity": 34,
+      "unit_cost": 19600.0,
+      "value_at_risk": 666400.0
+    },
+    {
+      "sku": "54",
+      "product_name": "Lê xanh túi 1kg",
+      "category_name": "Trái cây đóng gói",
+      "batch_code": "POS1000-01-48-1",
+      "expiry_date": 1793750400000,
+      "remaining_quantity": 37,
+      "available_quantity": 37,
+      "unit_cost": 34300.0,
+      "value_at_risk": 1269100.0
+    },
+    {
+      "sku": "55",
+      "product_name": "Nho xanh hộp 500g",
+      "category_name": "Trái cây đóng gói",
+      "batch_code": "POS1000-01-49-1",
+      "expiry_date": 1793750400000,
+      "remaining_quantity": 31,
+      "available_quantity": 31,
+      "unit_cost": 48300.0,
+      "value_at_risk": 1497300.0
+    },
+    {
+      "sku": "5",
+      "product_name": "Táo đỏ",
+      "category_name": "Trái cây",
+      "batch_code": "7",
+      "expiry_date": 1793836800000,
+      "remaining_quantity": 13,
+      "available_quantity": 13,
+      "unit_cost": 28000.0,
+      "value_at_risk": 364000.0
+    }
+  ],
+  "queryState": "COMPLETED",
+  "sql": "WITH catalog AS (SELECT sku, MAX(name) AS name, MAX(categoryName) AS category_name, COUNT(*) AS catalog_count FROM mongo_source.supermarket_catalog.products_catalog GROUP BY sku) SELECT p.sku_code AS sku, COALESCE(m.name, p.name) AS product_name, COALESCE(m.category_name, 'Chưa có catalog MongoDB') AS category_name, b.batch_code, b.expiry_date, b.remaining_quantity, b.remaining_quantity AS available_quantity, b.unit_cost, b.remaining_quantity * b.unit_cost AS value_at_risk FROM mysql_source.supermarket_api.inventory_batches b JOIN mysql_source.supermarket_api.products p ON p.product_id = b.product_id LEFT JOIN catalog m ON CAST(p.sku_code AS VARCHAR) = m.sku WHERE b.status = 'ACTIVE' AND b.remaining_quantity > 0 AND b.expiry_date >= DATE '2026-10-29' AND b.expiry_date <= DATE '2026-11-05' ORDER BY b.expiry_date, p.sku_code, b.batch_code LIMIT 500",
+  "timeZone": "Asia/Ho_Chi_Minh",
+  "generatedAt": "2026-10-29T15:28:18.694019200Z",
+  "profilesUrl": "http://localhost:8048/profiles",
+  "requestElapsedMs": 231,
+  "reportKind": "EXPIRY",
+  "dataset": "OPERATIONS",
+  "parameters": {
+    "coverageDays": 14,
+    "top": 20,
+    "leadDays": 7,
+    "horizon": 7
+  },
+  "sourceNames": [
+    "MySQL: supermarket_api",
+    "MongoDB: supermarket_catalog"
+  ],
+  "from": "2026-09-30",
+  "to": "2026-10-29",
+  "stockAsOf": "2026-10-29",
+  "definition": "Giá trị có nguy cơ = lượng còn trong lô × giá vốn lô, gồm cả phần đã giữ; chỉ lô ACTIVE sắp hết hạn, chưa tính hàng đã hết hạn.",
+  "managementAction": "Ưu tiên xử lý các lô gần hạn và có giá trị rủi ro lớn; bảo đảm nhặt hàng đúng FEFO.",
+  "assumptions": [
+    "Thông tin nhóm hàng theo catalog hiện tại; lượng trả là tổng đã ghi nhận đến thời điểm truy vấn.",
+    "Mốc ngày/giờ bán hàng là thời điểm tạo đơn theo giờ Việt Nam; tồn kho là ảnh chụp hiện tại, không phải tồn lịch sử."
+  ],
+  "rowLimit": 500
+}

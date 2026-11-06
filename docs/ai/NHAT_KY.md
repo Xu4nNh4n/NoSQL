@@ -20,4 +20,3 @@
 3. Thêm các script/SQL Parquet ngày và phân vùng tháng; chỉ đo benchmark sau khi người dùng/QA cho chạy.
 4. Bổ sung kết quả thật, ảnh Profile, báo cáo và demo; không bịa số liệu.
 
-\n

@@ -7,6 +7,12 @@ services:
       dockerfile: Dockerfile
     container_name: supermarket-bigdata-drill
     restart: unless-stopped
+    mem_limit: "${DRILL_MEMORY_LIMIT:-3g}"
+    memswap_limit: "${DRILL_MEMORY_LIMIT:-3g}"
+    environment:
+      DRILL_HEAP: "${DRILL_HEAP:-1024M}"
+      DRILL_MAX_DIRECT_MEMORY: "${DRILL_MAX_DIRECT_MEMORY:-1024M}"
+      DRILLBIT_CODE_CACHE_SIZE: "${DRILL_CODE_CACHE:-128M}"
     command: ["/opt/drill/bin/drill-embedded"]
     stdin_open: true
     tty: true
@@ -14,8 +20,30 @@ services:
       - "${DRILL_HTTP_PORT:-8047}:8047"
       - "${DRILL_JDBC_PORT:-31010}:31010"
     volumes:
-      - drill-data:/data
+      - drill-data:/tmp/drill
       - ./analytics:/analytics:rw
+    networks:
+      - supermarket-bigdata-network
+
+  # Chỉ chạy khi gọi đích danh cassandra hoặc bật profile local-cassandra.
+  cassandra:
+    image: cassandra:4.1
+    container_name: supermarket-cassandra
+    profiles: ["local-cassandra"]
+    restart: "no"
+    mem_limit: "${CASSANDRA_MEMORY_LIMIT:-2g}"
+    memswap_limit: "${CASSANDRA_MEMORY_LIMIT:-2g}"
+    environment:
+      CASSANDRA_CLUSTER_NAME: supermarket-local
+      CASSANDRA_DC: datacenter1
+      CASSANDRA_RACK: rack1
+      CASSANDRA_ENDPOINT_SNITCH: GossipingPropertyFileSnitch
+      MAX_HEAP_SIZE: "${CASSANDRA_HEAP:-768M}"
+      HEAP_NEWSIZE: "${CASSANDRA_NEW_HEAP:-128M}"
+    ports:
+      - "127.0.0.1:${CASSANDRA_PORT:-9042}:9042"
+    volumes:
+      - cassandra-data:/var/lib/cassandra
     networks:
       - supermarket-bigdata-network
 
@@ -25,3 +53,4 @@ networks:
 
 volumes:
   drill-data:
+  cassandra-data:
