@@ -21,28 +21,8 @@ import jakarta.servlet.http.HttpServletRequest;
 public class GlobalExceptionHandler {
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
-    @ExceptionHandler(PriceChangedException.class)
-    public ResponseEntity<?> handlePriceChanged(PriceChangedException ex) {
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(java.util.Map.of(
-                "code", "PRICE_CHANGED", "message", ex.getMessage(), "quote", ex.getQuote()));
-    }
 
-    @ExceptionHandler(AnalyticsUnavailableException.class)
-    public ResponseEntity<ApiErrorResponse> handleAnalyticsUnavailable(
-            AnalyticsUnavailableException ex, HttpServletRequest request) {
-        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(new ApiErrorResponse(
-                Instant.now().toString(), 503, "Service Unavailable", ex.getMessage(), request.getRequestURI()));
-    }
 
-    @ExceptionHandler({org.springframework.dao.OptimisticLockingFailureException.class,
-            org.springframework.dao.PessimisticLockingFailureException.class,
-            org.springframework.dao.DataIntegrityViolationException.class})
-    public ResponseEntity<ApiErrorResponse> handleDataConflict(RuntimeException ex, HttpServletRequest request) {
-        log.warn("Data conflict on path={}", request.getRequestURI(), ex);
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(new ApiErrorResponse(
-                Instant.now().toString(), HttpStatus.CONFLICT.value(), HttpStatus.CONFLICT.getReasonPhrase(),
-                "Dữ liệu đã thay đổi hoặc vi phạm ràng buộc. Vui lòng tải lại trước khi thao tác", request.getRequestURI()));
-    }
 
     // note: Hàm này bắt lỗi "không tìm thấy dữ liệu".
     // Ví dụ: tìm category/product/user theo id nhưng database không có bản ghi
@@ -152,18 +132,6 @@ public class GlobalExceptionHandler {
         ));
     }
 
-    @ExceptionHandler(InsufficientStockException.class)
-    public ResponseEntity<ApiErrorResponse> handleInsufficientStock(
-            InsufficientStockException ex,
-            HttpServletRequest request) {
-        log.warn("Lỗi tồn kho: {}, path={}", ex.getMessage(), request.getRequestURI());
-        return ResponseEntity.badRequest().body(new ApiErrorResponse(
-                Instant.now().toString(),
-                HttpStatus.BAD_REQUEST.value(),
-                HttpStatus.BAD_REQUEST.getReasonPhrase(),
-                ex.getMessage(),
-                request.getRequestURI()));
-    }
 
     // note: Hàm này là fallback cuối cùng cho các lỗi chưa được xử lý riêng.
     // Ví dụ: lỗi code, lỗi null bất ngờ, lỗi database không dự đoán trước...

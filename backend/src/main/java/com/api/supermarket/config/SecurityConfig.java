@@ -12,6 +12,7 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import com.api.supermarket.security.JwtAuthenticationFilter;
 import com.api.supermarket.security.JwtAuthenticationEntryPoint;
 import com.api.supermarket.security.JwtAccessDeniedHandler;
+import com.api.supermarket.security.SecurityRoles;
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
@@ -50,10 +51,12 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/v3/api-docs/**",
-                                "/api/auth/login"
+                                "/actuator/health",
+                                "/api/auth/login",
+                                "/api/auth/refresh",
+                                "/api/auth/logout"
                             ).permitAll()
-                        // Shop is retired; operational APIs require an internal employee role.
-                        .anyRequest().hasAnyRole("ADMIN", "MANAGER", "STAFF", "WAREHOUSE"))
+                        .anyRequest().hasAnyRole(SecurityRoles.ADMIN, SecurityRoles.WAREHOUSE, SecurityRoles.STAFF))
                 // note: Chay JwtAuthenticationFilter truoc filter login mac dinh cua Spring Security.
                 // Neu token hop le, filter se set Authentication vao SecurityContext.
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)

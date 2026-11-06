@@ -2,76 +2,62 @@ package com.api.supermarket.security;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.Optional;
 
 import javax.crypto.SecretKey;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import com.api.supermarket.entity.User;
-
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 
+/** Tạo và đọc access token. Token tự mang userId, username và role nên không cần đọc CSDL mỗi request. */
 @Service
 public class JwtService {
-    @Value("${jwt.secret}")
-    private String secret;
+    private static final int MIN_SECRET_BYTES = 32;
 
-    @Value("${jwt.expiration}")
-    private long expiration;
+    private final SecretKey signingKey;
+    private final long expirationMs;
 
-    // note: Ham nay duoc goi sau khi login thanh cong.
-    // No tao JWT gom username, userId, role, thoi diem tao va thoi diem het han.
-    public String generateToken(User user){
+    public JwtService(@Value("${jwt.secret}") String secret, @Value("${jwt.expiration}") long expirationMs) {
+        byte[] bytes = secret == null ? new byte[0] : secret.getBytes(StandardCharsets.UTF_8);
+        if (bytes.length < MIN_SECRET_BYTES) {
+            throw new IllegalStateException("jwt.secret phải dài ít nhất " + MIN_SECRET_BYTES + " byte cho HS256");
+        }
+        this.signingKey = Keys.hmacShaKeyFor(bytes);
+        this.expirationMs = expirationMs;
+    }
+
+    public String generateToken(JwtPrincipal principal) {
         Date now = new Date();
-
-        Date expiryDate = new Date(now.getTime() + expiration);
-
         return Jwts.builder()
-        // note: subject la danh tinh chinh cua token; o day minh dung username.
-        .subject(user.getUserName())
-        // note: claim la thong tin phu minh muon gui kem trong token.
-        .claim("userId", user.getUserId())
-        .claim("role", user.getRole().getRoleName())
-        .issuedAt(now)
-        .expiration(expiryDate)
-        // note: Ky token bang secret key. Neu token bi sua, chu ky se khong hop le.
-        .signWith(getSigningKey())
-        .compact();
+                .subject(principal.username())
+                .claim("userId", principal.userId())
+                .claim("role", principal.role())
+                .issuedAt(now)
+                .expiration(new Date(now.getTime() + expirationMs))
+                .signWith(signingKey)
+                .compact();
     }
 
-    // note: Tao khoa ky tu jwt.secret trong application.properties.
-    // Secret phai du dai cho HS256; project that nen dua secret vao bien moi truong.
-    private SecretKey getSigningKey(){
-        return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
-    }
-
-    // note: Lay username tu subject cua token de filter tim user trong database.
-    public String extractUsername(String token){
-        return extractAllClaims(token).getSubject();
-    }
-
-    // note: Validate token bang cach parse va verify chu ky/han su dung.
-    // Neu token sai, het han, hoac format loi thi jjwt se throw exception.
-    public boolean isTokenValid(String token){
-        try{
-            extractAllClaims(token);
-            return true;
+    /**
+     * Đọc token đã ký.
+     *
+     * @return người dùng trong token, hoặc rỗng khi token sai chữ ký, hết hạn hoặc sai định dạng
+     */
+    public Optional<JwtPrincipal> parse(String token) {
+        if (token == null || token.isBlank()) {
+            return Optional.empty();
         }
-        catch (Exception e){
-            return false;
+        try {
+            Claims claims = Jwts.parser().verifyWith(signingKey).build().parseSignedClaims(token).getPayload();
+            return Optional.of(new JwtPrincipal(
+                    claims.get("userId", String.class), claims.getSubject(), claims.get("role", String.class)));
+        } catch (JwtException | IllegalArgumentException e) {
+            return Optional.empty();
         }
-    }
-
-    // note: Parse token de lay payload claims.
-    // verifyWith(getSigningKey()) dam bao token dung chu ky cua backend minh.
-    private Claims extractAllClaims(String token){
-        return Jwts.parser()
-                .verifyWith(getSigningKey())
-                .build()
-                .parseSignedClaims(token)
-                .getPayload();
     }
 }
