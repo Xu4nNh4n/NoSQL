@@ -26,7 +26,7 @@ Ngày: 2026-11-07 · Nhánh: `nosql-migration` · Mốc trước khi chuyển: c
 - Không bán quá tồn khi bán đồng thời; bấm lặp không tạo đơn hay hoàn tiền hai lần.
 - Không còn MySQL, JPA, Drill, Docker trong repo.
 
-**Ngoài phạm vi**: bán online, tích điểm, cổng thanh toán, báo cáo/dashboard phân tích, giới hạn số suất khuyến mãi, nhiều chi nhánh.
+**Ngoài phạm vi**: bán online, tích điểm, cổng thanh toán, dashboard phân tích kiểu BigData (Drill, Parquet), giới hạn số suất khuyến mãi, nhiều chi nhánh. Trang thống kê đơn giản bằng aggregation MongoDB vẫn nằm trong phạm vi (mục 19, FR-21), vì mẫu chấm điểm yêu cầu "chức năng hỗ trợ: thống kê, biểu đồ, xuất file".
 
 ## 2. Tác nhân
 
@@ -105,6 +105,10 @@ File `secure-connect-*.zip` chuyển vào thư mục `secrets/` (đã nằm tron
 | FR-18 | Truy vết và thu hồi lô | ADMIN | | | ● | |
 | FR-19 | Gợi ý mua kèm | STAFF (quầy), ADMIN (tạo KM) | | | ● | |
 | FR-20 | Top bán chạy hôm nay | ADMIN, STAFF | | | | ● |
+| FR-21 | Thống kê bán hàng, biểu đồ, xuất CSV | ADMIN | ● aggregation | | | |
+| FR-22 | Thông báo realtime (sắp hết hàng, thu hồi lô) | ADMIN, WAREHOUSE | | | | ● Pub/Sub |
+| FR-23 | Sao lưu dữ liệu từ giao diện | ADMIN | ● | ● | | |
+| FR-24 | Lịch sử đăng nhập 90 ngày | ADMIN, chính người dùng | | ● TTL | | |
 
 ## 5. MongoDB
 
@@ -419,3 +423,110 @@ Không có Docker nên không dùng Testcontainers.
 9. **Neo4j**: ghi graph, truy vết và thu hồi, gợi ý mua kèm, dựng lại.
 10. **Frontend** theo mục 14, chạy song song từ bước 4.
 11. **Dữ liệu mẫu, README, SRS v2.0, checklist demo**.
+
+## 19. Bổ sung theo mẫu chấm điểm của trường
+
+Nguồn: `REFS_NoSQL_SRS&SDS_Template.docx` và `BaoCaoMinhChung_DoAn_DuLieuNoSQL.docx`. Các mục dưới đây là bắt buộc hoặc được chấm điểm, nên được thêm vào thiết kế.
+
+### 19.1 Bảng mẫu truy cập dữ liệu (Access Patterns)
+
+| Mã | Mẫu truy cập | Loại | Tham số | Tần suất | Độ trễ mục tiêu | Nhất quán | CSDL / cấu trúc |
+|---|---|---|---|---|---|---|---|
+| AP-01 | Tìm tài khoản để đăng nhập | Đọc | username | Cao | < 50 ms | Strong | Mongo `users` unique `username` |
+| AP-02 | Lưu, kiểm tra, xoay vòng refresh token | Đọc/Ghi | tokenHash | Cao | < 10 ms | Strong (1 key) | Redis `auth:refresh:*` |
+| AP-03 | Danh sách sản phẩm đang bán ở quầy | Đọc | — | Rất cao | < 50 ms | Eventual (5 phút) | Redis `cache:products:active` → Mongo `products` |
+| AP-04 | Tìm sản phẩm theo tên hoặc SKU | Đọc | từ khóa | Rất cao | < 100 ms | Strong | Mongo text index, unique `sku` |
+| AP-05 | Lọc sản phẩm theo nhóm, giá, sắp xếp, phân trang | Đọc | categoryId, khoảng giá, trang | Cao | < 100 ms | Strong | Mongo `{categoryId:1, price:1}` |
+| AP-06 | Sản phẩm sắp hết hàng | Đọc | — | Trung bình | < 100 ms | Eventual (1 phút) | Redis cache → Mongo `$expr` |
+| AP-07 | Lô còn hạn của sản phẩm theo FEFO | Đọc | productId, hôm nay | Rất cao | < 20 ms | Strong | Mongo `batches {productId, expirySortKey, receivedAt, batchCode}` |
+| AP-08 | Lô hết hạn còn tồn | Đọc | hôm nay | Thấp | < 200 ms | Strong | Mongo `batches {expirySortKey, remainingQty}` |
+| AP-09 | Tạo đơn bán: trừ lô, tạo đơn, thanh toán | Ghi | giỏ hàng, requestKey | Cao | < 300 ms | Strong | Mongo transaction |
+| AP-10 | Chi tiết đơn theo mã | Đọc | orderCode | Cao | < 50 ms | Strong | Mongo unique `orderCode` |
+| AP-11 | Danh sách đơn theo thời gian, trạng thái | Đọc | khoảng ngày, status, trang | Trung bình | < 100 ms | Strong | Mongo `{status:1, orderedAt:-1}` |
+| AP-12 | Lập phiếu trả kèm hoàn tiền | Ghi | orderId, dòng trả | Trung bình | < 300 ms | Strong | Mongo transaction |
+| AP-13 | Thẻ kho của sản phẩm theo tháng | Đọc | productId, tháng | Trung bình | < 100 ms | Eventual | Cassandra `stock_movements_by_product` |
+| AP-14 | Lịch sử thanh toán của đơn | Đọc | orderId | Trung bình | < 50 ms | Eventual | Cassandra `payments_by_order` |
+| AP-15 | Tổng thu của thu ngân trong ngày (chốt ca) | Đọc | cashierId, ngày | Thấp | < 100 ms | Eventual, đồng bộ trước khi đọc | Cassandra `payments_by_cashier_day` |
+| AP-16 | Lịch sử đăng nhập 90 ngày | Đọc/Ghi | userId, tháng | Thấp | < 100 ms | Eventual | Cassandra `login_history_by_user` (TTL) |
+| AP-17 | Khuyến mãi đang hiệu lực | Đọc | thời điểm | Rất cao | < 20 ms | Eventual (5 phút) | Redis `cache:promotions:active` → Mongo `promotions` |
+| AP-18 | Lưu, liệt kê, mở đơn treo | Đọc/Ghi | cashierId, holdId | Cao | < 10 ms | Strong (1 key) | Redis + MULTI và Lua |
+| AP-19 | Top 10 bán chạy hôm nay | Đọc/Ghi | ngày | Cao | < 10 ms | Eventual | Redis sorted set `top:sales:*` |
+| AP-20 | Truy vết lô → đơn → khách | Đọc | batchCode | Thấp | < 200 ms | Eventual | Neo4j `TOOK_FROM`, `PLACED` |
+| AP-21 | Gợi ý mua kèm | Đọc | productId | Cao | < 200 ms | Eventual | Neo4j `CONTAINS` 2 bước |
+| AP-22 | Phiếu nhập theo trạng thái; nhận hàng | Đọc/Ghi | status, poId | Trung bình | < 300 ms | Strong | Mongo `purchase_orders` + transaction |
+| AP-23 | Thống kê doanh thu theo ngày, nhóm hàng | Đọc | khoảng ngày | Thấp | < 1 s | Strong | Mongo aggregation trên `orders {orderedAt}` |
+| AP-24 | Phát thông báo realtime | Ghi/Đọc | loại sự kiện | Thấp | < 1 s | Eventual | Redis Pub/Sub `notify:alerts` → WebSocket |
+| AP-25 | Sinh mã chứng từ | Ghi | loại, ngày | Cao | < 20 ms | Strong | Mongo `counters` `$inc` |
+
+### 19.2 Chức năng thêm
+
+- **FR-21 Thống kê**: trang ADMIN gồm doanh thu và số đơn theo ngày (7/30 ngày), doanh thu theo nhóm hàng, tổng tiền khuyến mãi đã giảm, top sản phẩm theo kỳ. Dùng aggregation `$match → $unwind items → $group → $sort`, kèm `$facet` để lấy nhiều số liệu trong một lần gọi. Có nút **Xuất CSV**.
+- **FR-22 Thông báo realtime**: khi bán làm tồn ≤ `reorderPoint`, hoặc khi ADMIN đánh dấu thu hồi một lô, backend `PUBLISH notify:alerts`. Một bộ lắng nghe Redis chuyển tin sang WebSocket STOMP `/topic/alerts`, frontend hiện thông báo cho ADMIN và WAREHOUSE. Dùng Pub/Sub để chạy được nhiều instance backend.
+- **FR-23 Sao lưu từ giao diện**: `GET /api/admin/backup/mongodb` trả file zip JSON (Extended JSON) cho từng collection; `GET /api/admin/backup/cassandra` trả zip CSV cho từng bảng. Khôi phục bằng script (`mongorestore`/`mongoimport`, `COPY FROM`) nằm trong `nosql-scripts/`.
+- **FR-24 Lịch sử đăng nhập**: mỗi lần đăng nhập ghi vào Cassandra, dữ liệu tự xóa sau 90 ngày:
+
+```sql
+CREATE TABLE login_history_by_user (
+  user_id text, month text, login_at timestamp, event_id uuid,
+  success boolean, ip text, user_agent text,
+  PRIMARY KEY ((user_id, month), login_at, event_id)
+) WITH CLUSTERING ORDER BY (login_at DESC, event_id ASC)
+  AND default_time_to_live = 7776000;
+```
+
+### 19.3 Kỹ thuật nâng cao (mục 4.13 của mẫu)
+
+| Kỹ thuật | Áp dụng |
+|---|---|
+| Đa luồng (`CompletableFuture`) | `GET /api/pos/products/{id}/panel` gọi song song MongoDB (chi tiết, lô), Neo4j (gợi ý) và Redis (top bán), có đo thời gian tuần tự và song song |
+| `@Async` | `SyncService.process` chạy sau commit, không chặn API |
+| `@Scheduled` | Job đồng bộ mỗi 60 giây; job 07:00 hằng ngày quét lô sắp hết hạn trong 3 ngày và phát thông báo |
+| Realtime | Redis Pub/Sub kết hợp WebSocket STOMP (FR-22) |
+| Tối ưu CSDL | Index ESR, cache-aside với Redis, bucket theo tháng ở Cassandra, projection, `explain()` chứng minh dùng IXSCAN |
+| Xử lý tranh chấp | Transaction MongoDB và `updateOne` có điều kiện `$gte`; unique `requestKey`; Lua script lấy và xóa đơn treo nguyên tử |
+
+### 19.4 Script cho từng CSDL (hồ sơ nộp số 2)
+
+Thư mục mới `nosql-scripts/`:
+
+```
+nosql-scripts/
+  mongodb/   01-create-collections.js ($jsonSchema validation + index), 02-seed.js, 03-queries-basic.js, 04-queries-advanced.js, backup-restore.md
+  cassandra/ 01-schema.cql, 02-seed.cql, 03-queries-basic.cql, 04-queries-advanced.cql, backup-restore.md
+  neo4j/     01-constraints.cypher, 02-seed.cypher, 03-queries-basic.cypher, 04-queries-advanced.cypher, backup-restore.md
+  redis/     01-key-design.md, 02-commands-basic.redis, 03-commands-advanced.redis (ZSET, MULTI/EXEC, Lua, Pub/Sub)
+```
+
+Tối thiểu cho toàn đồ án là 12 truy vấn cơ bản và 18 truy vấn nâng cao, hệ nào cũng có cả hai loại:
+
+- **MongoDB**: lọc + sắp xếp + phân trang; thêm, sửa, xóa mềm; aggregation doanh thu theo ngày; `$facet`; `$lookup` lô → nhà cung cấp; `findOneAndUpdate` trừ tồn có điều kiện; text search; cập nhật mảng lồng nhau bằng `arrayFilters`.
+- **Cassandra**: truy vấn theo partition; truy vấn khoảng trên clustering key; `INSERT ... USING TTL` và `SELECT TTL()`; `BATCH` ghi cùng lúc hai bảng thanh toán; LWT `IF NOT EXISTS`.
+- **Neo4j**: `MATCH` theo SKU; `MERGE`; truy vết lô nhiều bước; gợi ý mua kèm; `shortestPath` nhà cung cấp → khách; khách hàng mua giống nhau.
+- **Redis**: `SET EX`/`GET`/`TTL`; `ZINCRBY`/`ZREVRANGE WITHSCORES`; `MULTI/EXEC`; Lua script; `PUBLISH`/`SUBSCRIBE`.
+
+Schema validation `$jsonSchema` và index cũng được backend tạo lúc khởi động nếu còn thiếu, nên script và app luôn khớp nhau.
+
+### 19.5 Phân tán và CAP khi dùng cloud (mục 4.8 của mẫu)
+
+Không dùng Docker, nên phần cụm mô tả theo dịch vụ cloud:
+
+| CSDL | Cụm | Sao chép | CAP | Ghi chú cấu hình |
+|---|---|---|---|---|
+| MongoDB Atlas M0 | Replica set 3 node do Atlas quản lý | primary–secondary | CP | `writeConcern: majority`, `readConcern: majority` cho transaction |
+| Astra DB | Serverless, nhiều vùng sẵn sàng | RF 3 (do Astra) | AP, tunable | Ghi `LOCAL_QUORUM`, đọc `LOCAL_QUORUM` (R + W > RF) |
+| Neo4j Aura Free | 1 instance | — | CP | Dựng lại được từ MongoDB |
+| Redis Cloud/Upstash | 1 node | — | AP | Chỉ dữ liệu tạm, `maxmemory-policy allkeys-lru` |
+
+Kiểm thử chịu lỗi (mục khuyến khích) thay bằng: tắt Redis và Neo4j (đổi URL sai) → hệ thống vẫn bán được, sync queue giữ PENDING rồi tự đồng bộ lại khi bật.
+
+### 19.6 Tài liệu nộp
+
+| Hồ sơ | File |
+|---|---|
+| SRS + SDS (Chương 1–4), khung Chương 5–8 | `docs/nop-bai/BaoCao_DoAn_NoSQL_SieuThi.docx` |
+| Bảng minh chứng và tự đánh giá | `docs/nop-bai/BaoCaoMinhChung_DoAn_DuLieuNoSQL.docx` |
+| Script từng CSDL | `nosql-scripts/` |
+| Kịch bản kiểm thử | Chương 7 của báo cáo + `Bruno/` |
+| SRS cũ v1.1 | Thay bằng Chương 3 của báo cáo |
+
+API thêm: `GET /api/stats/sales?from=&to=`, `GET /api/stats/sales.csv`, `GET /api/pos/products/{id}/panel`, `GET /api/admin/backup/mongodb`, `GET /api/admin/backup/cassandra`, `GET /api/users/{id}/logins?month=`, WebSocket `/ws` (topic `/topic/alerts`). Trang frontend thêm: **Thống kê**, **Sao lưu** (gộp vào Trạng thái hệ thống), hộp thông báo realtime trên thanh đầu trang.
