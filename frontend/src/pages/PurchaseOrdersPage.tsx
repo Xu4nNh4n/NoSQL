@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import type React from 'react';
+import { Eye, Plus, Trash2 } from 'lucide-react';
 import { api, errorMessage, qs } from '../api/client';
 import { useLoad } from '../hooks/useLoad';
 import { Button } from '../components/ui/Button';
@@ -11,6 +12,11 @@ import type { Page, Product, PurchaseOrder, Supplier } from '../types';
 
 type DraftLine = { productId: string; orderedQty: number; unitCost: number };
 type ReceiveLine = { lineNo: number; receivedQty: number; mfgDate: string; expiryDate: string };
+
+/** Số lượng tính tiền: phiếu đã nhận tính theo thực nhận, phiếu nháp tính theo số đặt. */
+const qtyOf = (po: PurchaseOrder, l: PurchaseOrder['lines'][number]) => (po.status === 'RECEIVED' ? l.receivedQty : l.orderedQty);
+const totalQty = (po: PurchaseOrder) => po.lines.reduce((s, l) => s + qtyOf(po, l), 0);
+const totalValue = (po: PurchaseOrder) => po.lines.reduce((s, l) => s + qtyOf(po, l) * l.unitCost, 0);
 
 export function PurchaseOrdersPage() {
   const toast = useToast();
@@ -47,7 +53,6 @@ export function PurchaseOrdersPage() {
     if (!confirm(`Xóa phiếu nháp ${po.poCode}?`)) return;
     try { await api.delete(`/purchase-orders/${po.id}`); void list.reload(); } catch (e) { toast.error(errorMessage(e)); }
   };
-  const productName = (id: string) => products.data?.content.find(p => p.id === id)?.name ?? id;
 
   return (
     <div>
@@ -56,13 +61,16 @@ export function PurchaseOrdersPage() {
           <option value="">Tất cả</option><option value="DRAFT">Nháp</option><option value="RECEIVED">Đã nhận</option></select></Field>
         <Button onClick={() => setDraft({ supplierId: suppliers.data?.content[0]?.id ?? '', note: '', lines: [] })}>Tạo phiếu nhập</Button>
       </Toolbar>
-      <Table headers={['Mã phiếu', 'Nhà cung cấp', 'Số dòng', 'Tạo lúc', 'Trạng thái', '']} loading={list.loading} error={list.error} empty={list.data?.content.length === 0}>
+      <Table headers={['Mã phiếu', 'Nhà cung cấp', 'Số dòng', 'Tổng SL', 'Giá trị', 'Tạo lúc', 'Trạng thái', '']} loading={list.loading} error={list.error} empty={list.data?.content.length === 0}>
         {list.data?.content.map(po => (
           <tr key={po.id}>
             <Td className="font-medium text-blue-700"><button type="button" onClick={() => setView(po)}>{po.poCode}</button></Td>
-            <Td>{po.supplierName}</Td><Td>{po.lines.length}</Td><Td>{formatDateTime(po.createdAt)}</Td>
+            <Td>{po.supplierName}</Td><Td>{po.lines.length}</Td><Td>{totalQty(po)}</Td>
+            <Td className="whitespace-nowrap font-semibold">{formatVND(totalValue(po))}</Td><Td>{formatDateTime(po.createdAt)}</Td>
             <Td>{po.status === 'DRAFT' ? 'Nháp' : `Đã nhận ${formatDateTime(po.receivedAt)}`}</Td>
-            <Td className="space-x-2 whitespace-nowrap">{po.status === 'DRAFT' && <>
+            <Td className="space-x-2 whitespace-nowrap">
+              <Button size="sm" variant="outline" leftIcon={<Eye className="h-4 w-4" />} onClick={() => setView(po)}>Xem</Button>
+              {po.status === 'DRAFT' && <>
               <Button size="sm" onClick={() => setReceiving({ po, lines: po.lines.map(l => ({ lineNo: l.lineNo, receivedQty: l.orderedQty, mfgDate: '', expiryDate: '' })) })}>Nhận hàng</Button>
               <Button size="sm" variant="outline" onClick={() => setDraft({ id: po.id, supplierId: po.supplierId, note: po.note ?? '', version: po.version, lines: po.lines.map(l => ({ productId: l.productId, orderedQty: l.orderedQty, unitCost: l.unitCost })) })}>Sửa</Button>
               <Button size="sm" variant="ghost" onClick={() => remove(po)}>Xóa</Button></>}</Td>
@@ -110,14 +118,60 @@ export function PurchaseOrdersPage() {
           </div>)}
       </Modal>
 
-      <Modal isOpen={!!view} onClose={() => setView(null)} title={`Phiếu ${view?.poCode ?? ''}`} maxWidth="2xl">
-        {view && (
-          <Table headers={['#', 'Sản phẩm', 'Đặt', 'Nhận', 'Giá vốn', 'Lô', 'Hạn dùng']}>
-            {view.lines.map(l => (
-              <tr key={l.lineNo}><Td>{l.lineNo}</Td><Td>{productName(l.productId) || l.productName}</Td><Td>{l.orderedQty}</Td><Td>{l.receivedQty}</Td>
-                <Td>{formatVND(l.unitCost)}</Td><Td className="font-mono text-xs">{l.batchCode ?? '—'}</Td><Td>{l.expiryDate ? formatDate(l.expiryDate) : '—'}</Td></tr>))}
-          </Table>)}
-      </Modal>
+      {view && <PurchaseOrderDetail po={view} onClose={() => setView(null)}
+        onReceive={() => { setView(null); setReceiving({ po: view, lines: view.lines.map(l => ({ lineNo: l.lineNo, receivedQty: l.orderedQty, mfgDate: '', expiryDate: '' })) }); }} />}
     </div>
+  );
+}
+
+/** Chi tiết phiếu nhập: thông tin chung, từng dòng hàng và lô sinh ra, tổng giá trị. */
+function PurchaseOrderDetail({ po, onClose, onReceive }: { po: PurchaseOrder; onClose: () => void; onReceive: () => void }) {
+  const received = po.status === 'RECEIVED';
+  const info: [string, React.ReactNode][] = [
+    ['Mã phiếu', <span key="code" className="font-mono">{po.poCode}</span>],
+    ['Trạng thái', <span key="status" className={`rounded border px-2 py-0.5 text-xs ${received ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-200 bg-amber-50 text-amber-700'}`}>{received ? 'Đã nhận hàng' : 'Nháp'}</span>],
+    ['Nhà cung cấp', po.supplierName],
+    ['Ghi chú', po.note || '—'],
+    ['Lập phiếu', `${po.createdBy} · ${formatDateTime(po.createdAt)}`],
+    ['Nhận hàng', received ? `${po.receivedBy ?? '—'} · ${formatDateTime(po.receivedAt)}` : 'Chưa nhận'],
+  ];
+  return (
+    <Modal isOpen onClose={onClose} title={`Phiếu nhập ${po.poCode}`} maxWidth="5xl"
+      footer={<>{!received && <Button onClick={onReceive}>Nhận hàng</Button>}<Button variant="outline" onClick={onClose}>Đóng</Button></>}>
+      <div className="space-y-4 text-sm">
+        <dl className="grid gap-x-6 gap-y-2 rounded-md border border-gray-200 p-3 sm:grid-cols-2">
+          {info.map(([k, v]) => (
+            <div key={k} className="flex justify-between gap-3 sm:block">
+              <dt className="eyebrow">{k}</dt><dd className="mt-0.5 text-gray-900">{v}</dd>
+            </div>))}
+        </dl>
+
+        <Table headers={['#', 'SKU', 'Sản phẩm', 'Đặt', 'Nhận', 'Giá vốn', 'Thành tiền', 'Lô', 'NSX', 'HSD']}>
+          {po.lines.map(l => {
+            const short = received && l.receivedQty < l.orderedQty;
+            return (
+              <tr key={l.lineNo}>
+                <Td>{l.lineNo}</Td>
+                <Td className="font-mono text-xs whitespace-nowrap">{l.sku}</Td>
+                <Td className="font-medium">{l.productName}</Td>
+                <Td>{l.orderedQty}</Td>
+                <Td className={short ? 'font-semibold text-amber-700' : ''}>{received ? l.receivedQty : '—'}{short && <span className="ml-1 text-xs">(thiếu {l.orderedQty - l.receivedQty})</span>}</Td>
+                <Td className="whitespace-nowrap">{formatVND(l.unitCost)}</Td>
+                <Td className="whitespace-nowrap font-semibold">{formatVND(qtyOf(po, l) * l.unitCost)}</Td>
+                <Td className="font-mono text-xs whitespace-nowrap">{l.batchCode ?? '—'}</Td>
+                <Td className="whitespace-nowrap">{l.mfgDate ? formatDate(l.mfgDate) : '—'}</Td>
+                <Td className="whitespace-nowrap">{l.expiryDate ? formatDate(l.expiryDate) : '—'}</Td>
+              </tr>);
+          })}
+        </Table>
+
+        <div className="flex flex-wrap justify-end gap-x-6 gap-y-1 border-t border-gray-200 pt-3">
+          <span className="text-gray-500">{po.lines.length} dòng</span>
+          <span className="text-gray-500">Tổng SL {received ? 'nhận' : 'đặt'}: <b className="text-gray-900">{totalQty(po)}</b></span>
+          <span>Tổng giá trị: <b className="text-base">{formatVND(totalValue(po))}</b></span>
+        </div>
+        {!received && <p className="text-xs text-gray-500">Phiếu nháp: giá trị tính theo số đặt. Khi nhận hàng, mỗi dòng sinh một lô và cộng tồn kho.</p>}
+      </div>
+    </Modal>
   );
 }

@@ -7,7 +7,7 @@ interface ModalProps {
   title: string;
   children: React.ReactNode;
   footer?: React.ReactNode;
-  maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+  maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '5xl';
   size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | string;
 }
 
@@ -20,7 +20,7 @@ export const Modal: React.FC<ModalProps> = ({
   maxWidth,
   size,
 }) => {
-  const effectiveWidth = (maxWidth || (['sm', 'md', 'lg', 'xl', '2xl'].includes(size || '') ? size : 'md')) as 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+  const effectiveWidth = (maxWidth || (['sm', 'md', 'lg', 'xl', '2xl'].includes(size || '') ? size : 'md')) as 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '5xl';
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) {
@@ -39,6 +39,7 @@ export const Modal: React.FC<ModalProps> = ({
     lg: 'max-w-lg',
     xl: 'max-w-xl',
     '2xl': 'max-w-2xl',
+    '5xl': 'max-w-5xl',
   };
 
   return (

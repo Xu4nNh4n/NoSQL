@@ -172,6 +172,8 @@ export interface PurchaseOrder {
   lines: PurchaseOrderLine[];
   createdBy: string;
   createdAt: string;
+  updatedAt?: string;
+  receivedBy?: string;
   receivedAt?: string;
   version: number;
 }
