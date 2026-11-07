@@ -31,8 +31,10 @@ class JwtServiceTest {
     void tamperedTokenIsEmpty() {
         JwtService service = new JwtService(SECRET, 900_000);
         String token = service.generateToken(new JwtPrincipal("u1", "admin", "ADMIN"));
-        char last = token.charAt(token.length() - 1);
-        String tampered = token.substring(0, token.length() - 1) + (last == 'A' ? 'B' : 'A');
+        // Đổi ký tự ĐẦU của chữ ký: ký tự cuối base64url còn bit đệm nên đổi nó có thể không làm đổi chữ ký.
+        int sigStart = token.lastIndexOf('.') + 1;
+        char first = token.charAt(sigStart);
+        String tampered = token.substring(0, sigStart) + (first == 'A' ? 'B' : 'A') + token.substring(sigStart + 1);
 
         assertTrue(service.parse(tampered).isEmpty());
     }

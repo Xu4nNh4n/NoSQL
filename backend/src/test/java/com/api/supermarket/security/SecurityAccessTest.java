@@ -32,8 +32,10 @@ class SecurityAccessTest {
     @Test
     void tamperedTokenIs401() throws Exception {
         String token = bearer("ADMIN");
-        mvc.perform(get("/api/roles").header("Authorization", token.substring(0, token.length() - 2) + "xx"))
-                .andExpect(status().isUnauthorized());
+        int sigStart = token.lastIndexOf('.') + 1;
+        String tampered = token.substring(0, sigStart) + (token.charAt(sigStart) == 'A' ? 'B' : 'A')
+                + token.substring(sigStart + 1);
+        mvc.perform(get("/api/roles").header("Authorization", tampered)).andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -66,6 +68,13 @@ class SecurityAccessTest {
         mvc.perform(get("/api/inventory/batches/expired").header("Authorization", bearer("STAFF")))
                 .andExpect(status().isForbidden());
         mvc.perform(get("/api/purchase-orders").header("Authorization", bearer("STAFF"))).andExpect(status().isForbidden());
+    }
+
+    @Test
+    void promotionsAreManagedByAdminOnly() throws Exception {
+        mvc.perform(get("/api/promotions").header("Authorization", bearer("STAFF"))).andExpect(status().isForbidden());
+        mvc.perform(get("/api/promotions/active").header("Authorization", bearer("WAREHOUSE")))
+                .andExpect(status().isForbidden());
     }
 
     @Test
