@@ -14,10 +14,18 @@ export function usePrintReceipt() {
 
   useEffect(() => {
     if (!job) return;
+    // Khổ giấy = 80mm x chiều cao hóa đơn, lề 0: không còn trang A4 trắng, trình duyệt không chèn tiêu đề/ngày giờ.
+    const pageStyle = document.createElement('style');
     const done = () => setJob(null);
     window.addEventListener('afterprint', done, { once: true });
-    const t = window.setTimeout(() => window.print(), 50); // đợi portal vẽ xong
-    return () => { window.clearTimeout(t); window.removeEventListener('afterprint', done); };
+    const t = window.setTimeout(() => { // đợi portal vẽ xong mới đo
+      const root = document.querySelector<HTMLElement>('body > .receipt-print-root');
+      const heightMm = root ? Math.ceil(root.scrollHeight * 25.4 / 96) + 2 : 200;
+      pageStyle.textContent = `@page { size: 80mm ${heightMm}mm; margin: 0; }`;
+      document.head.appendChild(pageStyle);
+      window.print();
+    }, 50);
+    return () => { window.clearTimeout(t); window.removeEventListener('afterprint', done); pageStyle.remove(); };
   }, [job]);
 
   return {

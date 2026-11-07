@@ -99,16 +99,24 @@ body {
   .shop-drawer-panel { animation: none; }
 }
 
-.receipt-print-root { display: none; }
+/* Hóa đơn chờ in: vẽ ngoài màn hình (không display:none) để đo được chiều cao, đặt khổ giấy cho vừa */
+.receipt-print-root {
+  position: absolute;
+  left: -10000px;
+  top: 0;
+  width: 80mm;
+  padding: 4mm 3mm;
+  box-sizing: border-box;
+  background: white;
+}
 @media print {
   body:has(.receipt-print-root) > :not(.receipt-print-root) { display: none !important; }
+  html:has(.receipt-print-root), body:has(.receipt-print-root) { margin: 0; padding: 0; background: white; }
   .receipt-print-root {
-    display: block;
+    position: static;
     width: 80mm;
-    max-width: 100%;
     margin: 0;
     color: black;
-    background: white;
   }
-  .receipt-print-root tr { break-inside: avoid; }
+  .receipt-print-root * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
