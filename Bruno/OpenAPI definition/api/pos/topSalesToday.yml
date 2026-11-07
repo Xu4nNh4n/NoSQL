@@ -1,0 +1,17 @@
+info:
+  name: topSalesToday
+  type: http
+  seq: 5
+  tags:
+    - sales
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/stats/top-sales/today"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

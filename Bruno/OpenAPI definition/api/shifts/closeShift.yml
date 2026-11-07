@@ -1,0 +1,24 @@
+info:
+  name: closeShift
+  type: http
+  seq: 2
+  tags:
+    - shift
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/shifts/me/close"
+  body:
+    type: json
+    data: |-
+      {
+        "countedCash": 650000,
+        "note": ""
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

@@ -1,0 +1,17 @@
+info:
+  name: getReturns
+  type: http
+  seq: 8
+  tags:
+    - sales
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/orders/{id}/returns"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

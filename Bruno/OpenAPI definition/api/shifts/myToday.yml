@@ -1,0 +1,17 @@
+info:
+  name: myToday
+  type: http
+  seq: 1
+  tags:
+    - shift
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/shifts/me/today"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

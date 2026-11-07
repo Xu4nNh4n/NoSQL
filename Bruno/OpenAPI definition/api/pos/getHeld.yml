@@ -1,0 +1,17 @@
+info:
+  name: getHeld
+  type: http
+  seq: 1
+  tags:
+    - sales
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/pos/held"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

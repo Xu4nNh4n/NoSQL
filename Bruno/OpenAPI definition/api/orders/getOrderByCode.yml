@@ -1,0 +1,17 @@
+info:
+  name: getOrderByCode
+  type: http
+  seq: 5
+  tags:
+    - sales
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/orders/code/HD261107-0001"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

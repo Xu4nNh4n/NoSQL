@@ -1,0 +1,30 @@
+info:
+  name: createOrder
+  type: http
+  seq: 2
+  tags:
+    - sales
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/orders"
+  body:
+    type: json
+    data: |-
+      {
+        "requestKey": "{{$guid}}",
+        "customerId": null,
+        "items": [
+          { "productId": "", "quantity": 3 }
+        ],
+        "paymentMethod": "CASH",
+        "transactionRef": null,
+        "quoteHash": ""
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

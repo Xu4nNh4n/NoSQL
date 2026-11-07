@@ -1,0 +1,27 @@
+info:
+  name: holdCart
+  type: http
+  seq: 2
+  tags:
+    - sales
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/pos/held"
+  body:
+    type: json
+    data: |-
+      {
+        "note": "Chị Lan áo xanh",
+        "customerId": null,
+        "items": [
+          { "productId": "", "quantity": 2 }
+        ]
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

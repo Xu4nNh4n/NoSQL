@@ -1,0 +1,25 @@
+info:
+  name: quote
+  type: http
+  seq: 1
+  tags:
+    - sales
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/orders/quote"
+  body:
+    type: json
+    data: |-
+      {
+        "items": [
+          { "productId": "", "quantity": 3 }
+        ]
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

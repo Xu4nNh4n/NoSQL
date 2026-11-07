@@ -1,0 +1,17 @@
+info:
+  name: getOrderPayments
+  type: http
+  seq: 6
+  tags:
+    - sales
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/orders/{id}/payments"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

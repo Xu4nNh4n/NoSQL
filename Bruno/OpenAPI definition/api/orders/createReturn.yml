@@ -1,0 +1,28 @@
+info:
+  name: createReturn
+  type: http
+  seq: 7
+  tags:
+    - sales
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/orders/{id}/returns"
+  body:
+    type: json
+    data: |-
+      {
+        "requestKey": "{{$guid}}",
+        "items": [
+          { "lineNo": 1, "quantity": 1, "restock": true, "reason": "Khách đổi ý" }
+        ],
+        "refundMethod": "CASH",
+        "refundReference": null
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

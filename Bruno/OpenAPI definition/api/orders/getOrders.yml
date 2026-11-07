@@ -1,0 +1,17 @@
+info:
+  name: getOrders
+  type: http
+  seq: 3
+  tags:
+    - sales
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/orders?from=2026-11-01&to=2026-11-30&status=&paymentMethod=&cashierId=&page=0&size=20&sortBy=orderedAt&sortDir=desc"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
