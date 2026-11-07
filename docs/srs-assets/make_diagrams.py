@@ -80,8 +80,8 @@ def context():
     arrow(ax, 13, 10, 45, 26, "Phiếu nhập, nhận lô,\nđiều chỉnh, thẻ kho", tpos=0.35, toff=(0, -3))
     arrow(ax, 45, 31, 15, 23, "Hóa đơn, gợi ý, top bán chạy", tpos=0.45, toff=(0, -2))
     arrow(ax, 52, 25, 16, 5, "Cảnh báo sắp hết hàng,\nlô hết hạn", rad=-0.25, tpos=0.6, toff=(4, -3))
-    dbs = [(55, "MongoDB Atlas\n(nguồn sự thật)", "mongo"), (40, "Astra DB\n(Cassandra – sổ cái)", "cass"),
-           (25, "Neo4j Aura\n(quan hệ)", "neo"), (10, "Redis Cloud\n(tạm, nhanh)", "redis")]
+    dbs = [(55, "MongoDB\n(nguồn sự thật)", "mongo"), (40, "Cassandra\n(sổ cái)", "cass"),
+           (25, "Neo4j\n(quan hệ)", "neo"), (10, "Redis\n(tạm, nhanh)", "redis")]
     for y, t, c in dbs:
         box(ax, 95, y - 4, 22, 9, t, c, 9)
         arrow(ax, 75, 33, 95, y, style="<|-|>")

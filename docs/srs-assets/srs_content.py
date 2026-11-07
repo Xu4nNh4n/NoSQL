@@ -30,7 +30,7 @@ b("**Giảng viên** hướng dẫn và chấm điểm: đối chiếu phạm vi
 
 h2("1.2 Phạm vi sản phẩm")
 p("Hệ thống gồm backend Spring Boot cung cấp REST API xác thực bằng JWT, giao diện web React dùng nội bộ tại cửa hàng, "
-  "và 4 CSDL NoSQL chạy trên dịch vụ cloud. Hệ thống phục vụ đủ một vòng nghiệp vụ của cửa hàng: "
+  "và 4 CSDL NoSQL chạy trên máy (Docker) hoặc trên dịch vụ cloud. Hệ thống phục vụ đủ một vòng nghiệp vụ của cửa hàng: "
   "**nhập hàng → bán hàng → trả hàng → chốt ca → thu hồi lô lỗi**.")
 table(["Trong phạm vi", "Ngoài phạm vi"], [
     ("Tài khoản, phân quyền 3 vai trò, phiên đăng nhập, lịch sử đăng nhập",
@@ -93,14 +93,17 @@ table(["Phiên bản", "Ngày", "Nội dung thay đổi"], [
                           "tra cứu vào FR-03; điều chỉnh tồn vào FR-04; FEFO vào FR-06; top bán chạy vào FR-14)."),
     ("2.1", "07/11/2026", "Bỏ quản lý khách hàng (FR-03 cũ): đơn bán lẻ không gắn khách; truy vết lô trả danh sách đơn đã bán. "
                           "Còn 14 FR, đánh số lại FR-03 → FR-14 và TC tương ứng; bỏ thực thể Khách hàng và node :Customer. "
-                          "Thêm xem chi tiết và in phiếu nhập kho A4 (FR-04), in lại hóa đơn (FR-09)."),
+                          "Thêm xem chi tiết và in phiếu nhập kho A4 (FR-04), in lại hóa đơn (FR-09). "
+                          "Môi trường chạy local: MongoDB replica set 1 node, Cassandra, Neo4j, Redis trong Docker Compose "
+                          "(cloud vẫn dùng được). Giao diện tối/sáng, phân trang có số, tồn kho nhóm theo sản phẩm, "
+                          "đổi mật khẩu ở thanh trên; cập nhật bảng API theo code."),
 ], [14, 16, 70])
 
 # ---------------------------------------------------------------- 2
 h1("2. MÔ TẢ TỔNG QUAN")
 h2("2.1 Bối cảnh sản phẩm và sơ đồ ngữ cảnh")
 p("Hệ thống phục vụ một siêu thị bán trực tiếp tại quầy. Ba nhóm người dùng nội bộ thao tác qua trình duyệt; "
-  "hệ thống không tích hợp hệ thống bên ngoài nào ngoài 4 CSDL NoSQL chạy trên cloud. Khách hàng không đăng nhập "
+  "hệ thống không tích hợp hệ thống bên ngoài nào ngoài 4 CSDL NoSQL. Khách hàng không đăng nhập "
   "và không có hồ sơ: mọi đơn là đơn bán lẻ, chỉ ghi thu ngân và hình thức thanh toán.")
 img("01_so_do_ngu_canh.png", "Sơ đồ ngữ cảnh của hệ thống")
 
@@ -138,13 +141,21 @@ p("So với bản 1.1, vai trò MANAGER được gộp vào ADMIN vì cửa hàn
 
 h2("2.5 Môi trường vận hành")
 p("Backend Java 21, Spring Boot 4.1, chạy trên JVM. Giao diện React + TypeScript (Vite) trên trình duyệt hiện đại. "
-  "CSDL dùng dịch vụ cloud: MongoDB Atlas, DataStax Astra DB (Cassandra), Neo4j AuraDB, Redis Cloud (hoặc Upstash). "
-  "Không dùng Docker; mọi kết nối tới CSDL qua Internet có mã hóa TLS.")
+  "Chỉ đóng gói các CSDL, không đóng gói backend và frontend. Hai cách đặt CSDL, chọn bằng file .env:")
+table(["CSDL", "Chạy trên máy (dùng khi phát triển, demo)", "Cloud (gói miễn phí)"], [
+    ("MongoDB", "MongoDB 8.x cài máy (Windows service), bật replica set 1 node rs0 để có transaction; "
+                "backend tự replSetInitiate lần đầu", "MongoDB Atlas M0"),
+    ("Cassandra", "Apache Cassandra 4.1 trong Docker Compose (profile cassandra), heap 512 MB, giới hạn 1,5 GB RAM", "DataStax Astra DB"),
+    ("Neo4j", "Neo4j 5.26 Community trong Docker Compose, heap 512 MB, giới hạn 900 MB RAM", "Neo4j AuraDB Free"),
+    ("Redis", "Redis 7.4 trong Docker Compose, tối đa 128 MB", "Redis Cloud hoặc Upstash"),
+], [14, 58, 28])
+p("Khi chạy trên máy, Docker Desktop dùng WSL2; toàn bộ máy ảo WSL được giới hạn 3,5 GB RAM (.wslconfig) để không chiếm hết bộ nhớ. "
+  "Các CSDL chỉ nghe trên 127.0.0.1. Khi dùng cloud, mọi kết nối đi qua Internet có mã hóa TLS.")
 
 h2("2.6 Ràng buộc thiết kế và triển khai")
 b("Học phần NoSQL: dữ liệu phải nằm trên đủ 4 loại CSDL NoSQL; không dùng RDBMS.",
-  "Ngân sách hạ tầng 0 đồng: chỉ dùng gói miễn phí (Atlas M0, Astra Free, Aura Free, Redis Cloud 30 MB). "
-  "Số node do nhà cung cấp quản lý; Aura Free giới hạn khoảng 200 nghìn node và 400 nghìn quan hệ.",
+  "Ngân sách hạ tầng 0 đồng: chạy CSDL trên máy bằng Docker (bản Community/miễn phí) hoặc gói cloud miễn phí "
+  "(Atlas M0, Astra Free, Aura Free giới hạn khoảng 200 nghìn node và 400 nghìn quan hệ, Redis Cloud 30 MB).",
   "Ngôn ngữ bắt buộc: Java (Spring Boot) cho backend; giao diện tiếng Việt.",
   "Không có giao dịch xuyên 4 CSDL. Tính đúng của tiền, tồn kho và trạng thái đơn dựa vào một nguồn sự thật là MongoDB; "
   "Cassandra và Neo4j được ghi sau, Redis chỉ giữ dữ liệu tạm.",
@@ -156,8 +167,10 @@ b("Xác nhận chuyển khoản tại quầy do thu ngân thực hiện bằng c
   "Hoàn tiền thực hiện tại quầy, ghi nhận cùng lúc với phiếu trả.",
   "Hạn dùng, ngày sản xuất là ngày lịch; múi giờ thống nhất Asia/Ho_Chi_Minh cho khái niệm \"hôm nay\".",
   "Tiền tệ VND, không có phần lẻ.",
-  "Phụ thuộc: kết nối Internet ổn định tới 4 dịch vụ cloud; MongoDB Atlas là replica set nên hỗ trợ transaction nhiều document.",
-  "Gói Redis miễn phí có thể không lưu bền; mất dữ liệu Redis chỉ buộc người dùng đăng nhập lại, không mất đơn hay tồn.")
+  "Phụ thuộc: MongoDB phải chạy dạng replica set (Atlas sẵn có; bản cài máy bật replica set 1 node) để có transaction nhiều document; "
+  "khi dùng cloud cần kết nối Internet ổn định.",
+  "Redis không được coi là lưu bền (bản local chỉ chụp snapshot mỗi 60 giây); mất dữ liệu Redis chỉ buộc người dùng đăng nhập lại, "
+  "không mất đơn hay tồn.")
 
 # ---------------------------------------------------------------- 3
 h1("3. YÊU CẦU CHỨC NĂNG")
@@ -369,7 +382,7 @@ uc("FR-11", "Chốt ca thu ngân", "STAFF (ca của mình); ADMIN (mọi thu ng�
    "1. Đồng bộ các giao dịch còn chờ của thu ngân.\n2. Hiện tiền mặt thu, chuyển khoản thu, tiền hoàn, tiền mặt phải có.\n"
    "3. Thu ngân nhập tiền đếm được; hệ thống tính chênh lệch và lưu bản chốt ca.\n4. ADMIN xem danh sách chốt ca theo ngày.",
    "• Mỗi thu ngân mỗi ngày một bản chốt; ADMIN được mở lại.\n• Tiền mặt phải có = thu tiền mặt − hoàn tiền mặt.",
-   "• Đã chốt: từ chối, trừ khi ADMIN mở lại.", "Có bản chốt ca kèm chênh lệch.",
+   "• Đã chốt: từ chối, trừ khi ADMIN mở lại.\n• Chốt ca không khóa việc bán; đơn bán sau lúc chốt không nằm trong bản chốt đã lưu.", "Có bản chốt ca kèm chênh lệch.",
    "Đọc: sổ thanh toán theo thu ngân và ngày. Ghi: chốt ca.", "AP-15")
 
 uc("FR-12", "Truy vết và thu hồi lô", "ADMIN", "Must",
@@ -398,8 +411,8 @@ uc("FR-14", "Thống kê bán hàng, top bán chạy và xuất CSV", "ADMIN; ST
 
 # ---------------------------------------------------------------- 4
 h1("4. YÊU CẦU PHI CHỨC NĂNG")
-p("Mỗi yêu cầu có con số và cách kiểm chứng; Chương 7 của báo cáo kiểm chứng lại. Độ trễ tính từ backend tới CSDL cloud "
-  "qua Internet, nên đặt mục tiêu thực tế cho gói miễn phí.")
+p("Mỗi yêu cầu có con số và cách kiểm chứng; Chương 7 của báo cáo kiểm chứng lại. Độ trễ đo khi CSDL chạy trên máy; "
+  "khi dùng gói cloud miễn phí, độ trễ mạng làm số đo cao hơn.")
 table(["Mã", "Nhóm", "Yêu cầu (đo được)", "Cách kiểm chứng"], [
     ("NFR-01", "Bảo mật – xác thực", "JWT không giữ phiên; mật khẩu BCrypt; refresh token lưu băm, dùng một lần.",
      "Không có mật khẩu gốc trong dữ liệu; token cũ bị từ chối sau khi làm mới; API thiếu token trả 401."),
@@ -419,18 +432,23 @@ table(["Mã", "Nhóm", "Yêu cầu (đo được)", "Cách kiểm chứng"], [
      "Đổi URL Redis/Neo4j sai, chạy kịch bản bán hàng, khôi phục rồi kiểm tra sổ cái và đồ thị."),
     ("NFR-10", "Sao lưu, phục hồi", "Có script sao lưu và khôi phục cho từng CSDL; khôi phục dữ liệu chính < 30 phút; dựng lại đồ thị từ dữ liệu gốc < 5 phút với 10 nghìn đơn.",
      "Kịch bản xóa dữ liệu → khôi phục → đếm lại số bản ghi."),
-    ("NFR-11", "Bảo mật kết nối, chống injection", "Kết nối tới 4 CSDL dùng TLS; bí mật nằm trong biến môi trường; không nhận toán tử $ từ client; Cypher dùng tham số.",
+    ("NFR-11", "Bảo mật kết nối, chống injection", "Kết nối cloud dùng TLS, CSDL local chỉ nghe 127.0.0.1; bí mật nằm trong file .env không commit; không nhận toán tử $ từ client; Cypher dùng tham số.",
      "Kiểm tra cấu hình; thử gửi {\"$gt\": \"\"} vào trường tìm kiếm."),
     ("NFR-12", "Khả năng mở rộng dữ liệu", "Partition Cassandra < 100 MB nhờ chia theo tháng; truy vấn chính trên MongoDB dùng index.",
      "Ước lượng kích thước partition; explain() cho thấy IXSCAN."),
     ("NFR-13", "Thời gian và ngày", "Hạn dùng là ngày lịch, múi giờ thống nhất.",
      "Lô hết hạn đúng hôm nay vẫn bán được; sang ngày hôm sau không còn được cấp phát."),
+    ("NFR-14", "Dễ dùng", "Giao diện tiếng Việt; chế độ tối/sáng nhớ theo người dùng (mặc định theo hệ điều hành); "
+     "danh sách dài có phân trang đánh số; hóa đơn in khổ 80 mm, phiếu nhập in khổ A4.",
+     "Đổi chế độ rồi tải lại trang vẫn giữ; bản in xem trước đúng khổ, không lẫn thanh menu."),
 ], [11, 16, 39, 34])
 
 # ---------------------------------------------------------------- 5
 h1("5. YÊU CẦU DỮ LIỆU")
 h2("5.1 Đặc tính dữ liệu (3V)")
-p("Ước lượng cho một siêu thị 5 quầy, khoảng 300 đơn mỗi ngày. Dữ liệu demo dùng khoảng 5 nghìn đơn trải đều 30 ngày.")
+p("Ước lượng cho một siêu thị 5 quầy, khoảng 300 đơn mỗi ngày. Dữ liệu demo do backend tạo khi APP_SEED_DEMO=true, đi qua đúng "
+  "các nghiệp vụ: 4 tài khoản, 5 nhóm hàng, 6 nhà cung cấp, 15 sản phẩm, 6 phiếu nhập đã nhận (15 lô), 5 khuyến mãi đủ 4 loại, "
+  "khoảng 80 đơn trải 7 ngày gần nhất (APP_SEED_ORDERS) và 3 phiếu trả.")
 table(["Nhóm dữ liệu", "Volume", "Velocity", "Variety", "Vòng đời / TTL"], [
     ("Danh mục: sản phẩm, nhóm, NCC", "~2 nghìn sản phẩm, < 20 MB", "Đọc rất cao (mỗi lần quét), ghi < 1/phút",
      "Bán cấu trúc: thuộc tính riêng theo nhóm hàng", "Vĩnh viễn, xóa mềm"),
@@ -561,16 +579,21 @@ table(["Mã", "Mẫu truy cập", "Loại", "Tham số", "Tần suất", "Độ 
 h1("7. YÊU CẦU GIAO DIỆN")
 h2("7.1 Giao diện người dùng")
 p("Ứng dụng web một trang, tiếng Việt, dùng nội bộ. Màn hình chỉ hiện với vai trò được phép; sau đăng nhập ADMIN và STAFF "
-  "vào màn hình Bán tại quầy, WAREHOUSE vào Tồn kho. Ảnh chụp màn hình thật được đưa vào Chương 6 của báo cáo.")
+  "vào màn hình Bán tại quầy, WAREHOUSE vào Tồn kho. Giao diện kiểu terminal: chữ monospace, màu nhấn vàng, có chế độ tối và sáng. "
+  "Bố cục: menu trái theo nhóm (Bán hàng, Hàng hóa & kho, Quản trị); thanh trên hiện đường dẫn trang, nút đổi tối/sáng, "
+  "đổi mật khẩu, đăng xuất. Danh sách dài phân trang đánh số (‹ 1 2 … n ›). Ảnh chụp màn hình thật nằm trong img/giao-dien "
+  "và được đưa vào Chương 6 của báo cáo.")
 table(["Màn hình", "Vai trò", "Nội dung chính"], [
-    ("Đăng nhập", "Tất cả", "Tên đăng nhập, mật khẩu; tự làm mới phiên"),
-    ("Bán tại quầy", "STAFF, ADMIN", "Tìm/quét sản phẩm, giỏ có khuyến mãi và dòng quà, gợi ý mua kèm, top bán chạy, đơn treo, thanh toán, in hóa đơn"),
+    ("Đăng nhập", "Tất cả", "Tên đăng nhập, mật khẩu, chọn nhanh tài khoản demo, đổi tối/sáng; tự làm mới phiên"),
+    ("Thanh trên (mọi màn hình)", "Tất cả", "Đổi chế độ tối/sáng, đổi mật khẩu (đổi xong đăng xuất mọi phiên), đăng xuất"),
+    ("Bán tại quầy", "STAFF, ADMIN", "Tìm/quét sản phẩm, giỏ có khuyến mãi và dòng quà, gợi ý mua kèm, top bán chạy, đơn treo có ghi chú, thanh toán, in hóa đơn 80 mm"),
     ("Đơn hàng", "STAFF, ADMIN", "Lọc đơn, chi tiết, in lại hóa đơn, trả hàng một bước, lịch sử thanh toán"),
     ("Chốt ca", "STAFF, ADMIN", "Tổng thu trong ca, nhập tiền đếm được, chênh lệch; ADMIN xem mọi ca"),
     ("Sản phẩm", "Tất cả xem", "Lọc, phân trang, thuộc tính riêng, tab Thẻ kho theo tháng"),
     ("Nhóm hàng, Nhà cung cấp", "ADMIN (+WAREHOUSE với NCC)", "Danh sách, thêm, sửa, xóa"),
     ("Phiếu nhập", "WAREHOUSE, ADMIN", "Tạo phiếu nháp, nhận hàng sinh lô, xem chi tiết, in phiếu nhập kho A4"),
-    ("Tồn kho theo lô", "WAREHOUSE, ADMIN", "Lô theo sản phẩm, lô hết hạn, điều chỉnh giảm; ADMIN: truy vết và thu hồi"),
+    ("Tồn kho theo lô", "WAREHOUSE, ADMIN", "Danh sách sản phẩm, bấm để xổ các lô theo FEFO (đánh dấu lô bán tiếp theo, lô hết hạn); "
+     "tab sắp hết hàng, sắp hết hạn 3 ngày, đã hết hạn nhóm theo sản phẩm; điều chỉnh giảm; ADMIN: truy vết và thu hồi"),
     ("Khuyến mãi", "ADMIN", "Form theo 4 loại, khung gợi ý mua kèm"),
     ("Thống kê", "ADMIN", "Biểu đồ doanh thu theo ngày, nhóm hàng; top bán chạy; xuất CSV"),
     ("Người dùng", "ADMIN", "Quản lý tài khoản, lịch sử đăng nhập"),
@@ -582,16 +605,18 @@ p("REST + JSON, tiền tố /api, xác thực Bearer JWT; tài liệu OpenAPI t�
 table(["Nhóm", "Endpoint chính", "FR"], [
     ("Xác thực", "POST /auth/login, /auth/refresh, /auth/logout; GET/PUT /auth/me; PUT /auth/password; GET /auth/me/logins?month=", "FR-01"),
     ("Người dùng", "GET/POST /users; GET/PUT/DELETE /users/{id}; GET /users/{id}/logins?month=; GET /roles", "FR-01, FR-02"),
-    ("Danh mục", "/categories, /suppliers, /products (CRUD); GET /products/low-stock; GET /products/sku/{sku}", "FR-03"),
-    ("Kho", "GET/POST /inventory/batches; POST /inventory/batches/{id}/adjustments; GET /inventory/batches/expired; "
+    ("Danh mục", "/categories, /suppliers, /products (CRUD); GET /products/active; GET /products/sku/{sku}", "FR-03"),
+    ("Kho", "GET/POST /inventory/batches; GET /inventory/batches/{id}; POST /inventory/batches/{id}/adjustments; "
+            "GET /inventory/batches/expiring-soon; GET /inventory/batches/expired; GET /inventory/low-stock; "
             "GET /products/{id}/stock-movements?month=", "FR-03 → FR-05"),
-    ("Phiếu nhập", "GET/POST /purchase-orders; PUT/DELETE /purchase-orders/{id}; POST /purchase-orders/{id}/receive", "FR-04"),
+    ("Phiếu nhập", "GET/POST /purchase-orders; GET/PUT/DELETE /purchase-orders/{id}; POST /purchase-orders/{id}/receive", "FR-04"),
     ("Bán, trả", "POST /orders/quote; POST /orders; GET /orders; GET /orders/{id}; GET /orders/code/{code}; "
                  "POST /orders/{id}/returns; GET /orders/{id}/returns; GET /orders/{id}/payments", "FR-06, FR-08, FR-09"),
     ("Quầy", "GET/POST /pos/held; GET/DELETE /pos/held/{holdId}; GET /pos/products/{id}/panel", "FR-07, FR-13, FR-14"),
-    ("Khuyến mãi", "GET/POST /promotions; PUT /promotions/{id}; PUT /promotions/{id}/active", "FR-10"),
-    ("Chốt ca", "GET /shifts/me/today; POST /shifts/me/close; GET /shifts?day=", "FR-11"),
-    ("Đồ thị", "GET /batches/{code}/trace; GET /products/{id}/also-bought; POST /admin/graph/rebuild", "FR-12, FR-13"),
+    ("Khuyến mãi", "GET/POST /promotions; GET /promotions/active; GET/PUT /promotions/{id}; PUT /promotions/{id}/active", "FR-10"),
+    ("Chốt ca", "GET /shifts/me/today; POST /shifts/me/close; GET /shifts?day=; GET /shifts/cashier/{cashierId}; "
+                "POST /shifts/{id}/reopen", "FR-11"),
+    ("Đồ thị", "GET /batches/{code}/trace; POST /batches/{code}/recall; GET /products/{id}/also-bought; POST /admin/graph/rebuild", "FR-12, FR-13"),
     ("Thống kê", "GET /stats/sales?from=&to=; GET /stats/sales.csv; GET /stats/top-sales/today", "FR-14"),
     ("Vận hành", "GET /health/datastores; GET /admin/sync/status; POST /admin/sync/retry", "—"),
 ], [14, 70, 16])
@@ -601,15 +626,17 @@ p("Không yêu cầu phần cứng chuyên dụng; máy quầy chỉ cần trìn
 table(["Thành phần", "Phiên bản / dịch vụ", "Công cụ quản trị (GUI)"], [
     ("Backend", "Java 21, Spring Boot 4.1, Spring Data MongoDB, Spring Data Redis, DataStax Java Driver 4.17, Neo4j Java Driver 5", "IntelliJ / VS Code, Bruno"),
     ("Frontend", "React 19, TypeScript, Vite", "Trình duyệt Chrome/Edge"),
-    ("MongoDB", "MongoDB Atlas M0 (replica set 3 node), MongoDB 8.x", "MongoDB Compass"),
-    ("Cassandra", "DataStax Astra DB Serverless (CQL)", "Astra CQL Console / DataStax Studio"),
-    ("Neo4j", "Neo4j AuraDB Free 5.x", "Neo4j Browser / Workspace"),
-    ("Redis", "Redis Cloud (hoặc Upstash) Redis 7.x", "RedisInsight"),
+    ("MongoDB", "MongoDB 8.x cài máy, replica set 1 node rs0 (hoặc Atlas M0, replica set 3 node)", "MongoDB Compass, mongosh"),
+    ("Cassandra", "Apache Cassandra 4.1 trong Docker (hoặc DataStax Astra DB Serverless)", "cqlsh (docker exec) / Astra CQL Console"),
+    ("Neo4j", "Neo4j 5.26 Community trong Docker (hoặc AuraDB Free)", "Neo4j Browser http://localhost:7474"),
+    ("Redis", "Redis 7.4 trong Docker (hoặc Redis Cloud / Upstash)", "redis-cli (docker exec) / RedisInsight"),
+    ("Hạ tầng local", "Docker Desktop (WSL2), docker-compose.yml chỉ chứa CSDL; script bật replica set cho MongoDB", "Docker Desktop"),
 ], [16, 54, 30])
 
 h2("7.4 Giao diện truyền thông")
-p("Client và server giao tiếp REST/JSON qua HTTPS. Token JWT gửi trong header "
-  "Authorization. Backend kết nối 4 CSDL bằng driver chính thức qua TLS; chuỗi kết nối và mật khẩu đặt trong biến môi trường.")
+p("Client và server giao tiếp REST/JSON qua HTTP khi chạy trên máy (HTTPS khi triển khai thật). Token JWT gửi trong header "
+  "Authorization. Backend kết nối 4 CSDL bằng driver chính thức: CSDL local qua 127.0.0.1, CSDL cloud qua TLS; "
+  "chuỗi kết nối và mật khẩu đặt trong file .env (không commit).")
 
 # ---------------------------------------------------------------- 8
 h1("8. MA TRẬN TRUY VẾT YÊU CẦU")
@@ -644,7 +671,7 @@ b("Mọi thay đổi tồn kho phát sinh từ lô hàng; tồn sản phẩm là
   "Hệ thống không lưu hồ sơ khách hàng; mọi đơn là đơn bán lẻ.")
 h2("9.2 Ràng buộc")
 b("Thời gian: trong khuôn khổ đồ án học phần Dữ liệu NoSQL, nhóm 3 sinh viên.",
-  "Công nghệ: dữ liệu nằm trên MongoDB, Cassandra, Neo4j và Redis; không dùng RDBMS; dùng gói cloud miễn phí.",
+  "Công nghệ: dữ liệu nằm trên MongoDB, Cassandra, Neo4j và Redis; không dùng RDBMS; CSDL chạy bằng Docker trên máy hoặc gói cloud miễn phí.",
   "Pháp lý: số điện thoại, email của người dùng nội bộ là dữ liệu cá nhân; không đưa vào file sao lưu công khai hay log.")
 h2("9.3 Rủi ro kỹ thuật")
 table(["Rủi ro", "Biện pháp giảm thiểu"], [
@@ -655,16 +682,18 @@ table(["Rủi ro", "Biện pháp giảm thiểu"], [
      "Transaction nhiều document và cập nhật có điều kiện tồn lô ≥ số lấy; thử lại khi xung đột."),
     ("MongoDB xếp null lên đầu khi sắp tăng dần, sai thứ tự FEFO cho lô không có hạn.",
      "Lưu khóa sắp xếp hạn dùng (9999-12-31 cho lô không có hạn) và đánh index theo khóa này."),
-    ("Mất dữ liệu Redis (gói miễn phí không lưu bền).",
+    ("Mất dữ liệu Redis (không lưu bền).",
      "Redis chỉ giữ phiên, cache, đơn treo, xếp hạng; mất thì đăng nhập lại, cache dựng lại từ MongoDB. "
      "Bộ đếm mã chứng từ và chống gửi lặp đặt ở MongoDB."),
     ("Cassandra chỉ truy vấn hiệu quả theo khóa đã thiết kế; partition quá lớn.",
      "Mỗi câu truy vấn một bảng; chia partition theo tháng; không dùng ALLOW FILTERING."),
-    ("Gói Neo4j Aura Free giới hạn số node, tự tạm dừng khi không dùng lâu.",
-     "Dữ liệu demo nằm trong giới hạn; mở instance trước buổi demo; tính năng đồ thị lỗi không chặn bán hàng."),
+    ("Neo4j không chạy (container tắt, hoặc Aura Free tự tạm dừng khi lâu không dùng).",
+     "Tính năng đồ thị lỗi không chặn bán hàng; sự kiện chờ trong hàng đợi đồng bộ; bật lại rồi dựng lại đồ thị nếu cần."),
+    ("Chạy 4 CSDL trên máy cá nhân tốn RAM.",
+     "Giới hạn heap và mem_limit cho từng container; giới hạn RAM toàn bộ WSL bằng .wslconfig; tắt container khi không dùng."),
     ("Sai số tiền khi dùng số thực; chia khuyến mãi lệch tổng.",
      "Dùng Decimal128 (MongoDB) và decimal (Cassandra); làm tròn xuống đến đồng, phần dư dồn vào dòng cuối."),
-    ("Độ trễ mạng tới CSDL cloud.", "Cache Redis cho dữ liệu đọc nhiều; gọi song song các CSDL độc lập; đặt mục tiêu NFR phù hợp."),
+    ("Độ trễ mạng khi dùng CSDL cloud.", "Chạy CSDL trên máy khi demo; cache Redis cho dữ liệu đọc nhiều; gọi song song các CSDL độc lập; đặt mục tiêu NFR phù hợp."),
 ], [40, 60])
 h2("9.4 Phụ lục – giá trị trạng thái")
 table(["Nhóm", "Giá trị"], [
