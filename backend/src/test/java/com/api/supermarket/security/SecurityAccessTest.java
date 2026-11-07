@@ -1,5 +1,6 @@
 package com.api.supermarket.security;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -44,6 +45,18 @@ class SecurityAccessTest {
     void staffCannotManageUsers() throws Exception {
         mvc.perform(get("/api/users").header("Authorization", bearer("STAFF"))).andExpect(status().isForbidden());
         mvc.perform(get("/api/health/datastores").header("Authorization", bearer("WAREHOUSE")))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void catalogRolesAreEnforced() throws Exception {
+        mvc.perform(get("/api/suppliers").header("Authorization", bearer("STAFF"))).andExpect(status().isForbidden());
+        mvc.perform(get("/api/customers").header("Authorization", bearer("WAREHOUSE"))).andExpect(status().isForbidden());
+        mvc.perform(get("/api/products/active").header("Authorization", bearer("WAREHOUSE")))
+                .andExpect(status().isForbidden());
+        mvc.perform(delete("/api/products/p1").header("Authorization", bearer("STAFF"))).andExpect(status().isForbidden());
+        mvc.perform(delete("/api/customers/k1").header("Authorization", bearer("STAFF"))).andExpect(status().isForbidden());
+        mvc.perform(delete("/api/categories/c1").header("Authorization", bearer("WAREHOUSE")))
                 .andExpect(status().isForbidden());
     }
 
