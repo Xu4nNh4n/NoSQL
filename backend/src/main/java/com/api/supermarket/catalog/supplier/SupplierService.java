@@ -17,7 +17,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
-/** Nhà cung cấp (FR-04). Ngừng hoạt động thì không nhận phiếu nhập hoặc lô mới. */
+/** Nhà cung cấp (FR-03). Ngừng hoạt động thì không nhận phiếu nhập hoặc lô mới. */
 @Service
 public class SupplierService {
     public static final Set<String> SORT_FIELDS = Set.of("name", "createdAt");

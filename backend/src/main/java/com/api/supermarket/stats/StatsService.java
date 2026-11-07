@@ -21,7 +21,7 @@ import com.api.supermarket.exception.BadRequestException;
 import com.api.supermarket.sales.SalesOrder;
 
 /**
- * Thống kê bán hàng (FR-15, AP-23) bằng MỘT lệnh aggregation:
+ * Thống kê bán hàng (FR-14, AP-23) bằng MỘT lệnh aggregation:
  * <pre>
  * $match orderedAt ∈ [from, to+1)
  * $facet {

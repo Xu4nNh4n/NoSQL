@@ -34,7 +34,6 @@ import com.api.supermarket.common.CodeGenerator;
 import com.api.supermarket.common.ConflictException;
 import com.api.supermarket.common.DocumentType;
 import com.api.supermarket.common.MongoTx;
-import com.api.supermarket.customer.CustomerService;
 import com.api.supermarket.exception.BadRequestException;
 import com.api.supermarket.inventory.FefoAllocator;
 import com.api.supermarket.inventory.InventoryEvents;
@@ -62,7 +61,7 @@ class OrderServiceTest {
         topSales = mock(TopSalesService.class);
         CodeGenerator codes = mock(CodeGenerator.class);
         when(codes.next(DocumentType.ORDER)).thenReturn("HD261107-0042");
-        service = new OrderService(orders, quotes, fefo, products, mock(CustomerService.class), codes, sync,
+        service = new OrderService(orders, quotes, fefo, products, codes, sync,
                 new MongoTx(TransactionOperations.withoutTransaction()), mock(ProductCache.class), topSales, TIME);
         when(orders.findByRequestKey(anyString())).thenReturn(Optional.empty());
         when(orders.insert(any())).thenAnswer(inv -> {
@@ -81,7 +80,7 @@ class OrderServiceTest {
     }
 
     private static CreateOrderRequest req(String key, String hash, SalesOrder.Method method, String ref) {
-        return new CreateOrderRequest(key, null, List.of(new QuoteItem("beer", 2)), method, ref, hash);
+        return new CreateOrderRequest(key, List.of(new QuoteItem("beer", 2)), method, ref, hash);
     }
 
     @Test
@@ -146,9 +145,9 @@ class OrderServiceTest {
 
     @Test
     void fingerprintIgnoresLineOrderAndSplitScans() {
-        CreateOrderRequest a = new CreateOrderRequest("k", null,
+        CreateOrderRequest a = new CreateOrderRequest("k",
                 List.of(new QuoteItem("a", 1), new QuoteItem("b", 2), new QuoteItem("a", 1)), SalesOrder.Method.CASH, null, "h");
-        CreateOrderRequest b = new CreateOrderRequest("k", null,
+        CreateOrderRequest b = new CreateOrderRequest("k",
                 List.of(new QuoteItem("b", 2), new QuoteItem("a", 2)), SalesOrder.Method.CASH, null, "h");
         assertEquals(OrderService.fingerprint(a, null), OrderService.fingerprint(b, null));
     }

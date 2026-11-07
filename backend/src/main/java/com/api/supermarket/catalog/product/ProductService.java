@@ -22,7 +22,7 @@ import com.api.supermarket.exception.ResourceNotFoundException;
 import com.api.supermarket.user.UserFields;
 import com.api.supermarket.validation.PaginationValidator;
 
-/** Sản phẩm (FR-04). Tồn kho không sửa ở đây; chỉ lô hàng, bán và trả được đổi tồn. */
+/** Sản phẩm (FR-03). Tồn kho không sửa ở đây; chỉ lô hàng, bán và trả được đổi tồn. */
 @Service
 public class ProductService {
     public static final Set<String> SORT_FIELDS = Set.of("name", "sku", "price", "stockQuantity", "createdAt");

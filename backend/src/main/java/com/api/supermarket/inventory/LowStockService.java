@@ -20,7 +20,7 @@ import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Cảnh báo sắp hết hàng (FR-04 bước 5, AP-06): tồn khả dụng = tổng tồn còn lại của lô còn hạn,
+ * Cảnh báo sắp hết hàng (FR-03 bước 5, AP-06): tồn khả dụng = tổng tồn còn lại của lô còn hạn,
  * tính bằng aggregation trên {@code batches}; sản phẩm có tồn khả dụng ≤ ngưỡng đặt lại thì vào danh sách.
  * Cache Redis 1 phút; bán hoặc nhập lô thì xóa cache.
  */

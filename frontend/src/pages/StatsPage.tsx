@@ -9,7 +9,7 @@ import { Field, inputClass, Table, Td, Toolbar } from '../components/ui/Table';
 import { formatVND, vietnamDateKey } from '../utils/formatters';
 import type { SalesStats } from '../types';
 
-/** Thống kê (FR-15): một lệnh aggregation $facet trên MongoDB trả đủ các khối bên dưới. */
+/** Thống kê (FR-14): một lệnh aggregation $facet trên MongoDB trả đủ các khối bên dưới. */
 export function StatsPage() {
   const toast = useToast();
   const [from, setFrom] = useState(() => vietnamDateKey(new Date(Date.now() - 6 * 86400000)));

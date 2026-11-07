@@ -8,7 +8,7 @@ import java.util.UUID;
 import org.bson.Document;
 
 /**
- * Một dòng thẻ kho (bảng Cassandra {@code stock_movements_by_product}). Dấu số lượng theo SRS FR-06:
+ * Một dòng thẻ kho (bảng Cassandra {@code stock_movements_by_product}). Dấu số lượng theo SRS FR-05:
  * RECEIPT, RETURN dương; SALE, ADJUSTMENT âm; RETURN_DAMAGED dương nhưng không cộng tồn bán.
  * {@code id} tạo từ nội dung nên ghi lại cùng sự kiện chỉ ghi đè đúng dòng cũ.
  */

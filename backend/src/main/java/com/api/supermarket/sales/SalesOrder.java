@@ -41,7 +41,6 @@ public class SalesOrder {
     /** SHA-256 nội dung yêu cầu, để phân biệt gửi lặp (giống) với dùng trùng requestKey (khác). */
     private String requestFingerprint;
     private PersonRef cashier;
-    private PersonRef customer;
     private Instant orderedAt;
     private LocalDate orderDay;
     private Status status;

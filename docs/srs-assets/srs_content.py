@@ -35,8 +35,8 @@ p("Hệ thống gồm backend Spring Boot cung cấp REST API xác thực bằng
 table(["Trong phạm vi", "Ngoài phạm vi"], [
     ("Tài khoản, phân quyền 3 vai trò, phiên đăng nhập, lịch sử đăng nhập",
      "Bán hàng online: giỏ hàng khách, giao hàng, thu tiền khi nhận hàng"),
-    ("Danh mục: sản phẩm (thuộc tính linh hoạt), nhóm hàng, nhà cung cấp, khách hàng",
-     "Tích điểm thành viên, ví điện tử, cổng thanh toán tự động"),
+    ("Danh mục: sản phẩm (thuộc tính linh hoạt), nhóm hàng, nhà cung cấp",
+     "Hồ sơ khách hàng, tích điểm thành viên, ví điện tử, cổng thanh toán tự động"),
     ("Kho theo lô: phiếu nhập, nhận lô, cấp phát FEFO, điều chỉnh giảm, thẻ kho",
      "Dashboard phân tích dữ liệu lớn (Apache Drill, Parquet) của bản BigData trước"),
     ("Bán tại quầy có khuyến mãi 4 loại, đơn treo, gợi ý mua kèm",
@@ -80,7 +80,7 @@ b("IEEE Std 830-1998 và ISO/IEC/IEEE 29148:2018 – Requirements engineering.",
   "SRS phiên bản 1.1 (16/10/2026) – bản trước khi chuyển sang đồ án NoSQL.")
 
 h2("1.5 Tổng quan cấu trúc tài liệu và lịch sử thay đổi")
-p("Phần 2 mô tả tổng quan sản phẩm, tác nhân, ràng buộc. Phần 3 đặc tả 15 yêu cầu chức năng kèm các sơ đồ use case, "
+p("Phần 2 mô tả tổng quan sản phẩm, tác nhân, ràng buộc. Phần 3 đặc tả 14 yêu cầu chức năng kèm các sơ đồ use case, "
   "BPMN, activity, sequence, state machine và DFD. Phần 4 nêu yêu cầu phi chức năng đo được. Phần 5 mô tả yêu cầu dữ liệu "
   "(3V, mô hình khái niệm, từ điển dữ liệu). Phần 6 là bảng mẫu truy cập dữ liệu. Phần 7 nêu yêu cầu giao diện. "
   "Phần 8 là ma trận truy vết. Phần 9 gồm giả định, ràng buộc, rủi ro và phụ lục.")
@@ -90,15 +90,17 @@ table(["Phiên bản", "Ngày", "Nội dung thay đổi"], [
                           "truy vết và thu hồi lô, gợi ý mua kèm, thống kê và top bán chạy, lịch sử đăng nhập; phiếu nhập; "
                           "trả hàng một bước; thêm sơ đồ, đặc tính 3V, bảng access pattern, ma trận truy vết FR → AP → CSDL → TC. "
                           "Các FR nhỏ được gộp theo use case (hồ sơ và lịch sử đăng nhập vào FR-01; nhóm hàng, nhà cung cấp, "
-                          "tra cứu vào FR-04; điều chỉnh tồn vào FR-05; FEFO vào FR-07; top bán chạy vào FR-15)."),
+                          "tra cứu vào FR-03; điều chỉnh tồn vào FR-04; FEFO vào FR-06; top bán chạy vào FR-14)."),
+    ("2.1", "07/11/2026", "Bỏ quản lý khách hàng (FR-03 cũ): đơn bán lẻ không gắn khách; truy vết lô trả danh sách đơn đã bán. "
+                          "Còn 14 FR, đánh số lại FR-03 → FR-14 và TC tương ứng; bỏ thực thể Khách hàng và node :Customer."),
 ], [14, 16, 70])
 
 # ---------------------------------------------------------------- 2
 h1("2. MÔ TẢ TỔNG QUAN")
 h2("2.1 Bối cảnh sản phẩm và sơ đồ ngữ cảnh")
 p("Hệ thống phục vụ một siêu thị bán trực tiếp tại quầy. Ba nhóm người dùng nội bộ thao tác qua trình duyệt; "
-  "hệ thống không tích hợp hệ thống bên ngoài nào ngoài 4 CSDL NoSQL chạy trên cloud. Khách hàng không đăng nhập, "
-  "chỉ có hồ sơ do thu ngân tạo.")
+  "hệ thống không tích hợp hệ thống bên ngoài nào ngoài 4 CSDL NoSQL chạy trên cloud. Khách hàng không đăng nhập "
+  "và không có hồ sơ: mọi đơn là đơn bán lẻ, chỉ ghi thu ngân và hình thức thanh toán.")
 img("01_so_do_ngu_canh.png", "Sơ đồ ngữ cảnh của hệ thống")
 
 h2("2.2 Quy trình nghiệp vụ")
@@ -107,18 +109,18 @@ p("Điểm cốt lõi của nghiệp vụ là tồn kho theo lô: mỗi sản ph
   "ngày sản xuất, hạn dùng và hệ thống sinh lô. Thu ngân bán tại quầy, hệ thống tự áp khuyến mãi, chọn lô theo FEFO, "
   "trừ kho và ghi nhận thanh toán. Khách trả hàng thì thu ngân lập phiếu trả và hoàn tiền ngay; hàng còn bán được quay về "
   "đúng lô đã xuất. Cuối ca, thu ngân chốt ca bằng cách đối chiếu tổng thu với tiền trong két. Khi nhà cung cấp báo lô lỗi, "
-  "quản lý truy vết lô để biết đã bán cho khách nào và liên hệ thu hồi. Mọi thay đổi tồn kho đều để lại bản ghi trên thẻ kho.")
+  "quản lý truy vết lô để biết lô đã bán ra trong những đơn nào và thu hồi phần còn tồn. Mọi thay đổi tồn kho đều để lại bản ghi trên thẻ kho.")
 
 h2("2.3 Tóm tắt chức năng sản phẩm")
 table(["Phân hệ", "Yêu cầu chức năng"], [
     ("Tài khoản", "FR-01 Tài khoản và phiên đăng nhập (đăng nhập, làm mới phiên, hồ sơ, đổi mật khẩu, lịch sử đăng nhập) · "
-                  "FR-02 Người dùng · FR-03 Khách hàng"),
-    ("Danh mục và kho", "FR-04 Danh mục hàng hóa (sản phẩm, nhóm hàng, nhà cung cấp, tra cứu, cảnh báo) · "
-                        "FR-05 Nhập hàng và điều chỉnh tồn · FR-06 Thẻ kho"),
-    ("Bán hàng và trả hàng", "FR-07 Bán tại quầy (cấp phát FEFO) · FR-08 Đơn treo · FR-09 Trả hàng, hoàn tiền · "
-                             "FR-10 Tra cứu đơn, phiếu trả, thanh toán · FR-11 Khuyến mãi 4 loại"),
-    ("Ca làm việc, truy vết và thống kê", "FR-12 Chốt ca · FR-13 Truy vết, thu hồi lô · FR-14 Gợi ý mua kèm · "
-                                          "FR-15 Thống kê, top bán chạy, xuất CSV"),
+                  "FR-02 Người dùng"),
+    ("Danh mục và kho", "FR-03 Danh mục hàng hóa (sản phẩm, nhóm hàng, nhà cung cấp, tra cứu, cảnh báo) · "
+                        "FR-04 Nhập hàng và điều chỉnh tồn · FR-05 Thẻ kho"),
+    ("Bán hàng và trả hàng", "FR-06 Bán tại quầy (cấp phát FEFO) · FR-07 Đơn treo · FR-08 Trả hàng, hoàn tiền · "
+                             "FR-09 Tra cứu đơn, phiếu trả, thanh toán · FR-10 Khuyến mãi 4 loại"),
+    ("Ca làm việc, truy vết và thống kê", "FR-11 Chốt ca · FR-12 Truy vết, thu hồi lô · FR-13 Gợi ý mua kèm · "
+                                          "FR-14 Thống kê, top bán chạy, xuất CSV"),
 ], [28, 72])
 
 h2("2.4 Tác nhân và đặc điểm người dùng")
@@ -127,7 +129,7 @@ table(["Vai trò", "Mô tả", "Đặc điểm / kỹ năng"], [
               "thống kê; có toàn quyền của STAFF và WAREHOUSE.", "Am hiểu nghiệp vụ; ra quyết định giá và khuyến mãi."),
     ("WAREHOUSE", "Thủ kho: phiếu nhập, nhận lô, điều chỉnh giảm tồn, sản phẩm, nhà cung cấp, thẻ kho, cảnh báo.",
      "Nhập liệu thường xuyên, cần số tồn chính xác."),
-    ("STAFF", "Thu ngân: bán tại quầy, đơn treo, trả hàng và hoàn tiền, chốt ca của mình, khách hàng.",
+    ("STAFF", "Thu ngân: bán tại quầy, đơn treo, trả hàng và hoàn tiền, chốt ca của mình.",
      "Thao tác nhanh tại quầy; ít kiến thức kỹ thuật."),
 ], [16, 54, 30])
 p("So với bản 1.1, vai trò MANAGER được gộp vào ADMIN vì cửa hàng nhỏ không tách người quản lý với chủ cửa hàng; "
@@ -163,23 +165,22 @@ FR = [
     ("FR-01", "Tài khoản và phiên đăng nhập", "Tất cả", "Đăng nhập, refresh token xoay vòng, đăng xuất; hồ sơ, đổi mật khẩu; "
      "lịch sử đăng nhập 90 ngày", "Cao", "AP-01, AP-02, AP-16"),
     ("FR-02", "Quản lý người dùng", "ADMIN", "Thêm, sửa, khóa tài khoản; gán vai trò", "Cao", "AP-01"),
-    ("FR-03", "Quản lý khách hàng", "ADMIN, STAFF", "Hồ sơ khách tại quầy, SĐT và email duy nhất", "Trung bình", "—"),
-    ("FR-04", "Danh mục hàng hóa", "Tất cả xem; ADMIN, WAREHOUSE ghi", "Sản phẩm (thuộc tính linh hoạt), nhóm hàng, nhà cung cấp; "
+    ("FR-03", "Danh mục hàng hóa", "Tất cả xem; ADMIN, WAREHOUSE ghi", "Sản phẩm (thuộc tính linh hoạt), nhóm hàng, nhà cung cấp; "
      "tra cứu, cảnh báo sắp hết hàng và lô hết hạn", "Cao", "AP-03 → AP-08"),
-    ("FR-05", "Nhập hàng và điều chỉnh tồn", "ADMIN, WAREHOUSE", "Phiếu nhập DRAFT → RECEIVED sinh lô; nhập lô lẻ; "
+    ("FR-04", "Nhập hàng và điều chỉnh tồn", "ADMIN, WAREHOUSE", "Phiếu nhập DRAFT → RECEIVED sinh lô; nhập lô lẻ; "
      "điều chỉnh giảm tồn theo lô", "Cao", "AP-08, AP-22, AP-24"),
-    ("FR-06", "Thẻ kho", "Tất cả", "Lịch sử biến động theo sản phẩm, theo tháng", "Cao", "AP-13"),
-    ("FR-07", "Bán tại quầy", "ADMIN, STAFF", "Tính khuyến mãi, cấp phát FEFO, thu tiền, in hóa đơn", "Cao",
+    ("FR-05", "Thẻ kho", "Tất cả", "Lịch sử biến động theo sản phẩm, theo tháng", "Cao", "AP-13"),
+    ("FR-06", "Bán tại quầy", "ADMIN, STAFF", "Tính khuyến mãi, cấp phát FEFO, thu tiền, in hóa đơn", "Cao",
      "AP-03, AP-07, AP-09, AP-17, AP-19"),
-    ("FR-08", "Đơn treo tại quầy", "STAFF, ADMIN", "Tạm giữ giỏ 30 phút, mở lại hoặc hủy", "Trung bình", "AP-18"),
-    ("FR-09", "Trả hàng kèm hoàn tiền", "ADMIN, STAFF", "Một bước: lập phiếu, nhập lại đúng lô, hoàn tiền", "Cao", "AP-12"),
-    ("FR-10", "Tra cứu đơn, phiếu trả, thanh toán", "ADMIN, STAFF", "Lọc đơn, xem chi tiết, lịch sử thanh toán", "Cao",
+    ("FR-07", "Đơn treo tại quầy", "STAFF, ADMIN", "Tạm giữ giỏ 30 phút, mở lại hoặc hủy", "Trung bình", "AP-18"),
+    ("FR-08", "Trả hàng kèm hoàn tiền", "ADMIN, STAFF", "Một bước: lập phiếu, nhập lại đúng lô, hoàn tiền", "Cao", "AP-12"),
+    ("FR-09", "Tra cứu đơn, phiếu trả, thanh toán", "ADMIN, STAFF", "Lọc đơn, xem chi tiết, lịch sử thanh toán", "Cao",
      "AP-10, AP-11, AP-14"),
-    ("FR-11", "Khuyến mãi 4 loại", "ADMIN", "Giảm %, giảm tiền, mua X tặng Y, giảm theo tổng đơn", "Cao", "AP-17"),
-    ("FR-12", "Chốt ca thu ngân", "STAFF, ADMIN", "Tổng thu theo ca, nhập tiền đếm được, chênh lệch", "Cao", "AP-15"),
-    ("FR-13", "Truy vết và thu hồi lô", "ADMIN", "Lô → đơn → khách cần liên hệ", "Cao", "AP-20"),
-    ("FR-14", "Gợi ý mua kèm", "STAFF, ADMIN", "\"Khách mua A thường mua B\"", "Trung bình", "AP-21"),
-    ("FR-15", "Thống kê, top bán chạy, xuất CSV", "ADMIN (STAFF xem top bán)", "Doanh thu theo ngày, nhóm hàng; tiền khuyến mãi; "
+    ("FR-10", "Khuyến mãi 4 loại", "ADMIN", "Giảm %, giảm tiền, mua X tặng Y, giảm theo tổng đơn", "Cao", "AP-17"),
+    ("FR-11", "Chốt ca thu ngân", "STAFF, ADMIN", "Tổng thu theo ca, nhập tiền đếm được, chênh lệch", "Cao", "AP-15"),
+    ("FR-12", "Truy vết và thu hồi lô", "ADMIN", "Lô → các đơn đã bán; thu hồi phần còn tồn", "Cao", "AP-20"),
+    ("FR-13", "Gợi ý mua kèm", "STAFF, ADMIN", "\"Đơn có A thường có B\"", "Trung bình", "AP-21"),
+    ("FR-14", "Thống kê, top bán chạy, xuất CSV", "ADMIN (STAFF xem top bán)", "Doanh thu theo ngày, nhóm hàng; tiền khuyến mãi; "
      "top 10 bán chạy hôm nay", "Trung bình", "AP-19, AP-23"),
 ]
 table(["Mã", "Tên yêu cầu", "Tác nhân", "Mô tả", "Ưu tiên", "Truy vết AP"], FR, [10, 19, 15, 32, 10, 14])
@@ -196,11 +197,11 @@ table(["Bước", "Vai trò", "Dữ liệu đọc", "Dữ liệu sinh ra"], [
     ("Lập phiếu nhập", "WAREHOUSE", "Nhà cung cấp, sản phẩm", "Phiếu nhập (DRAFT)"),
     ("Nhận hàng", "WAREHOUSE", "Phiếu nhập", "Lô hàng, tồn sản phẩm, thẻ kho RECEIPT, quan hệ lô–NCC"),
     ("Tính giá ở quầy", "STAFF", "Sản phẩm đang bán, khuyến mãi hiệu lực", "Giỏ đã tính giá (tạm)"),
-    ("Thu tiền, tạo đơn", "STAFF", "Lô còn hạn (FEFO), khách hàng", "Đơn hàng, cấp phát lô, thanh toán, thẻ kho SALE, quan hệ mua, top bán"),
+    ("Thu tiền, tạo đơn", "STAFF", "Lô còn hạn (FEFO)", "Đơn hàng, cấp phát lô, thanh toán, thẻ kho SALE, quan hệ mua, top bán"),
     ("Treo đơn", "STAFF", "Giỏ hiện tại", "Đơn treo (30 phút)"),
     ("Trả hàng", "STAFF", "Đơn, cấp phát lô", "Phiếu trả, hoàn tiền, thẻ kho RETURN/RETURN_DAMAGED"),
     ("Chốt ca", "STAFF", "Thanh toán theo thu ngân trong ngày", "Bản ghi chốt ca"),
-    ("Thu hồi lô", "ADMIN", "Quan hệ lô → đơn → khách", "Danh sách khách cần liên hệ, điều chỉnh giảm phần còn tồn"),
+    ("Thu hồi lô", "ADMIN", "Quan hệ lô → đơn", "Danh sách đơn đã bán từ lô, điều chỉnh giảm phần còn tồn"),
 ], [18, 14, 30, 38])
 
 h2("3.4 Mô hình hóa chức năng")
@@ -257,15 +258,7 @@ uc("FR-02", "Quản lý người dùng", "ADMIN", "Must",
    "• Trùng tên đăng nhập hoặc email: từ chối.\n• Không tìm thấy: 404.\n• Vi phạm quy tắc ADMIN cuối cùng: từ chối.",
    "Tài khoản được tạo, cập nhật hoặc khóa.", "Đọc/ghi: người dùng. Xóa: phiên đăng nhập.", "AP-01")
 
-uc("FR-03", "Quản lý khách hàng", "ADMIN, STAFF (xem, tạo, sửa); ADMIN (ngừng hoạt động)", "Should",
-   "Đã đăng nhập.", "Họ tên, SĐT, email, địa chỉ, trạng thái; từ khóa, trang.",
-   "1. Xem, tìm khách theo tên hoặc SĐT.\n2. Tạo khách tại quầy (không cần tài khoản).\n3. Cập nhật.\n4. Ngừng hoạt động.",
-   "• SĐT duy nhất; email duy nhất không phân biệt hoa thường.\n• Khách ngừng hoạt động không được gắn vào đơn mới.",
-   "• Trùng SĐT hoặc email: từ chối.\n• Không tìm thấy: 404.",
-   "Hồ sơ khách được tạo, cập nhật hoặc ngừng hoạt động; khách mới xuất hiện trong đồ thị quan hệ.",
-   "Đọc/ghi: khách hàng. Ghi sau: node khách hàng trong đồ thị.", "—")
-
-uc("FR-04", "Danh mục hàng hóa", "ADMIN (nhóm hàng); ADMIN, WAREHOUSE (sản phẩm, nhà cung cấp); mọi người dùng (xem, tra cứu)", "Must",
+uc("FR-03", "Danh mục hàng hóa", "ADMIN (nhóm hàng); ADMIN, WAREHOUSE (sản phẩm, nhà cung cấp); mọi người dùng (xem, tra cứu)", "Must",
    "Đã đăng nhập; khi tạo sản phẩm thì nhóm hàng và nhà cung cấp đã tồn tại.",
    "Sản phẩm: tên, SKU, giá bán, nhóm hàng, nhà cung cấp mặc định, ngưỡng đặt lại, ảnh, thuộc tính riêng (ví dụ dung tích, bảo hành), "
    "trạng thái. Nhóm hàng: tên, mô tả. Nhà cung cấp: tên, SĐT, email, địa chỉ. Tra cứu: từ khóa, nhóm, khoảng giá, trang, sắp xếp.",
@@ -285,7 +278,7 @@ uc("FR-04", "Danh mục hàng hóa", "ADMIN (nhóm hàng); ADMIN, WAREHOUSE (s�
    "Đọc/ghi: sản phẩm, nhóm hàng, nhà cung cấp. Đọc: lô. Ghi/xóa: cache sản phẩm. Ghi sau: node sản phẩm, NCC trong đồ thị.",
    "AP-03, AP-04, AP-05, AP-06, AP-07, AP-08")
 
-uc("FR-05", "Nhập hàng và điều chỉnh tồn", "ADMIN, WAREHOUSE", "Must",
+uc("FR-04", "Nhập hàng và điều chỉnh tồn", "ADMIN, WAREHOUSE", "Must",
    "Nhà cung cấp và sản phẩm đang hoạt động; khi điều chỉnh thì lô tồn tại.",
    "Phiếu nhập: nhà cung cấp, các dòng (sản phẩm, số lượng, giá vốn). Nhận hàng: số thực nhận, ngày sản xuất, hạn dùng từng dòng. "
    "Điều chỉnh: lô, số lượng giảm, lý do.",
@@ -301,7 +294,7 @@ uc("FR-05", "Nhập hàng và điều chỉnh tồn", "ADMIN, WAREHOUSE", "Must"
    "Có lô mới và tồn tăng, hoặc tồn giảm; thẻ kho có dòng RECEIPT hoặc ADJUSTMENT.",
    "Ghi: phiếu nhập, lô, sản phẩm, bộ đếm. Ghi sau: thẻ kho, đồ thị.", "AP-08, AP-22, AP-24")
 
-uc("FR-06", "Thẻ kho", "Hệ thống ghi; mọi người dùng xem", "Must",
+uc("FR-05", "Thẻ kho", "Hệ thống ghi; mọi người dùng xem", "Must",
    "Có thay đổi tồn kho.", "Sản phẩm, tháng.",
    "1. Mỗi thay đổi tồn sinh một dòng biến động: loại, số lượng, lô, chứng từ, người thực hiện, thời điểm.\n"
    "2. Người dùng xem thẻ kho theo sản phẩm, mặc định tháng hiện tại, chọn được tháng khác.",
@@ -309,11 +302,11 @@ uc("FR-06", "Thẻ kho", "Hệ thống ghi; mọi người dùng xem", "Must",
    "• Tổng RECEIPT + SALE + RETURN + ADJUSTMENT của sản phẩm bằng tồn sản phẩm.",
    "• Sản phẩm không tồn tại: 404.", "Mọi thay đổi tồn có dòng tương ứng.", "Ghi/đọc: thẻ kho.", "AP-13")
 
-uc("FR-07", "Bán tại quầy", "ADMIN, STAFF", "Must",
+uc("FR-06", "Bán tại quầy", "ADMIN, STAFF", "Must",
    "Có ít nhất một dòng hàng; sản phẩm đang bán và đủ tồn.",
-   "Khóa yêu cầu request_key, khách hàng (tùy chọn), danh sách sản phẩm và số lượng, phương thức CASH hoặc BANK_TRANSFER, "
+   "Khóa yêu cầu request_key, danh sách sản phẩm và số lượng, phương thức CASH hoặc BANK_TRANSFER, "
    "mã giao dịch với chuyển khoản, mã báo giá quoteHash.",
-   "1. Thu ngân quét hàng; hệ thống tính giá: áp khuyến mãi (FR-11), thêm dòng quà, trả quoteHash.\n"
+   "1. Thu ngân quét hàng; hệ thống tính giá: áp khuyến mãi (FR-10), thêm dòng quà, trả quoteHash.\n"
    "2. Thu ngân chọn phương thức thanh toán và xác nhận.\n3. Kiểm tra request_key; tính lại giá, so quoteHash.\n"
    "4. Cấp phát FEFO cho từng dòng: lọc lô còn tồn và còn hạn; sắp hạn dùng tăng dần, lô không hạn xếp cuối, rồi ngày nhận, mã lô; "
    "lấy lần lượt đến khi đủ, mỗi lần trừ chỉ thành công nếu tồn lô còn đủ.\n"
@@ -324,20 +317,20 @@ uc("FR-07", "Bán tại quầy", "ADMIN, STAFF", "Must",
    "• Tổng cấp phát của dòng bằng số lượng bán.\n• Đơn đã lập không hủy; sai sót xử lý bằng trả hàng.",
    "• request_key trùng cùng nội dung: trả đơn cũ; khác nội dung: 409.\n• Giá hoặc khuyến mãi đổi so với báo giá: 409 PRICE_CHANGED, thu ngân tính lại.\n"
    "• Xung đột đồng thời khi trừ lô: thử lại tối đa 3 lần rồi báo thiếu tồn.\n"
-   "• Thiếu tồn, sản phẩm ngừng bán, khách bị khóa, thiếu mã giao dịch: từ chối.",
+   "• Thiếu tồn, sản phẩm ngừng bán, thiếu mã giao dịch: từ chối.",
    "Đơn đã thanh toán, kho đã trừ; gửi lặp không tạo đơn thứ hai.",
-   "Đọc: sản phẩm, khuyến mãi (cache), lô, khách. Ghi: đơn, lô, sản phẩm. Ghi sau: thẻ kho, sổ thanh toán, đồ thị, top bán.",
+   "Đọc: sản phẩm, khuyến mãi (cache), lô. Ghi: đơn, lô, sản phẩm. Ghi sau: thẻ kho, sổ thanh toán, đồ thị, top bán.",
    "AP-03, AP-07, AP-09, AP-17, AP-19")
 
-uc("FR-08", "Đơn treo tại quầy", "STAFF, ADMIN", "Should",
-   "Giỏ hiện tại có ít nhất một dòng.", "Giỏ hàng, ghi chú (tên khách).",
+uc("FR-07", "Đơn treo tại quầy", "STAFF, ADMIN", "Should",
+   "Giỏ hiện tại có ít nhất một dòng.", "Giỏ hàng, ghi chú để nhận lại đơn (vd: chị áo xanh).",
    "1. Bấm \"Treo đơn\": lưu giỏ, giỏ quầy trống để phục vụ khách khác.\n2. Danh sách đơn treo của thu ngân.\n"
    "3. Mở lại: giỏ quay về quầy và bị xóa khỏi danh sách (một thao tác nguyên tử).\n4. Hủy đơn treo.",
    "• Tự hết hạn sau 30 phút.\n• Không giữ tồn kho; giá được tính lại khi mở.\n• Mỗi thu ngân chỉ thấy đơn treo của mình.",
    "• Đơn treo đã hết hạn: báo không còn.\n• Bộ nhớ tạm không khả dụng: báo tạm thời không dùng được, vẫn bán bình thường.",
    "Giỏ được giữ hoặc khôi phục.", "Ghi/đọc/xóa: đơn treo (tạm).", "AP-18")
 
-uc("FR-09", "Trả hàng kèm hoàn tiền", "ADMIN, STAFF", "Must",
+uc("FR-08", "Trả hàng kèm hoàn tiền", "ADMIN, STAFF", "Must",
    "Đơn PAID hoặc PARTIALLY_RETURNED, trong 7 ngày kể từ ngày mua (cấu hình).",
    "Mã đơn, request_key, dòng trả (dòng đơn, số lượng, restock, lý do), phương thức hoàn, mã tham chiếu với chuyển khoản.",
    "1. Kiểm tra điều kiện, thời hạn, request_key.\n2. Chia số lượng trả vào các lô đã cấp phát, lô hạn xa nhất trước.\n"
@@ -350,16 +343,16 @@ uc("FR-09", "Trả hàng kèm hoàn tiền", "ADMIN, STAFF", "Must",
    "Có phiếu trả và khoản hoàn; kho, hàng hỏng, trạng thái đơn cập nhật đúng; gửi lặp không hoàn hai lần.",
    "Đọc/ghi: đơn, lô, sản phẩm, phiếu trả. Ghi sau: thẻ kho, sổ thanh toán.", "AP-12")
 
-uc("FR-10", "Tra cứu đơn, phiếu trả và thanh toán", "ADMIN, STAFF", "Must",
+uc("FR-09", "Tra cứu đơn, phiếu trả và thanh toán", "ADMIN, STAFF", "Must",
    "Đã đăng nhập với vai trò được phép.", "Mã đơn, khoảng ngày, trạng thái, phương thức, trang, sắp xếp.",
    "1. Lọc đơn, mới nhất trước, phân trang.\n2. Xem chi tiết đơn: dòng hàng, khuyến mãi, lô đã cấp phát.\n"
    "3. Xem phiếu trả của đơn.\n4. Xem lịch sử thanh toán và hoàn tiền.",
    "• Chỉ ADMIN, STAFF được xem.", "• Không có quyền: 403. • Không tìm thấy: 404.", "Trả về dữ liệu đúng quyền.",
    "Đọc: đơn, phiếu trả, sổ thanh toán.", "AP-10, AP-11, AP-14")
 
-uc("FR-11", "Khuyến mãi 4 loại", "ADMIN (quản lý); hệ thống áp dụng khi bán", "Must",
+uc("FR-10", "Khuyến mãi 4 loại", "ADMIN (quản lý); hệ thống áp dụng khi bán", "Must",
    "Đăng nhập ADMIN.", "Tên, loại, thời gian bắt đầu/kết thúc, phạm vi (sản phẩm hoặc nhóm hàng), tham số theo loại, trạng thái.",
-   "1. Tạo, sửa, bật/tắt khuyến mãi; xem gợi ý mua kèm (FR-14) để chọn cặp sản phẩm.\n"
+   "1. Tạo, sửa, bật/tắt khuyến mãi; xem gợi ý mua kèm (FR-13) để chọn cặp sản phẩm.\n"
    "2. Khi tính giá: với mỗi dòng chọn một khuyến mãi dòng có lợi nhất; thêm dòng quà nếu mua X tặng Y khác loại.\n"
    "3. Sau đó chọn một khuyến mãi theo tổng đơn có lợi nhất đạt mức tối thiểu.\n4. Chia tiền giảm vào từng dòng.",
    "• PERCENT: 0 < % ≤ 100. FIXED: giảm ≤ giá. BUY_X_GET_Y: buyQty, getQty > 0; quà cùng loại hoặc khác loại.\n"
@@ -368,7 +361,7 @@ uc("FR-11", "Khuyến mãi 4 loại", "ADMIN (quản lý); hệ thống áp dụ
    "• Tham số sai, thời gian kết thúc trước bắt đầu: từ chối.", "Khuyến mãi có hiệu lực ngay ở quầy.",
    "Đọc/ghi: khuyến mãi; xóa cache khuyến mãi.", "AP-17")
 
-uc("FR-12", "Chốt ca thu ngân", "STAFF (ca của mình); ADMIN (mọi thu ngân)", "Must",
+uc("FR-11", "Chốt ca thu ngân", "STAFF (ca của mình); ADMIN (mọi thu ngân)", "Must",
    "Thu ngân có giao dịch trong ngày.", "Ngày, tiền mặt đếm được, ghi chú.",
    "1. Đồng bộ các giao dịch còn chờ của thu ngân.\n2. Hiện tiền mặt thu, chuyển khoản thu, tiền hoàn, tiền mặt phải có.\n"
    "3. Thu ngân nhập tiền đếm được; hệ thống tính chênh lệch và lưu bản chốt ca.\n4. ADMIN xem danh sách chốt ca theo ngày.",
@@ -376,22 +369,22 @@ uc("FR-12", "Chốt ca thu ngân", "STAFF (ca của mình); ADMIN (mọi thu ng�
    "• Đã chốt: từ chối, trừ khi ADMIN mở lại.", "Có bản chốt ca kèm chênh lệch.",
    "Đọc: sổ thanh toán theo thu ngân và ngày. Ghi: chốt ca.", "AP-15")
 
-uc("FR-13", "Truy vết và thu hồi lô", "ADMIN", "Must",
+uc("FR-12", "Truy vết và thu hồi lô", "ADMIN", "Must",
    "Lô tồn tại.", "Mã lô.",
-   "1. Nhập mã lô; hệ thống trả các đơn đã lấy hàng từ lô, số lượng, thời điểm, khách (tên, SĐT) nếu có.\n"
-   "2. Hiện tổng đã bán, còn tồn, nhà cung cấp của lô.\n3. Đánh dấu thu hồi: điều chỉnh giảm phần còn tồn (FR-05) và xuất danh sách khách cần liên hệ.",
-   "• Kết quả gồm cả đơn đã trả hàng.\n• Khách lẻ không có hồ sơ chỉ hiện mã đơn.",
-   "• Đồ thị chưa đồng bộ: hiện cảnh báo và cho dựng lại từ dữ liệu gốc.", "Có danh sách khách cần liên hệ.",
-   "Đọc: quan hệ lô–đơn–khách. Ghi: lô (điều chỉnh).", "AP-20")
+   "1. Nhập mã lô; hệ thống trả các đơn đã lấy hàng từ lô, số lượng, thời điểm.\n"
+   "2. Hiện tổng đã bán, còn tồn, nhà cung cấp của lô.\n3. Đánh dấu thu hồi: điều chỉnh giảm phần còn tồn (FR-04) và giữ danh sách đơn đã bán từ lô.",
+   "• Kết quả gồm cả đơn đã trả hàng.",
+   "• Đồ thị chưa đồng bộ: hiện cảnh báo và cho dựng lại từ dữ liệu gốc.", "Lô còn tồn bằng 0; có danh sách đơn đã bán từ lô.",
+   "Đọc: quan hệ lô–đơn. Ghi: lô (điều chỉnh).", "AP-20")
 
-uc("FR-14", "Gợi ý mua kèm", "STAFF, ADMIN", "Should",
+uc("FR-13", "Gợi ý mua kèm", "STAFF, ADMIN", "Should",
    "Có lịch sử bán.", "Sản phẩm vừa thêm vào giỏ.",
    "1. Khi thêm sản phẩm vào giỏ, hiện tối đa 5 sản phẩm thường được mua cùng.\n2. ADMIN xem gợi ý ở trang khuyến mãi.",
    "• Xếp theo số đơn có cả hai sản phẩm.\n• Chỉ gợi ý sản phẩm đang bán.",
    "• Không có dữ liệu hoặc đồ thị không khả dụng: không hiện gợi ý, không chặn bán.", "Thu ngân thấy gợi ý.",
    "Đọc: quan hệ đơn–sản phẩm.", "AP-21")
 
-uc("FR-15", "Thống kê bán hàng, top bán chạy và xuất CSV", "ADMIN; STAFF xem top bán chạy ở quầy", "Should",
+uc("FR-14", "Thống kê bán hàng, top bán chạy và xuất CSV", "ADMIN; STAFF xem top bán chạy ở quầy", "Should",
    "Có đơn hàng.", "Khoảng ngày (7, 30 ngày hoặc tùy chọn).",
    "1. Doanh thu, số đơn theo ngày (biểu đồ cột).\n2. Doanh thu theo nhóm hàng; tổng tiền khuyến mãi; top sản phẩm trong kỳ.\n3. Xuất CSV.\n"
    "4. Top 10 bán chạy hôm nay: mỗi đơn cộng số lượng bán (không tính hàng tặng); hiện ở màn hình bán hàng và trang thống kê.",
@@ -436,7 +429,7 @@ h1("5. YÊU CẦU DỮ LIỆU")
 h2("5.1 Đặc tính dữ liệu (3V)")
 p("Ước lượng cho một siêu thị 5 quầy, khoảng 300 đơn mỗi ngày. Dữ liệu demo dùng khoảng 5 nghìn đơn trải đều 30 ngày.")
 table(["Nhóm dữ liệu", "Volume", "Velocity", "Variety", "Vòng đời / TTL"], [
-    ("Danh mục: sản phẩm, nhóm, NCC, khách", "~2 nghìn sản phẩm, ~5 nghìn khách, < 20 MB", "Đọc rất cao (mỗi lần quét), ghi < 1/phút",
+    ("Danh mục: sản phẩm, nhóm, NCC", "~2 nghìn sản phẩm, < 20 MB", "Đọc rất cao (mỗi lần quét), ghi < 1/phút",
      "Bán cấu trúc: thuộc tính riêng theo nhóm hàng", "Vĩnh viễn, xóa mềm"),
     ("Lô hàng, phiếu nhập", "~20 nghìn lô/năm", "Đọc mỗi lần bán; ghi vài chục/ngày", "Có cấu trúc, phiếu có nhiều dòng", "Vĩnh viễn"),
     ("Đơn hàng, phiếu trả", "~110 nghìn đơn/năm, 2–5 KB/đơn", "Ghi đỉnh 2 đơn/giây; đọc theo mã", "Lồng nhau: dòng, lô, thanh toán, khuyến mãi", "Vĩnh viễn"),
@@ -444,7 +437,7 @@ table(["Nhóm dữ liệu", "Volume", "Velocity", "Variety", "Vòng đời / TTL
      "Bản ghi theo thời gian", "Vĩnh viễn, không sửa"),
     ("Lịch sử đăng nhập", "~50/ngày", "Ghi mỗi lần đăng nhập", "Bản ghi theo thời gian", "TTL 90 ngày"),
     ("Phiên, cache, đơn treo, xếp hạng", "Vài trăm key, < 5 MB", "Đọc/ghi rất cao, < 10 ms", "Key-value, sorted set", "TTL 1 phút – 7 ngày"),
-    ("Quan hệ khách–đơn–sản phẩm–lô", "~110 nghìn node đơn, ~400 nghìn cạnh/năm", "Đọc vài chục/phút; ghi theo đơn",
+    ("Quan hệ đơn–sản phẩm–lô–NCC", "~110 nghìn node đơn, ~400 nghìn cạnh/năm", "Đọc vài chục/phút; ghi theo đơn",
      "Đồ thị", "Vĩnh viễn; dựng lại được"),
 ], [21, 20, 22, 20, 17])
 
@@ -472,34 +465,30 @@ ent("5.3.3 Lịch sử đăng nhập", [
     ("user_id, login_at", "Định danh, thời điểm", "Bắt buộc", "6731…a1, 2026-11-07 08:01"),
     ("success", "Logic", "Bắt buộc", "true"), ("ip, user_agent", "Chuỗi", "Tùy chọn", "113.161.x.x, Chrome"),
     ("—", "—", "Tự xóa sau 90 ngày", "—")])
-ent("5.3.4 Khách hàng", [
-    ("customer_id", "Định danh", "Khóa chính", "—"), ("full_name", "Chuỗi", "Bắt buộc", "Trần Thị B"),
-    ("phone", "Chuỗi", "Bắt buộc, duy nhất", "0912345678"), ("email", "Chuỗi", "Duy nhất, không phân biệt hoa thường", "b@gmail.com"),
-    ("address", "Chuỗi", "Tùy chọn", "Q.3, TP.HCM"), ("active, created_at", "Logic, thời điểm", "Mặc định hoạt động", "true")])
-ent("5.3.5 Nhóm hàng và nhà cung cấp", [
+ent("5.3.4 Nhóm hàng và nhà cung cấp", [
     ("category: name", "Chuỗi", "Bắt buộc, không trống, duy nhất", "Sữa"), ("category: description, active", "Chuỗi, logic", "Tùy chọn", "—"),
     ("supplier: name", "Chuỗi", "Bắt buộc", "Vinamilk"), ("supplier: phone, email", "Chuỗi", "Duy nhất khi có giá trị", "028…"),
     ("supplier: address, active", "Chuỗi, logic", "Tùy chọn; mặc định hoạt động", "—")])
-ent("5.3.6 Sản phẩm", [
+ent("5.3.5 Sản phẩm", [
     ("product_id, sku", "Định danh, chuỗi", "Khóa chính; SKU bắt buộc, duy nhất", "SUA-TT-1L"), ("name", "Chuỗi", "Bắt buộc", "Sữa tươi 1L"),
     ("price", "Tiền tệ", "Bắt buộc, ≥ 0; đơn giá khi bán", "32000"), ("category_id, supplier_id", "Định danh", "Tham chiếu nhóm hàng, NCC mặc định", "—"),
     ("attributes", "Danh sách khóa–giá trị", "Tùy chọn, khác nhau theo nhóm hàng", "{dungTich: \"1L\"}"),
     ("stock_quantity, damaged_quantity", "Số nguyên", "≥ 0; chỉ đổi qua lô, bán, trả", "120, 2"), ("reorder_point", "Số nguyên", "Ngưỡng cảnh báo", "20"),
     ("image_url, active, version", "Chuỗi, logic, số nguyên", "Tùy chọn; xóa mềm; khóa lạc quan", "—")])
-ent("5.3.7 Lô hàng", [
+ent("5.3.6 Lô hàng", [
     ("batch_id, batch_code", "Định danh, chuỗi", "Khóa chính; mã duy nhất, sinh tự động", "L261107-0003"),
     ("product_id, supplier_id, purchase_order_id", "Định danh", "Sản phẩm bắt buộc; còn lại tùy chọn", "—"),
     ("received_qty", "Số nguyên", "> 0", "100"), ("remaining_qty, damaged_qty", "Số nguyên", "≥ 0", "80, 0"),
     ("unit_cost", "Tiền tệ", "Giá vốn", "24000"), ("mfg_date, expiry_date", "Ngày", "NSX không ở tương lai; HSD tùy chọn, không trước NSX", "2026-11-01, 2026-11-20"),
     ("received_at, received_by", "Thời điểm, chuỗi", "Bắt buộc", "—")])
-ent("5.3.8 Phiếu nhập", [
+ent("5.3.7 Phiếu nhập", [
     ("po_code, supplier_id", "Chuỗi, định danh", "Mã duy nhất; NCC bắt buộc", "PN261107-0001"),
     ("status", "Liệt kê", "DRAFT, RECEIVED; phiếu nháp được sửa hoặc xóa", "DRAFT"),
     ("lines", "Danh sách", "≥ 1 dòng: sản phẩm, số đặt, giá vốn, số thực nhận, lô sinh ra", "—"),
     ("created_by, created_at, received_at", "Chuỗi, thời điểm", "—", "—")])
-ent("5.3.9 Đơn hàng, dòng đơn và cấp phát lô", [
+ent("5.3.8 Đơn hàng, dòng đơn và cấp phát lô", [
     ("order_code, request_key", "Chuỗi", "Duy nhất; request_key chống tạo trùng", "HD261107-0042"),
-    ("cashier, customer", "Tham chiếu", "Thu ngân bắt buộc; khách tùy chọn", "—"),
+    ("cashier", "Tham chiếu", "Bắt buộc", "—"),
     ("ordered_at, status", "Thời điểm, liệt kê", "PAID, PARTIALLY_RETURNED, RETURNED", "PAID"),
     ("payment_method, transaction_ref", "Liệt kê, chuỗi", "CASH, BANK_TRANSFER; mã giao dịch bắt buộc với CK", "CASH"),
     ("gross_total, discount_total, total", "Tiền tệ", "total = gross − discount = tổng netAmount", "120000, 20000, 100000"),
@@ -508,27 +497,27 @@ ent("5.3.9 Đơn hàng, dòng đơn và cấp phát lô", [
     ("dòng: gross_amount, net_amount, is_gift", "Tiền tệ, logic", "net_amount = tiền thực trả của dòng", "90000, 60000, false"),
     ("dòng: promotion, returned_quantity", "Ảnh chụp, số nguyên", "Tối đa 1 khuyến mãi dòng; ≤ số lượng", "Mua 2 tặng 1, 0"),
     ("cấp phát: batch, quantity, returned_quantity", "—", "Tổng theo dòng = số lượng dòng", "L261101-0003, 3, 0")])
-ent("5.3.10 Ghi nhận thanh toán", [
+ent("5.3.9 Ghi nhận thanh toán", [
     ("type", "Liệt kê", "PAYMENT, REFUND", "PAYMENT"), ("method, amount", "Liệt kê, tiền tệ", "amount > 0", "CASH, 100000"),
     ("reference", "Chuỗi", "Cùng đơn, loại, mã thì không ghi trùng", "POS-HD261107-0042"),
     ("return_id, cashier, created_at", "—", "Mỗi phiếu trả có đúng một khoản hoàn", "—")])
-ent("5.3.11 Phiếu trả và dòng phiếu trả", [
+ent("5.3.10 Phiếu trả và dòng phiếu trả", [
     ("return_code, order_id, request_key", "Chuỗi, định danh", "request_key duy nhất toàn hệ thống", "PT261108-0001"),
     ("refund_amount, refund_method, refund_reference", "Tiền tệ, liệt kê, chuỗi", "Hoàn cùng lúc lập phiếu", "20000, CASH"),
     ("dòng: order line, batch, quantity", "—", "Quantity > 0; duy nhất theo (dòng, lô)", "—"),
     ("dòng: restock, reason, refund_amount", "Logic, chuỗi, tiền", "Lý do bắt buộc", "true, \"Khách đổi ý\"")])
-ent("5.3.12 Biến động kho", [
+ent("5.3.11 Biến động kho", [
     ("product_id, batch_code", "Định danh, chuỗi", "Bắt buộc", "—"),
     ("movement_type", "Liệt kê", "RECEIPT, SALE, RETURN, RETURN_DAMAGED, ADJUSTMENT", "SALE"),
     ("quantity", "Số nguyên", "Có dấu theo loại", "-3"), ("ref_type, ref_code", "Chuỗi", "Chứng từ gốc", "ORDER, HD261107-0042"),
     ("note, performed_by, created_at", "Chuỗi, thời điểm", "Chỉ thêm, không sửa", "—")])
-ent("5.3.13 Khuyến mãi", [
+ent("5.3.12 Khuyến mãi", [
     ("name, type", "Chuỗi, liệt kê", "PERCENT, FIXED, BUY_X_GET_Y, ORDER_THRESHOLD", "Mua 2 tặng 1 sữa"),
     ("starts_at, ends_at, active", "Thời điểm, logic", "ends_at > starts_at", "—"),
     ("scope", "Danh sách", "Sản phẩm hoặc nhóm hàng áp dụng", "[SUA-TT-1L]"),
     ("rule", "Cấu trúc theo loại", "{percent} / {amount} / {buyQty, getQty, giftProductId} / {minTotal, amount | percent, maxDiscount}",
      "{buyQty: 2, getQty: 1}")])
-ent("5.3.14 Chốt ca", [
+ent("5.3.13 Chốt ca", [
     ("cashier_id, day", "Định danh, ngày", "Duy nhất theo cặp", "—"),
     ("expected_cash, expected_bank, refunds", "Tiền tệ", "Tính từ sổ thanh toán", "5.200.000, 3.100.000, 50.000"),
     ("counted_cash, difference, note, closed_at", "Tiền tệ, chuỗi, thời điểm", "difference = counted − expected_cash", "5.150.000, -50.000")])
@@ -557,7 +546,7 @@ AP = [
     ("AP-17", "Khuyến mãi đang hiệu lực", "Đọc", "thời điểm", "Rất cao", "< 20 ms", "Eventual (5 phút)"),
     ("AP-18", "Lưu, liệt kê, mở đơn treo", "Đọc/Ghi", "cashierId, holdId", "Cao", "< 10 ms", "Strong (1 key)"),
     ("AP-19", "Top 10 bán chạy hôm nay", "Đọc/Ghi", "ngày", "Cao", "< 10 ms", "Eventual"),
-    ("AP-20", "Truy vết lô → đơn → khách", "Đọc", "batchCode", "Thấp", "< 200 ms", "Eventual"),
+    ("AP-20", "Truy vết lô → đơn", "Đọc", "batchCode", "Thấp", "< 200 ms", "Eventual"),
     ("AP-21", "Gợi ý mua kèm (2 bước quan hệ)", "Đọc", "productId", "Cao", "< 200 ms", "Eventual"),
     ("AP-22", "Phiếu nhập theo trạng thái; nhận hàng", "Đọc/Ghi", "status, poId", "Trung bình", "< 300 ms", "Strong"),
     ("AP-23", "Thống kê doanh thu theo ngày, nhóm hàng", "Đọc", "khoảng ngày", "Thấp", "< 1 s", "Strong"),
@@ -573,9 +562,8 @@ p("Ứng dụng web một trang, tiếng Việt, dùng nội bộ. Màn hình ch
 table(["Màn hình", "Vai trò", "Nội dung chính"], [
     ("Đăng nhập", "Tất cả", "Tên đăng nhập, mật khẩu; tự làm mới phiên"),
     ("Bán tại quầy", "STAFF, ADMIN", "Tìm/quét sản phẩm, giỏ có khuyến mãi và dòng quà, gợi ý mua kèm, top bán chạy, đơn treo, thanh toán, in hóa đơn"),
-    ("Đơn hàng", "STAFF, ADMIN", "Lọc đơn, chi tiết, trả hàng một bước, lịch sử thanh toán"),
+    ("Đơn hàng", "STAFF, ADMIN", "Lọc đơn, chi tiết, in lại hóa đơn, trả hàng một bước, lịch sử thanh toán"),
     ("Chốt ca", "STAFF, ADMIN", "Tổng thu trong ca, nhập tiền đếm được, chênh lệch; ADMIN xem mọi ca"),
-    ("Khách hàng", "STAFF, ADMIN", "Danh sách, tìm theo SĐT, thêm, sửa"),
     ("Sản phẩm", "Tất cả xem", "Lọc, phân trang, thuộc tính riêng, tab Thẻ kho theo tháng"),
     ("Nhóm hàng, Nhà cung cấp", "ADMIN (+WAREHOUSE với NCC)", "Danh sách, thêm, sửa, xóa"),
     ("Phiếu nhập", "WAREHOUSE, ADMIN", "Tạo phiếu nháp, nhận hàng sinh lô"),
@@ -591,18 +579,17 @@ p("REST + JSON, tiền tố /api, xác thực Bearer JWT; tài liệu OpenAPI t�
 table(["Nhóm", "Endpoint chính", "FR"], [
     ("Xác thực", "POST /auth/login, /auth/refresh, /auth/logout; GET/PUT /auth/me; PUT /auth/password; GET /auth/me/logins?month=", "FR-01"),
     ("Người dùng", "GET/POST /users; GET/PUT/DELETE /users/{id}; GET /users/{id}/logins?month=; GET /roles", "FR-01, FR-02"),
-    ("Khách hàng", "GET/POST /customers; GET/PUT/DELETE /customers/{id}", "FR-03"),
-    ("Danh mục", "/categories, /suppliers, /products (CRUD); GET /products/low-stock; GET /products/sku/{sku}", "FR-04"),
+    ("Danh mục", "/categories, /suppliers, /products (CRUD); GET /products/low-stock; GET /products/sku/{sku}", "FR-03"),
     ("Kho", "GET/POST /inventory/batches; POST /inventory/batches/{id}/adjustments; GET /inventory/batches/expired; "
-            "GET /products/{id}/stock-movements?month=", "FR-04 → FR-06"),
-    ("Phiếu nhập", "GET/POST /purchase-orders; PUT/DELETE /purchase-orders/{id}; POST /purchase-orders/{id}/receive", "FR-05"),
+            "GET /products/{id}/stock-movements?month=", "FR-03 → FR-05"),
+    ("Phiếu nhập", "GET/POST /purchase-orders; PUT/DELETE /purchase-orders/{id}; POST /purchase-orders/{id}/receive", "FR-04"),
     ("Bán, trả", "POST /orders/quote; POST /orders; GET /orders; GET /orders/{id}; GET /orders/code/{code}; "
-                 "POST /orders/{id}/returns; GET /orders/{id}/returns; GET /orders/{id}/payments", "FR-07, FR-09, FR-10"),
-    ("Quầy", "GET/POST /pos/held; GET/DELETE /pos/held/{holdId}; GET /pos/products/{id}/panel", "FR-08, FR-14, FR-15"),
-    ("Khuyến mãi", "GET/POST /promotions; PUT /promotions/{id}; PUT /promotions/{id}/active", "FR-11"),
-    ("Chốt ca", "GET /shifts/me/today; POST /shifts/me/close; GET /shifts?day=", "FR-12"),
-    ("Đồ thị", "GET /batches/{code}/trace; GET /products/{id}/also-bought; POST /admin/graph/rebuild", "FR-13, FR-14"),
-    ("Thống kê", "GET /stats/sales?from=&to=; GET /stats/sales.csv; GET /stats/top-sales/today", "FR-15"),
+                 "POST /orders/{id}/returns; GET /orders/{id}/returns; GET /orders/{id}/payments", "FR-06, FR-08, FR-09"),
+    ("Quầy", "GET/POST /pos/held; GET/DELETE /pos/held/{holdId}; GET /pos/products/{id}/panel", "FR-07, FR-13, FR-14"),
+    ("Khuyến mãi", "GET/POST /promotions; PUT /promotions/{id}; PUT /promotions/{id}/active", "FR-10"),
+    ("Chốt ca", "GET /shifts/me/today; POST /shifts/me/close; GET /shifts?day=", "FR-11"),
+    ("Đồ thị", "GET /batches/{code}/trace; GET /products/{id}/also-bought; POST /admin/graph/rebuild", "FR-12, FR-13"),
+    ("Thống kê", "GET /stats/sales?from=&to=; GET /stats/sales.csv; GET /stats/top-sales/today", "FR-14"),
     ("Vận hành", "GET /health/datastores; GET /admin/sync/status; POST /admin/sync/retry", "—"),
 ], [14, 70, 16])
 
@@ -628,22 +615,21 @@ table(["FR", "AP", "CSDL / cấu trúc", "Màn hình", "TC"], [
     ("FR-01", "AP-01, 02, 16", "MongoDB users · Redis auth:refresh:*, auth:user-tokens:* · Cassandra login_history_by_user (TTL 90 ngày)",
      "Đăng nhập, Menu tài khoản", "TC-01"),
     ("FR-02", "AP-01", "MongoDB users", "Người dùng", "TC-02"),
-    ("FR-03", "—", "MongoDB customers · Neo4j :Customer", "Khách hàng", "TC-03"),
-    ("FR-04", "AP-03 → 08", "MongoDB products (text, {categoryId, price}), categories, suppliers, batches · Redis cache:products:*",
-     "Sản phẩm, Nhóm hàng, NCC, Tồn kho", "TC-04"),
-    ("FR-05", "AP-08, 22, 24", "MongoDB purchase_orders, batches, counters · Cassandra stock_movements_by_product · Neo4j :SUPPLIED_BY",
-     "Phiếu nhập, Tồn kho", "TC-05"),
-    ("FR-06", "AP-13", "Cassandra stock_movements_by_product", "Sản phẩm – Thẻ kho", "TC-06"),
-    ("FR-07", "AP-03, 07, 09, 17, 19", "MongoDB orders (transaction), batches {productId, expirySortKey} · Redis cache, top:sales:* · "
-     "Cassandra payments_* · Neo4j", "Bán tại quầy", "TC-07"),
-    ("FR-08", "AP-18", "Redis pos:held:* (MULTI, Lua)", "Bán tại quầy", "TC-08"),
-    ("FR-09", "AP-12", "MongoDB orders, returns, batches · Cassandra", "Đơn hàng", "TC-09"),
-    ("FR-10", "AP-10, 11, 14", "MongoDB orders · Cassandra payments_by_order", "Đơn hàng", "TC-10"),
-    ("FR-11", "AP-17", "MongoDB promotions (polymorphic) · Redis cache:promotions:active", "Khuyến mãi", "TC-11"),
-    ("FR-12", "AP-15", "Cassandra payments_by_cashier_day · MongoDB shift_closings", "Chốt ca", "TC-12"),
-    ("FR-13", "AP-20", "Neo4j (:Batch)<-[:TOOK_FROM]-(:Order)<-[:PLACED]-(:Customer)", "Tồn kho", "TC-13"),
-    ("FR-14", "AP-21", "Neo4j (:Product)<-[:CONTAINS]-(:Order)-[:CONTAINS]->(:Product)", "Bán tại quầy, Khuyến mãi", "TC-14"),
-    ("FR-15", "AP-19, 23", "MongoDB aggregation trên orders · Redis top:sales:{ngày} (sorted set)", "Thống kê, Bán tại quầy", "TC-15"),
+    ("FR-03", "AP-03 → 08", "MongoDB products (text, {categoryId, price}), categories, suppliers, batches · Redis cache:products:*",
+     "Sản phẩm, Nhóm hàng, NCC, Tồn kho", "TC-03"),
+    ("FR-04", "AP-08, 22, 24", "MongoDB purchase_orders, batches, counters · Cassandra stock_movements_by_product · Neo4j :SUPPLIED_BY",
+     "Phiếu nhập, Tồn kho", "TC-04"),
+    ("FR-05", "AP-13", "Cassandra stock_movements_by_product", "Sản phẩm – Thẻ kho", "TC-05"),
+    ("FR-06", "AP-03, 07, 09, 17, 19", "MongoDB orders (transaction), batches {productId, expirySortKey} · Redis cache, top:sales:* · "
+     "Cassandra payments_* · Neo4j", "Bán tại quầy", "TC-06"),
+    ("FR-07", "AP-18", "Redis pos:held:* (MULTI, Lua)", "Bán tại quầy", "TC-07"),
+    ("FR-08", "AP-12", "MongoDB orders, returns, batches · Cassandra", "Đơn hàng", "TC-08"),
+    ("FR-09", "AP-10, 11, 14", "MongoDB orders · Cassandra payments_by_order", "Đơn hàng", "TC-09"),
+    ("FR-10", "AP-17", "MongoDB promotions (polymorphic) · Redis cache:promotions:active", "Khuyến mãi", "TC-10"),
+    ("FR-11", "AP-15", "Cassandra payments_by_cashier_day · MongoDB shift_closings", "Chốt ca", "TC-11"),
+    ("FR-12", "AP-20", "Neo4j (:Batch)<-[:TOOK_FROM]-(:Order), (:Batch)-[:SUPPLIED_BY]->(:Supplier)", "Tồn kho", "TC-12"),
+    ("FR-13", "AP-21", "Neo4j (:Product)<-[:CONTAINS]-(:Order)-[:CONTAINS]->(:Product)", "Bán tại quầy, Khuyến mãi", "TC-13"),
+    ("FR-14", "AP-19, 23", "MongoDB aggregation trên orders · Redis top:sales:{ngày} (sorted set)", "Thống kê, Bán tại quầy", "TC-14"),
 ], [10, 15, 45, 20, 10])
 
 # ---------------------------------------------------------------- 9
@@ -652,11 +638,11 @@ h2("9.1 Giả định")
 b("Mọi thay đổi tồn kho phát sinh từ lô hàng; tồn sản phẩm là số tổng hợp để hiển thị nhanh.",
   "Đơn giá và khuyến mãi lúc bán được chốt trong dòng đơn; thay đổi sau đó không ảnh hưởng đơn đã tạo.",
   "Thời hạn trả hàng mặc định 7 ngày, lấy từ cấu hình.",
-  "Khách mua tại quầy không bắt buộc có hồ sơ.")
+  "Hệ thống không lưu hồ sơ khách hàng; mọi đơn là đơn bán lẻ.")
 h2("9.2 Ràng buộc")
 b("Thời gian: trong khuôn khổ đồ án học phần Dữ liệu NoSQL, nhóm 3 sinh viên.",
   "Công nghệ: dữ liệu nằm trên MongoDB, Cassandra, Neo4j và Redis; không dùng RDBMS; dùng gói cloud miễn phí.",
-  "Pháp lý: số điện thoại, email, địa chỉ khách hàng là dữ liệu cá nhân; không đưa vào file sao lưu công khai hay log.")
+  "Pháp lý: số điện thoại, email của người dùng nội bộ là dữ liệu cá nhân; không đưa vào file sao lưu công khai hay log.")
 h2("9.3 Rủi ro kỹ thuật")
 table(["Rủi ro", "Biện pháp giảm thiểu"], [
     ("Không có giao dịch xuyên 4 CSDL; Cassandra, Neo4j có thể lệch MongoDB khi lỗi giữa chừng.",

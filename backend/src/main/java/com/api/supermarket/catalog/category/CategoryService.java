@@ -15,7 +15,7 @@ import com.api.supermarket.user.UserFields;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
-/** Nhóm hàng (FR-04). Đổi tên thì cập nhật tên đã chép trong mọi sản phẩm của nhóm. */
+/** Nhóm hàng (FR-03). Đổi tên thì cập nhật tên đã chép trong mọi sản phẩm của nhóm. */
 @Service
 public class CategoryService {
     public record CategoryRequest(@NotBlank @Size(max = 100) String name, @Size(max = 500) String description,

@@ -26,7 +26,7 @@ Ngày: 2026-11-07 · Nhánh: `nosql-migration` · Mốc trước khi chuyển: c
 - Không bán quá tồn khi bán đồng thời; bấm lặp không tạo đơn hay hoàn tiền hai lần.
 - Không còn MySQL, JPA, Drill, Docker trong repo.
 
-**Ngoài phạm vi**: bán online, tích điểm, cổng thanh toán, dashboard phân tích kiểu BigData (Drill, Parquet), giới hạn số suất khuyến mãi, nhiều chi nhánh, thông báo đẩy realtime, sao lưu bằng giao diện (sao lưu làm bằng script). Trang thống kê đơn giản bằng aggregation MongoDB vẫn nằm trong phạm vi (mục 19, FR-15), vì mẫu chấm điểm yêu cầu "chức năng hỗ trợ: thống kê, biểu đồ, xuất file".
+**Ngoài phạm vi**: bán online, tích điểm, cổng thanh toán, dashboard phân tích kiểu BigData (Drill, Parquet), giới hạn số suất khuyến mãi, nhiều chi nhánh, thông báo đẩy realtime, sao lưu bằng giao diện (sao lưu làm bằng script). Trang thống kê đơn giản bằng aggregation MongoDB vẫn nằm trong phạm vi (mục 19, FR-14), vì mẫu chấm điểm yêu cầu "chức năng hỗ trợ: thống kê, biểu đồ, xuất file".
 
 ## 2. Tác nhân
 
@@ -34,7 +34,7 @@ Ngày: 2026-11-07 · Nhánh: `nosql-migration` · Mốc trước khi chuyển: c
 |---|---|---|
 | `ADMIN` | Chủ cửa hàng kiêm quản lý | Người dùng, nhóm hàng, sản phẩm, nhà cung cấp, khuyến mãi, thu hồi lô, xem chốt ca mọi thu ngân, top bán chạy, dựng lại Neo4j |
 | `WAREHOUSE` | Thủ kho | Phiếu nhập hàng, nhận lô, điều chỉnh giảm tồn, thẻ kho, cảnh báo sắp hết hàng và lô hết hạn |
-| `STAFF` | Thu ngân | Bán tại quầy, đơn treo, trả hàng kèm hoàn tiền, chốt ca của mình, khách hàng |
+| `STAFF` | Thu ngân | Bán tại quầy, đơn treo, trả hàng kèm hoàn tiền, chốt ca của mình |
 
 `MANAGER` bị bỏ khỏi code và SRS; quyền của MANAGER gộp vào ADMIN. Vai trò là enum trong code, không cần collection riêng.
 
@@ -83,27 +83,26 @@ File `secure-connect-*.zip` chuyển vào thư mục `secrets/` (đã nằm tron
 
 ## 4. Danh sách chức năng và CSDL dùng
 
-Rút gọn từ 24 xuống 15 FR (07/11/2026): gộp các FR nhỏ theo use case, bỏ thông báo realtime và sao lưu bằng giao diện (sao lưu làm bằng script trong `nosql-scripts/`), phiếu nhập chỉ còn 2 trạng thái.
+Rút gọn từ 24 xuống 15 FR (07/11/2026): gộp các FR nhỏ theo use case, bỏ thông báo realtime và sao lưu bằng giao diện (sao lưu làm bằng script trong `nosql-scripts/`), phiếu nhập chỉ còn 2 trạng thái. Sau đó bỏ quản lý khách hàng (FR-03 cũ): đơn bán lẻ không gắn khách, nên còn 14 FR và các FR sau được đánh số lùi một bậc.
 
 | Mã | Chức năng | Tác nhân | Mongo | Cassandra | Neo4j | Redis |
 |---|---|---|:-:|:-:|:-:|:-:|
 | FR-01 | Tài khoản và phiên: đăng nhập, làm mới, đăng xuất, hồ sơ, đổi mật khẩu, lịch sử đăng nhập 90 ngày | Tất cả | ● | ● TTL | | ● refresh token |
 | FR-02 | Quản lý người dùng | ADMIN | ● | | | |
-| FR-03 | Quản lý khách hàng | ADMIN, STAFF | ● | | ● | |
-| FR-04 | Danh mục hàng hóa: sản phẩm (thuộc tính linh hoạt), nhóm hàng, nhà cung cấp, tra cứu, cảnh báo sắp hết hàng và lô hết hạn | Tất cả xem; ADMIN, WAREHOUSE ghi | ● | | ● | ● cache |
-| FR-05 | Nhập hàng (phiếu DRAFT → RECEIVED, lô lẻ) và điều chỉnh giảm tồn | ADMIN, WAREHOUSE | ● | ● | ● | |
-| FR-06 | Thẻ kho (lịch sử biến động) | Tất cả | | ● | | |
-| FR-07 | Bán tại quầy (khuyến mãi, cấp phát FEFO) | ADMIN, STAFF | ● | ● | ● | ● top bán |
-| FR-08 | Đơn treo tại quầy | STAFF | | | | ● |
-| FR-09 | Trả hàng kèm hoàn tiền (1 bước) | ADMIN, STAFF | ● | ● | | |
-| FR-10 | Tra cứu đơn, phiếu trả, thanh toán | ADMIN, STAFF | ● | ● | | |
-| FR-11 | Khuyến mãi 4 loại | ADMIN | ● | | | ● cache |
-| FR-12 | Chốt ca thu ngân | STAFF (của mình), ADMIN (tất cả) | ● | ● | | |
-| FR-13 | Truy vết và thu hồi lô | ADMIN | | | ● | |
-| FR-14 | Gợi ý mua kèm | STAFF (quầy), ADMIN (tạo KM) | | | ● | |
-| FR-15 | Thống kê bán hàng, biểu đồ, xuất CSV, top bán chạy hôm nay | ADMIN (STAFF xem top bán) | ● aggregation | | | ● sorted set |
+| FR-03 | Danh mục hàng hóa: sản phẩm (thuộc tính linh hoạt), nhóm hàng, nhà cung cấp, tra cứu, cảnh báo sắp hết hàng và lô hết hạn | Tất cả xem; ADMIN, WAREHOUSE ghi | ● | | ● | ● cache |
+| FR-04 | Nhập hàng (phiếu DRAFT → RECEIVED, lô lẻ) và điều chỉnh giảm tồn | ADMIN, WAREHOUSE | ● | ● | ● | |
+| FR-05 | Thẻ kho (lịch sử biến động) | Tất cả | | ● | | |
+| FR-06 | Bán tại quầy (khuyến mãi, cấp phát FEFO) | ADMIN, STAFF | ● | ● | ● | ● top bán |
+| FR-07 | Đơn treo tại quầy | STAFF | | | | ● |
+| FR-08 | Trả hàng kèm hoàn tiền (1 bước) | ADMIN, STAFF | ● | ● | | |
+| FR-09 | Tra cứu đơn, phiếu trả, thanh toán | ADMIN, STAFF | ● | ● | | |
+| FR-10 | Khuyến mãi 4 loại | ADMIN | ● | | | ● cache |
+| FR-11 | Chốt ca thu ngân | STAFF (của mình), ADMIN (tất cả) | ● | ● | | |
+| FR-12 | Truy vết và thu hồi lô | ADMIN | | | ● | |
+| FR-13 | Gợi ý mua kèm | STAFF (quầy), ADMIN (tạo KM) | | | ● | |
+| FR-14 | Thống kê bán hàng, biểu đồ, xuất CSV, top bán chạy hôm nay | ADMIN (STAFF xem top bán) | ● aggregation | | | ● sorted set |
 
-Bảng đổi mã từ bản 24 FR: 01, 02, 24 → FR-01 · 03 → FR-02 · 04 → FR-03 · 05, 06, 07 → FR-04 · 08, 10 → FR-05 · 11 → FR-06 · 09, 12 → FR-07 · 16 → FR-08 · 13 → FR-09 · 14 → FR-10 · 15 → FR-11 · 17 → FR-12 · 18 → FR-13 · 19 → FR-14 · 20, 21 → FR-15 · 22, 23 bỏ.
+Bảng đổi mã từ bản 24 FR: 01, 02, 24 → FR-01 · 03 → FR-02 · 04 → FR-03 · 05, 06, 07 → FR-03 · 08, 10 → FR-04 · 11 → FR-05 · 09, 12 → FR-06 · 16 → FR-07 · 13 → FR-08 · 14 → FR-09 · 15 → FR-10 · 17 → FR-11 · 18 → FR-12 · 19 → FR-13 · 20, 21 → FR-14 · 22, 23 bỏ.
 
 ## 5. MongoDB
 
@@ -114,7 +113,6 @@ Bảng đổi mã từ bản 24 FR: 01, 02, 24 → FR-01 · 03 → FR-02 · 04 �
 | Collection | Nội dung chính | Index |
 |---|---|---|
 | `users` | `username, passwordHash, fullName, email, phone, role, active, createdAt` | unique `username`; unique một phần `email`, `phone` |
-| `customers` | `fullName, phone, email, emailLower, address, active, createdAt` | unique `phone`; unique một phần `emailLower` |
 | `categories` | `name, nameLower, description, active` | unique `nameLower` |
 | `suppliers` | `name, phone, email, address, active` | unique một phần `phone`, `email` |
 | `products` | `sku, name, price, categoryId, categoryName, supplierId, reorderPoint, imageUrl, active, attributes{}, stockQuantity, damagedQuantity, version` | unique `sku`; text `name, sku`; `categoryId` |
@@ -135,7 +133,6 @@ Bảng đổi mã từ bản 24 FR: 01, 02, 24 → FR-01 · 03 → FR-02 · 04 �
 {
   "_id": "...", "orderCode": "HD20261107-0042", "requestKey": "uuid-từ-client",
   "cashier": {"userId": "...", "name": "Thu ngân A"},
-  "customer": {"customerId": "...", "name": "...", "phone": "..."},
   "orderedAt": "2026-11-07T10:15:00+07:00",
   "status": "PAID",
   "paymentMethod": "CASH", "transactionRef": null,
@@ -190,29 +187,28 @@ CREATE TABLE payments_by_cashier_day (
 - Mỗi bảng phục vụ đúng một câu truy vấn: thẻ kho theo sản phẩm và tháng, thanh toán theo đơn, thanh toán theo thu ngân và ngày.
 - `movement_id`, `payment_id` là UUID tạo từ nội dung, ví dụ `UUID.nameUUIDFromBytes("SALE|orderId|lineNo|batchId")`. Ghi lại cùng dữ liệu chỉ ghi đè đúng dòng cũ, nên không cần LWT.
 - Thẻ kho mặc định xem tháng hiện tại; frontend có ô chọn tháng.
-- Loại biến động: `RECEIPT`, `SALE`, `RETURN`, `RETURN_DAMAGED`, `ADJUSTMENT`. Quy ước dấu số lượng giữ như SRS FR-06.
+- Loại biến động: `RECEIPT`, `SALE`, `RETURN`, `RETURN_DAMAGED`, `ADJUSTMENT`. Quy ước dấu số lượng giữ như SRS FR-05.
 
 ## 7. Neo4j
 
 Mô hình:
 
 ```
-(:Customer {id, name, phone})-[:PLACED]->(:Order {id, code, at})
-(:Order)-[:CONTAINS {qty}]->(:Product {id, sku, name})
+(:Order {id, code, at})-[:CONTAINS {qty}]->(:Product {id, sku, name})
 (:Order)-[:TOOK_FROM {qty}]->(:Batch {id, code, expiry})
 (:Batch)-[:OF_PRODUCT]->(:Product)
 (:Batch)-[:SUPPLIED_BY]->(:Supplier {id, name})
 ```
 
-- Ghi bằng `MERGE` theo `id`, nên ghi lặp an toàn. Khách lẻ không có node Customer.
-- **Truy vết và thu hồi lô (FR-13)**:
-  `MATCH (b:Batch {code:$code})<-[t:TOOK_FROM]-(o:Order) OPTIONAL MATCH (c:Customer)-[:PLACED]->(o) RETURN o.code, o.at, t.qty, c.name, c.phone ORDER BY o.at`
-  Màn hình hiện danh sách khách cần liên hệ (có số điện thoại) và tổng số lượng đã bán ra.
-- **Gợi ý mua kèm (FR-14)**:
+- Ghi bằng `MERGE` theo `id`, nên ghi lặp an toàn.
+- **Truy vết và thu hồi lô (FR-12)**:
+  `MATCH (b:Batch {code:$code})<-[t:TOOK_FROM]-(o:Order) RETURN o.code, o.at, t.qty ORDER BY o.at`
+  Màn hình hiện các đơn đã lấy hàng từ lô và tổng số lượng đã bán ra; thu hồi giảm toàn bộ phần còn tồn.
+- **Gợi ý mua kèm (FR-13)**:
   `MATCH (p:Product {id:$id})<-[:CONTAINS]-(o:Order)-[:CONTAINS]->(x:Product) WHERE x <> p RETURN x.id, x.name, count(o) AS times ORDER BY times DESC LIMIT 5`
   Ở quầy, khi thêm sản phẩm vào giỏ thì hiện 5 gợi ý. Ở trang khuyến mãi, ADMIN xem gợi ý để chọn cặp tạo khuyến mãi mua X tặng Y.
-- **Dựng lại**: `POST /api/admin/graph/rebuild` (ADMIN) xóa graph, đọc toàn bộ đơn, lô, khách, nhà cung cấp từ MongoDB rồi `MERGE` lại theo từng lô 500 bản ghi.
-- Graph không quan tâm hàng trả. Truy vết là "đã bán ra cho ai", bao gồm cả đơn đã trả.
+- **Dựng lại**: `POST /api/admin/graph/rebuild` (ADMIN) xóa graph, đọc toàn bộ đơn, lô, nhà cung cấp từ MongoDB rồi `MERGE` lại theo từng lô 500 bản ghi.
+- Graph không quan tâm hàng trả. Truy vết là "đã bán ra trong những đơn nào", bao gồm cả đơn đã trả.
 
 ## 8. Redis
 
@@ -223,9 +219,9 @@ Mô hình:
 | `cache:products:active` | string JSON | 5 phút | Danh sách sản phẩm ở quầy; xóa khi sản phẩm hoặc lô đổi |
 | `cache:products:low-stock` | string JSON | 1 phút | Cảnh báo sắp hết hàng |
 | `cache:promotions:active` | string JSON | 5 phút | Tính giá ở quầy; xóa khi sửa khuyến mãi |
-| `pos:held:{cashierId}:{holdId}` | string JSON giỏ | 30 phút | FR-08 đơn treo |
+| `pos:held:{cashierId}:{holdId}` | string JSON giỏ | 30 phút | FR-07 đơn treo |
 | `pos:held-index:{cashierId}` | sorted set holdId theo thời gian | 30 phút | Liệt kê đơn treo |
-| `top:sales:{yyyyMMdd}` | sorted set productId → số lượng | 3 ngày | FR-15; `ZINCRBY` khi bán (không tính hàng tặng), `ZREVRANGE 0 9` |
+| `top:sales:{yyyyMMdd}` | sorted set productId → số lượng | 3 ngày | FR-14; `ZINCRBY` khi bán (không tính hàng tặng), `ZREVRANGE 0 9` |
 
 Khi Redis lỗi:
 
@@ -240,11 +236,11 @@ Mọi lệnh Redis đi qua một lớp `RedisSafe` có `try/catch` và log.
 - Trong cùng transaction nghiệp vụ, ghi một document `sync_queue`, ví dụ `{type: "ORDER_CREATED", refId, payload: {movements[], payments[], graph{...}}, status: "PENDING"}`. Payload chứa sẵn dữ liệu cần ghi, nên job không phải tính lại.
 - Sau khi commit, `SyncService.process(id)` chạy ngay (bất đồng bộ). Ghi Cassandra và Neo4j xong thì đặt `DONE`; lỗi thì tăng `attempts`, lưu `lastError`.
 - Job `@Scheduled` mỗi 60 giây xử lý các bản ghi `PENDING` cũ hơn 30 giây, với `attempts < 10`. Đến lần thứ 10 vẫn lỗi thì đặt `FAILED` và chờ ADMIN bấm thử lại.
-- Các loại sự kiện: `BATCH_RECEIVED`, `STOCK_ADJUSTED`, `ORDER_CREATED`, `RETURN_CREATED`, `MASTER_UPSERTED` (khách, sản phẩm, nhà cung cấp sang Neo4j).
+- Các loại sự kiện: `BATCH_RECEIVED`, `STOCK_ADJUSTED`, `ORDER_CREATED`, `RETURN_CREATED`, `MASTER_UPSERTED` (sản phẩm, nhà cung cấp sang Neo4j).
 - Chốt ca gọi xử lý các bản ghi `PENDING` của thu ngân đó trước khi tính tổng, để số liệu không thiếu.
 - `GET /api/admin/sync/status` (ADMIN) trả số bản ghi PENDING/FAILED, kèm nút "Thử lại".
 
-## 10. Khuyến mãi (FR-11)
+## 10. Khuyến mãi (FR-10)
 
 ### 10.1 Bốn loại, cùng một collection `promotions`
 
@@ -292,15 +288,15 @@ Kết quả là `netAmount` của từng dòng (mục 5.2).
 
 ## 11. Luồng nghiệp vụ chính
 
-**Nhập hàng (FR-05)**: WAREHOUSE tạo phiếu `DRAFT` (nhà cung cấp, dòng hàng, giá vốn); còn `DRAFT` thì sửa hoặc xóa được. Khi hàng về, mở phiếu, nhập số thực nhận, ngày sản xuất, hạn dùng từng dòng → bấm "Nhận hàng". Một transaction thực hiện: tạo các lô, cộng `stockQuantity`, đặt phiếu `RECEIVED`, ghi `sync_queue` (`RECEIPT` sang Cassandra, Batch→Supplier sang Neo4j). Vẫn giữ nhập lô lẻ không cần phiếu cho hàng phát sinh. Điều chỉnh giảm tồn theo lô cũng thuộc FR-05.
+**Nhập hàng (FR-04)**: WAREHOUSE tạo phiếu `DRAFT` (nhà cung cấp, dòng hàng, giá vốn); còn `DRAFT` thì sửa hoặc xóa được. Khi hàng về, mở phiếu, nhập số thực nhận, ngày sản xuất, hạn dùng từng dòng → bấm "Nhận hàng". Một transaction thực hiện: tạo các lô, cộng `stockQuantity`, đặt phiếu `RECEIVED`, ghi `sync_queue` (`RECEIPT` sang Cassandra, Batch→Supplier sang Neo4j). Vẫn giữ nhập lô lẻ không cần phiếu cho hàng phát sinh. Điều chỉnh giảm tồn theo lô cũng thuộc FR-04.
 
-**Bán (FR-07)**: quầy → `quote` → thu ngân chọn CASH hoặc BANK_TRANSFER (bắt buộc mã giao dịch) → `POST /api/orders`. Một transaction: kiểm tra `requestKey`, tính lại khuyến mãi, cấp phát FEFO, trừ tồn, tạo đơn có thanh toán nhúng, ghi `sync_queue`. Sau commit: `ZINCRBY` top bán, xóa cache sản phẩm.
+**Bán (FR-06)**: quầy → `quote` → thu ngân chọn CASH hoặc BANK_TRANSFER (bắt buộc mã giao dịch) → `POST /api/orders`. Một transaction: kiểm tra `requestKey`, tính lại khuyến mãi, cấp phát FEFO, trừ tồn, tạo đơn có thanh toán nhúng, ghi `sync_queue`. Sau commit: `ZINCRBY` top bán, xóa cache sản phẩm.
 
-**Đơn treo (FR-08)**: nút "Treo đơn" lưu giỏ vào Redis; danh sách "Đơn đang treo" cho phép mở lại hoặc xóa. Mở lại thì giỏ quay về quầy và xóa key. Đơn treo không giữ tồn kho.
+**Đơn treo (FR-07)**: nút "Treo đơn" lưu giỏ vào Redis; danh sách "Đơn đang treo" cho phép mở lại hoặc xóa. Mở lại thì giỏ quay về quầy và xóa key. Đơn treo không giữ tồn kho.
 
-**Trả hàng (FR-09)**: một bước, gồm lập phiếu và hoàn tiền. Bỏ endpoint hoàn tiền riêng `/returns/{id}/refund` của code cũ. Quy tắc như SRS FR-09: hạn 7 ngày, nhập lại đúng lô, lô hết hạn thì bắt buộc tính hàng hỏng, tiền hoàn theo mục 10.4.
+**Trả hàng (FR-08)**: một bước, gồm lập phiếu và hoàn tiền. Bỏ endpoint hoàn tiền riêng `/returns/{id}/refund` của code cũ. Quy tắc như SRS FR-08: hạn 7 ngày, nhập lại đúng lô, lô hết hạn thì bắt buộc tính hàng hỏng, tiền hoàn theo mục 10.4.
 
-**Chốt ca (FR-12)**: STAFF mở trang "Chốt ca" → hệ thống xử lý `sync_queue` còn chờ của mình → đọc `payments_by_cashier_day` hôm nay → hiện tiền mặt thu, chuyển khoản thu, tiền hoàn, tiền mặt phải có → thu ngân nhập tiền mặt đếm được và ghi chú → lưu `shift_closings` (mỗi thu ngân mỗi ngày một lần; ADMIN được mở lại). ADMIN xem danh sách chốt ca theo ngày và độ chênh lệch.
+**Chốt ca (FR-11)**: STAFF mở trang "Chốt ca" → hệ thống xử lý `sync_queue` còn chờ của mình → đọc `payments_by_cashier_day` hôm nay → hiện tiền mặt thu, chuyển khoản thu, tiền hoàn, tiền mặt phải có → thu ngân nhập tiền mặt đếm được và ghi chú → lưu `shift_closings` (mỗi thu ngân mỗi ngày một lần; ADMIN được mở lại). ADMIN xem danh sách chốt ca theo ngày và độ chênh lệch.
 
 ## 12. API
 
@@ -310,7 +306,6 @@ Giữ tiền tố `/api`. Thay đổi so với code cũ:
 |---|---|---|
 | Auth | `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`, `GET/PUT /auth/me`, `PUT /auth/password` | Thêm refresh/logout |
 | Users | `GET/POST /users`, `GET/PUT/DELETE /users/{id}`, `GET /roles` | |
-| Customers | `GET/POST /customers`, `GET/PUT/DELETE /customers/{id}` | Mới |
 | Categories | `GET/POST /categories`, `PUT/DELETE /categories/{id}` | Mới |
 | Suppliers | Giữ như cũ | |
 | Products | Giữ như cũ, thêm `attributes`, `categoryId`, `supplierId` | |
@@ -335,7 +330,7 @@ Package `com.api.supermarket`, chia theo module nghiệp vụ, mỗi module có 
 config/        MongoConfig, CassandraConfig, Neo4jConfig, RedisConfig, SecurityConfig, OpenApiConfig, SchedulingConfig
 common/        ApiErrorResponse, exceptions, PageResponse, PaginationValidator, CodeGenerator(counters), Clock/AppTime, RedisSafe
 auth/          AuthController, AuthService, JwtService, RefreshTokenStore(Redis), filters
-user/  customer/  catalog/(category, supplier, product)
+user/  catalog/(category, supplier, product)
 inventory/     BatchService, FefoPolicy, PurchaseOrderService, StockCardReader(Cassandra)
 sales/         OrderService, ReturnService, ReturnPolicy, QuoteService, HeldCartService(Redis), TopSalesService(Redis)
 promotion/     PromotionService, PromotionEngine (thuần Java)
@@ -353,9 +348,8 @@ seed/          DemoDataSeeder (APP_SEED_DEMO)
 |---|---|---|
 | Đăng nhập | Tất cả | Thêm tự làm mới token |
 | Bán tại quầy | STAFF, ADMIN | Khuyến mãi tự áp, dòng quà, đơn treo, gợi ý mua kèm, top bán chạy |
-| Đơn hàng | STAFF, ADMIN | Trả hàng 1 bước, lịch sử thanh toán |
+| Đơn hàng | STAFF, ADMIN | Trả hàng 1 bước, lịch sử thanh toán, in lại hóa đơn |
 | Chốt ca | STAFF, ADMIN | Mới |
-| Khách hàng | STAFF, ADMIN | Mới |
 | Sản phẩm | Tất cả xem | Thuộc tính linh hoạt, tab "Thẻ kho" (gộp `StockHistoryPage`) |
 | Nhóm hàng | ADMIN | Mới |
 | Nhà cung cấp | ADMIN, WAREHOUSE | Giữ |
@@ -400,17 +394,17 @@ Không có Docker nên không dùng Testcontainers.
 - Mục 1.2 và 8.2: bỏ "khuyến mãi và giảm giá" khỏi *ngoài phạm vi*.
 - Mục 2.3: còn 3 vai trò, bỏ MANAGER.
 - Mục 2.5 và 2.6: thay "khóa dòng" bằng transaction MongoDB kèm cập nhật có điều kiện; thêm `sync_queue`; Redis không cần bật AOF.
-- Mục 3: 15 FR theo bảng mục 4 (đã làm trong SRS v2.0).
+- Mục 3: 14 FR theo bảng mục 4 (đã làm trong SRS v2.0).
 - Mục 4: thêm thực thể Khuyến mãi, Phiếu nhập, Chốt ca, Hàng đợi đồng bộ; đổi Refresh token sang Redis; thanh toán nhúng trong đơn và sao sang Cassandra.
 - Mục 5.3: thay bằng bảng phân vai mục 4 của tài liệu này.
-- Mục 8: ma trận truy vết theo 15 FR.
+- Mục 8: ma trận truy vết theo 14 FR.
 
 ## 18. Thứ tự triển khai
 
 1. **Dọn dẹp**: xóa theo mục 15, đổi `pom.xml`, chuyển file bundle. Backend còn khung chạy được.
 2. **Nền tảng**: cấu hình 4 CSDL, `/health/datastores`, `counters`, `RedisSafe`, `sync_queue` và job.
 3. **Tài khoản**: người dùng, đăng nhập và refresh token qua Redis, hồ sơ.
-4. **Danh mục**: nhóm hàng, nhà cung cấp, sản phẩm, khách hàng, cache.
+4. **Danh mục**: nhóm hàng, nhà cung cấp, sản phẩm, cache.
 5. **Kho**: lô, FEFO, điều chỉnh, phiếu nhập, thẻ kho trên Cassandra.
 6. **Khuyến mãi**: `PromotionEngine` (TDD), API.
 7. **Bán**: quote, đơn hàng, đơn treo, top bán.
@@ -446,7 +440,7 @@ Nguồn: `REFS_NoSQL_SRS&SDS_Template.docx` và `BaoCaoMinhChung_DoAn_DuLieuNoSQ
 | AP-17 | Khuyến mãi đang hiệu lực | Đọc | thời điểm | Rất cao | < 20 ms | Eventual (5 phút) | Redis `cache:promotions:active` → Mongo `promotions` |
 | AP-18 | Lưu, liệt kê, mở đơn treo | Đọc/Ghi | cashierId, holdId | Cao | < 10 ms | Strong (1 key) | Redis + MULTI và Lua |
 | AP-19 | Top 10 bán chạy hôm nay | Đọc/Ghi | ngày | Cao | < 10 ms | Eventual | Redis sorted set `top:sales:*` |
-| AP-20 | Truy vết lô → đơn → khách | Đọc | batchCode | Thấp | < 200 ms | Eventual | Neo4j `TOOK_FROM`, `PLACED` |
+| AP-20 | Truy vết lô → đơn | Đọc | batchCode | Thấp | < 200 ms | Eventual | Neo4j `TOOK_FROM` |
 | AP-21 | Gợi ý mua kèm | Đọc | productId | Cao | < 200 ms | Eventual | Neo4j `CONTAINS` 2 bước |
 | AP-22 | Phiếu nhập theo trạng thái; nhận hàng | Đọc/Ghi | status, poId | Trung bình | < 300 ms | Strong | Mongo `purchase_orders` + transaction |
 | AP-23 | Thống kê doanh thu theo ngày, nhóm hàng | Đọc | khoảng ngày | Thấp | < 1 s | Strong | Mongo aggregation trên `orders {orderedAt}` |
@@ -454,7 +448,7 @@ Nguồn: `REFS_NoSQL_SRS&SDS_Template.docx` và `BaoCaoMinhChung_DoAn_DuLieuNoSQ
 
 ### 19.2 Chức năng thêm
 
-- **FR-15 Thống kê**: trang ADMIN gồm doanh thu và số đơn theo ngày (7/30 ngày), doanh thu theo nhóm hàng, tổng tiền khuyến mãi đã giảm, top sản phẩm theo kỳ. Dùng aggregation `$match → $unwind items → $group → $sort`, kèm `$facet` để lấy nhiều số liệu trong một lần gọi. Có nút **Xuất CSV**. Khung top 10 bán chạy hôm nay (Redis) hiện ở trang này và ở quầy.
+- **FR-14 Thống kê**: trang ADMIN gồm doanh thu và số đơn theo ngày (7/30 ngày), doanh thu theo nhóm hàng, tổng tiền khuyến mãi đã giảm, top sản phẩm theo kỳ. Dùng aggregation `$match → $unwind items → $group → $sort`, kèm `$facet` để lấy nhiều số liệu trong một lần gọi. Có nút **Xuất CSV**. Khung top 10 bán chạy hôm nay (Redis) hiện ở trang này và ở quầy.
 - **Lịch sử đăng nhập (thuộc FR-01)**: mỗi lần đăng nhập ghi vào Cassandra, dữ liệu tự xóa sau 90 ngày:
 
 ```sql
@@ -492,7 +486,7 @@ Tối thiểu cho toàn đồ án là 12 truy vấn cơ bản và 18 truy vấn 
 
 - **MongoDB**: lọc + sắp xếp + phân trang; thêm, sửa, xóa mềm; aggregation doanh thu theo ngày; `$facet`; `$lookup` lô → nhà cung cấp; `findOneAndUpdate` trừ tồn có điều kiện; text search; cập nhật mảng lồng nhau bằng `arrayFilters`.
 - **Cassandra**: truy vấn theo partition; truy vấn khoảng trên clustering key; `INSERT ... USING TTL` và `SELECT TTL()`; `BATCH` ghi cùng lúc hai bảng thanh toán; LWT `IF NOT EXISTS`.
-- **Neo4j**: `MATCH` theo SKU; `MERGE`; truy vết lô nhiều bước; gợi ý mua kèm; `shortestPath` nhà cung cấp → khách; khách hàng mua giống nhau.
+- **Neo4j**: `MATCH` theo SKU; `MERGE`; truy vết lô nhiều bước; gợi ý mua kèm; `shortestPath` nhà cung cấp → đơn; đơn có giỏ hàng giống nhau.
 - **Redis**: `SET EX`/`GET`/`TTL`; `ZINCRBY`/`ZREVRANGE WITHSCORES`; `MULTI/EXEC`; Lua script; `PUBLISH`/`SUBSCRIBE`.
 
 Schema validation `$jsonSchema` và index cũng được backend tạo lúc khởi động nếu còn thiếu, nên script và app luôn khớp nhau.

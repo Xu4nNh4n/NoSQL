@@ -47,14 +47,13 @@ export function OrdersPage() {
             <Button variant="outline" onClick={openByCode}>Mở</Button></div>
         </Field>
       </Toolbar>
-      <Table headers={['Mã đơn', 'Thời gian', 'Thu ngân', 'Khách', 'Thanh toán', 'Tổng', 'Trạng thái', '']}
+      <Table headers={['Mã đơn', 'Thời gian', 'Thu ngân', 'Thanh toán', 'Tổng', 'Trạng thái', '']}
         loading={list.loading} error={list.error} empty={list.data?.content.length === 0}>
         {list.data?.content.map(o => (
           <tr key={o.id} className="cursor-pointer hover:bg-gray-50" onClick={() => setSelected(o)}>
             <Td className="font-medium text-blue-700">{o.orderCode}</Td>
             <Td>{formatDateTime(o.orderedAt)}</Td>
             <Td>{o.cashier.name}</Td>
-            <Td>{o.customer?.name ?? 'Khách lẻ'}</Td>
             <Td>{PAYMENT_METHOD_LABELS[o.paymentMethod]}</Td>
             <Td className="text-right font-semibold">{formatVND(o.total)}</Td>
             <Td><span className={`rounded border px-2 py-0.5 text-xs ${ORDER_STATUS_LABELS[o.status].bg} ${ORDER_STATUS_LABELS[o.status].color}`}>{ORDER_STATUS_LABELS[o.status].label}</span></Td>
@@ -101,7 +100,7 @@ function OrderDetail({ order, onClose, onChanged, onPrint }: { order: SalesOrder
     <Modal isOpen onClose={onClose} title={`Đơn ${order.orderCode}`} maxWidth="2xl">
       <div className="space-y-4 text-sm">
         <div className="flex flex-wrap items-start justify-between gap-2">
-        <p className="text-gray-600">{formatDateTime(order.orderedAt)} · {order.cashier.name} · {order.customer ? `${order.customer.name} (${order.customer.phone})` : 'Khách lẻ'} · {ORDER_STATUS_LABELS[order.status].label}</p>
+        <p className="text-gray-600">{formatDateTime(order.orderedAt)} · {order.cashier.name} · {ORDER_STATUS_LABELS[order.status].label}</p>
           <Button variant="outline" size="sm" disabled={returns.loading} onClick={() => onPrint(returns.data ?? [])}><Printer className="mr-1 h-4 w-4" />In hóa đơn</Button>
         </div>
         <Table headers={['#', 'Sản phẩm', 'SL', 'Đã trả', 'Thực trả', 'Lô đã xuất', canReturn ? 'Trả' : '']}>

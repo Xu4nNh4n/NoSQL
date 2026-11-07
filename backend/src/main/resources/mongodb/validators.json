@@ -12,16 +12,6 @@
       "active": { "bsonType": "bool" }
     }
   },
-  "customers": {
-    "bsonType": "object",
-    "required": ["fullName", "phone", "active"],
-    "properties": {
-      "fullName": { "bsonType": "string" },
-      "phone": { "bsonType": "string", "pattern": "^0[0-9]{9,10}$" },
-      "email": { "bsonType": "string" },
-      "active": { "bsonType": "bool" }
-    }
-  },
   "products": {
     "bsonType": "object",
     "required": ["sku", "name", "price", "categoryId", "active", "stockQuantity", "damagedQuantity"],

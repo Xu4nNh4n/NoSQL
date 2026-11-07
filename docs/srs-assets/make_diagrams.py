@@ -95,13 +95,13 @@ def usecase():
     ax.add_patch(Rectangle((25, 3), 85, 102, fc="white", ec="#333", lw=1.2))
     ax.text(67.5, 102, "Hệ thống quản lý siêu thị", ha="center", fontsize=11, fontweight="bold")
     groups = {
-        "STAFF": ["FR-07 Bán tại quầy", "FR-08 Đơn treo", "FR-09 Trả hàng, hoàn tiền", "FR-12 Chốt ca",
-                  "FR-14 Xem gợi ý mua kèm", "FR-03 Quản lý khách hàng"],
-        "CHUNG": ["FR-01 Đăng nhập, hồ sơ", "FR-04 Tra cứu sản phẩm, cảnh báo",
-                  "FR-06 Xem thẻ kho", "FR-10 Tra cứu đơn, thanh toán"],
-        "WAREHOUSE": ["FR-05 Phiếu nhập, nhận lô", "FR-05 Điều chỉnh giảm tồn", "FR-04 Sản phẩm, nhà cung cấp"],
-        "ADMIN": ["FR-02 Quản lý người dùng", "FR-04 Nhóm hàng", "FR-11 Khuyến mãi", "FR-13 Truy vết, thu hồi lô",
-                  "FR-15 Thống kê, top bán, CSV", "FR-01 Lịch sử đăng nhập"],
+        "STAFF": ["FR-06 Bán tại quầy", "FR-07 Đơn treo", "FR-08 Trả hàng, hoàn tiền", "FR-11 Chốt ca",
+                  "FR-13 Xem gợi ý mua kèm"],
+        "CHUNG": ["FR-01 Đăng nhập, hồ sơ", "FR-03 Tra cứu sản phẩm, cảnh báo",
+                  "FR-05 Xem thẻ kho", "FR-09 Tra cứu đơn, thanh toán"],
+        "WAREHOUSE": ["FR-04 Phiếu nhập, nhận lô", "FR-04 Điều chỉnh giảm tồn", "FR-03 Sản phẩm, nhà cung cấp"],
+        "ADMIN": ["FR-02 Quản lý người dùng", "FR-03 Nhóm hàng", "FR-10 Khuyến mãi", "FR-12 Truy vết, thu hồi lô",
+                  "FR-14 Thống kê, top bán, CSV", "FR-01 Lịch sử đăng nhập"],
     }
     pos = {}
     cols = {"STAFF": (45, 96), "CHUNG": (67.5, 96), "WAREHOUSE": (90, 96), "ADMIN": (67.5, 45)}
@@ -255,7 +255,7 @@ def sequence():
         (32, 56, "commitTransaction"),
         (32, 8, "201 Created (hóa đơn)"),
         (32, 104, "@Async: INSERT stock_movements, payments_*"),
-        (32, 128, "MERGE Customer/Order/Product/Batch"),
+        (32, 128, "MERGE Order/Product/Batch"),
         (32, 56, "sync_queue → DONE"),
         (32, 80, "ZINCRBY top:sales · DEL cache:products"),
     ]
@@ -334,10 +334,10 @@ def dfd():
         ax.add_patch(Ellipse((x, y), 24, 13, fc="#FFF3CD", ec="#333"))
         ax.text(x, y, t, ha="center", va="center", fontsize=8)
     stores = [
-        (5, 88, "D1 users / customers", "mongo"), (45, 88, "D2 products / categories / suppliers", "mongo"),
+        (5, 88, "D1 users", "mongo"), (45, 88, "D2 products / categories / suppliers", "mongo"),
         (85, 88, "D3 batches / purchase_orders", "mongo"), (5, 15, "D4 orders / returns / promotions", "mongo"),
         (45, 15, "D5 stock_movements / payments_* (CQL)", "cass"), (85, 15, "D6 shift_closings / sync_queue", "mongo"),
-        (113, 80, "D7 Graph: Customer–Order–Product–Batch", "neo"),
+        (113, 80, "D7 Graph: Order–Product–Batch–Supplier", "neo"),
         (113, 25, "D8 Redis: auth:*, cache:*, pos:held:*, top:sales:*", "redis"),
     ]
     for x, y, t, c in stores:
@@ -359,7 +359,7 @@ def dfd():
 def er():
     fig, ax = canvas(15, 10)
     ents = {
-        "Chốt ca": (5, 85), "Người dùng": (5, 62), "Đơn hàng": (5, 38), "Khách hàng": (5, 14),
+        "Chốt ca": (5, 85), "Người dùng": (5, 62), "Đơn hàng": (5, 38),
         "Nhóm hàng": (40, 85), "Nhà cung cấp": (85, 85), "Phiếu nhập": (125, 85),
         "Sản phẩm": (40, 62), "Lô hàng": (85, 62), "Biến động kho": (125, 62),
         "Dòng đơn": (40, 38), "Cấp phát lô": (85, 38),
@@ -377,7 +377,6 @@ def er():
     link("Nhà cung cấp", "Lô hàng", "1 – n")
     link("Phiếu nhập", "Lô hàng", "1 – n")
     link("Nhà cung cấp", "Phiếu nhập", "1 – n")
-    link("Khách hàng", "Đơn hàng", "1 – n")
     link("Người dùng", "Đơn hàng", "lập 1 – n")
     link("Đơn hàng", "Dòng đơn", "1 – n")
     link("Sản phẩm", "Dòng đơn", "1 – n")

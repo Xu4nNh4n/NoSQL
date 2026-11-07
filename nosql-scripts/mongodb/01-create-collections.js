@@ -52,29 +52,6 @@ const schemas = {
       }
     }
   },
-  "customers": {
-    "bsonType": "object",
-    "required": [
-      "fullName",
-      "phone",
-      "active"
-    ],
-    "properties": {
-      "fullName": {
-        "bsonType": "string"
-      },
-      "phone": {
-        "bsonType": "string",
-        "pattern": "^0[0-9]{9,10}$"
-      },
-      "email": {
-        "bsonType": "string"
-      },
-      "active": {
-        "bsonType": "bool"
-      }
-    }
-  },
   "products": {
     "bsonType": "object",
     "required": [
@@ -267,7 +244,6 @@ const schemas = {
 };
 
 ensureCollection('users', schemas['users']);
-ensureCollection('customers', schemas['customers']);
 ensureCollection('categories', null);
 ensureCollection('suppliers', null);
 ensureCollection('products', schemas['products']);
@@ -282,8 +258,6 @@ ensureCollection('sync_queue', null);
 target.users.createIndex({ username: 1 }, { unique: true, name: 'username_unique' });
 target.users.createIndex({ email: 1 }, { unique: true, name: 'email_unique_partial', partialFilterExpression: { email: { $exists: true } } });
 target.users.createIndex({ phone: 1 }, { unique: true, name: 'phone_unique_partial', partialFilterExpression: { phone: { $exists: true } } });
-target.customers.createIndex({ phone: 1 }, { unique: true, name: 'phone_unique' });
-target.customers.createIndex({ email: 1 }, { unique: true, name: 'email_unique_partial', partialFilterExpression: { email: { $exists: true } } });
 target.categories.createIndex({ nameLower: 1 }, { unique: true, name: 'nameLower_unique' });
 target.suppliers.createIndex({ phone: 1 }, { unique: true, name: 'phone_unique_partial', partialFilterExpression: { phone: { $exists: true } } });
 target.suppliers.createIndex({ email: 1 }, { unique: true, name: 'email_unique_partial', partialFilterExpression: { email: { $exists: true } } });

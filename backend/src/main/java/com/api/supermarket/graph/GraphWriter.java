@@ -34,11 +34,6 @@ public class GraphWriter implements SyncHandler {
     static final String MERGE_ORDERS = """
             UNWIND $rows AS r
             MERGE (o:Order {id: r.orderId}) SET o.code = r.orderCode, o.at = r.orderedAt""";
-    static final String MERGE_CUSTOMERS = """
-            UNWIND $rows AS r
-            MATCH (o:Order {id: r.orderId})
-            MERGE (c:Customer {id: r.id}) SET c.name = r.name, c.phone = r.phone
-            MERGE (c)-[:PLACED]->(o)""";
     static final String MERGE_ITEMS = """
             UNWIND $rows AS r
             MATCH (o:Order {id: r.orderId})
@@ -93,9 +88,6 @@ public class GraphWriter implements SyncHandler {
         try (Session session = neo4j.session()) {
             session.executeWriteWithoutResult(tx -> {
                 tx.run(MERGE_ORDERS, Map.of("rows", rows.orders())).consume();
-                if (!rows.customers().isEmpty()) {
-                    tx.run(MERGE_CUSTOMERS, Map.of("rows", rows.customers())).consume();
-                }
                 if (!rows.items().isEmpty()) {
                     tx.run(MERGE_ITEMS, Map.of("rows", rows.items())).consume();
                 }

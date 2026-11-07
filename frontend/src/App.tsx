@@ -10,7 +10,6 @@ import { LoginPage } from './pages/LoginPage';
 import { PosPage } from './pages/PosPage';
 import { OrdersPage } from './pages/OrdersPage';
 import { ShiftPage } from './pages/ShiftPage';
-import { CustomersPage } from './pages/CustomersPage';
 import { ProductsPage } from './pages/ProductsPage';
 import { CategoriesPage } from './pages/CategoriesPage';
 import { SuppliersPage } from './pages/SuppliersPage';
@@ -47,7 +46,6 @@ const routes: { path: string; roles: RoleName[]; element: React.ReactNode }[] = 
   { path: '/pos', roles: ['ADMIN', 'STAFF'], element: <PosPage /> },
   { path: '/orders', roles: ['ADMIN', 'STAFF'], element: <OrdersPage /> },
   { path: '/shift', roles: ['ADMIN', 'STAFF'], element: <ShiftPage /> },
-  { path: '/customers', roles: ['ADMIN', 'STAFF'], element: <CustomersPage /> },
   { path: '/products', roles: ALL, element: <ProductsPage /> },
   { path: '/categories', roles: ['ADMIN'], element: <CategoriesPage /> },
   { path: '/suppliers', roles: ['ADMIN', 'WAREHOUSE'], element: <SuppliersPage /> },

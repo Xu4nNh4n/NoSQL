@@ -98,16 +98,6 @@ export interface PosProduct {
   stockQuantity: number;
 }
 
-export interface Customer {
-  id: string;
-  fullName: string;
-  phone: string;
-  email?: string;
-  address?: string;
-  active: boolean;
-  version: number;
-}
-
 // ---------- Kho ----------
 export interface BatchAdjustment {
   id: string;
@@ -280,7 +270,6 @@ export interface SalesOrder {
   id: string;
   orderCode: string;
   cashier: PersonRef;
-  customer?: PersonRef;
   orderedAt: string;
   status: OrderStatus;
   paymentMethod: PaymentMethod;
@@ -318,7 +307,6 @@ export interface SalesReturn {
 export interface HeldCart {
   holdId: string;
   note?: string;
-  customerId?: string;
   items: { productId: string; quantity: number }[];
   heldAt: string;
   expiresAt: string;
@@ -375,8 +363,7 @@ export interface TraceResult {
   receivedQty: number;
   remainingQty: number;
   soldQty: number;
-  orders: { orderCode: string; orderedAt: string; quantity: number; customerName?: string; customerPhone?: string }[];
-  contacts: { customerId: string; name: string; phone: string; quantity: number }[];
+  orders: { orderCode: string; orderedAt: string; quantity: number }[];
 }
 
 export interface SalesStats {

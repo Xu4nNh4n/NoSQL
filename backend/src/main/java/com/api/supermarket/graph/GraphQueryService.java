@@ -25,8 +25,7 @@ public class GraphQueryService {
 
     static final String TRACE = """
             MATCH (b:Batch {code: $code})<-[t:TOOK_FROM]-(o:Order)
-            OPTIONAL MATCH (c:Customer)-[:PLACED]->(o)
-            RETURN o.code AS orderCode, o.at AS at, t.qty AS qty, c.id AS customerId, c.name AS name, c.phone AS phone
+            RETURN o.code AS orderCode, o.at AS at, t.qty AS qty
             ORDER BY at""";
     static final String ALSO_BOUGHT = """
             MATCH (p:Product {id: $id})<-[r1:CONTAINS]-(o:Order)-[r2:CONTAINS]->(x:Product)
@@ -34,8 +33,7 @@ public class GraphQueryService {
             RETURN x.id AS id, x.name AS name, count(DISTINCT o) AS times
             ORDER BY times DESC, name LIMIT $limit""";
 
-    public record TracedOrder(String orderCode, Instant orderedAt, long quantity, String customerId, String customerName,
-            String customerPhone) {
+    public record TracedOrder(String orderCode, Instant orderedAt, long quantity) {
     }
 
     public record Suggestion(String productId, String sku, String name, long times) {
@@ -63,9 +61,7 @@ public class GraphQueryService {
                 for (Record r : tx.run(TRACE, Map.of("code", batchCode)).list()) {
                     Value at = r.get("at");
                     rows.add(new TracedOrder(r.get("orderCode").asString(null),
-                            at.isNull() ? null : at.asZonedDateTime().toInstant(), r.get("qty").asLong(0),
-                            r.get("customerId").asString(null), r.get("name").asString(null),
-                            r.get("phone").asString(null)));
+                            at.isNull() ? null : at.asZonedDateTime().toInstant(), r.get("qty").asLong(0)));
                 }
                 return rows;
             });

@@ -13,7 +13,7 @@ import com.api.supermarket.common.AppTime;
 import com.api.supermarket.common.RedisSafe;
 
 /**
- * Top bán chạy trong ngày (FR-15, AP-19) bằng sorted set Redis {@code top:sales:{yyyyMMdd}}:
+ * Top bán chạy trong ngày (FR-14, AP-19) bằng sorted set Redis {@code top:sales:{yyyyMMdd}}:
  * mỗi đơn {@code ZINCRBY} số lượng (không tính hàng tặng), xem bằng {@code ZREVRANGE 0 9 WITHSCORES}.
  * Giữ 3 ngày. Redis lỗi thì không chặn bán, trang chỉ ẩn khung top.
  */

@@ -358,7 +358,7 @@ function TraceTab() {
     if (!confirm(`Thu hồi lô ${result.batchCode}: giảm toàn bộ ${result.remainingQty} còn tồn?`)) return;
     try {
       setResult(await api.post<TraceResult>(`/batches/${encodeURIComponent(result.batchCode)}/recall`, { reason }));
-      toast.success('Đã thu hồi lô; danh sách khách cần liên hệ ở bên dưới');
+      toast.success('Đã thu hồi lô: giảm toàn bộ phần còn tồn');
     } catch (e) { toast.error(errorMessage(e)); }
   };
 
@@ -379,13 +379,9 @@ function TraceTab() {
                 <Button variant="danger" onClick={recall}>Thu hồi lô</Button>
               </div>)}
           </div>
-          <h4 className="font-semibold">Khách cần liên hệ ({result.contacts.length})</h4>
-          <Table headers={['Khách', 'SĐT', 'Số lượng đã mua']} empty={result.contacts.length === 0}>
-            {result.contacts.map(c => <tr key={c.customerId}><Td>{c.name}</Td><Td>{c.phone}</Td><Td>{c.quantity}</Td></tr>)}
-          </Table>
           <h4 className="font-semibold">Các đơn đã lấy hàng từ lô ({result.orders.length})</h4>
-          <Table headers={['Đơn', 'Thời điểm', 'SL', 'Khách']} empty={result.orders.length === 0}>
-            {result.orders.map(o => <tr key={o.orderCode}><Td>{o.orderCode}</Td><Td>{formatDateTime(o.orderedAt)}</Td><Td>{o.quantity}</Td><Td>{o.customerName ?? 'Khách lẻ'}</Td></tr>)}
+          <Table headers={['Đơn', 'Thời điểm', 'SL']} empty={result.orders.length === 0}>
+            {result.orders.map(o => <tr key={o.orderCode}><Td>{o.orderCode}</Td><Td>{formatDateTime(o.orderedAt)}</Td><Td>{o.quantity}</Td></tr>)}
           </Table>
         </>)}
     </div>

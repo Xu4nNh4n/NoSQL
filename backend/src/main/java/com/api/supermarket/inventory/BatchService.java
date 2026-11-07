@@ -25,7 +25,7 @@ import com.api.supermarket.security.JwtPrincipal;
 import com.api.supermarket.sync.SyncQueue;
 import com.api.supermarket.validation.PaginationValidator;
 
-/** Lô hàng: nhập lô (lẻ hoặc từ phiếu nhập), điều chỉnh giảm (FR-05), tra cứu lô. */
+/** Lô hàng: nhập lô (lẻ hoặc từ phiếu nhập), điều chỉnh giảm (FR-04), tra cứu lô. */
 @Service
 public class BatchService {
     public static final Set<String> SORT_FIELDS = Set.of("expirySortKey", "receivedAt", "batchCode");

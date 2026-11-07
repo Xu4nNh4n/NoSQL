@@ -7,7 +7,6 @@ const TITLE_MAP: Record<string, string> = {
   '/pos': 'Bán tại quầy',
   '/orders': 'Đơn hàng & trả hàng',
   '/shift': 'Chốt ca thu ngân',
-  '/customers': 'Khách hàng',
   '/promotions': 'Khuyến mãi',
   '/products': 'Sản phẩm & thẻ kho',
   '/categories': 'Nhóm hàng',

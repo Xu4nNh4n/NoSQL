@@ -31,9 +31,6 @@ import com.api.supermarket.catalog.supplier.Supplier;
 import com.api.supermarket.catalog.supplier.SupplierService;
 import com.api.supermarket.catalog.supplier.SupplierService.SupplierRequest;
 import com.api.supermarket.common.AppTime;
-import com.api.supermarket.customer.Customer;
-import com.api.supermarket.customer.CustomerService;
-import com.api.supermarket.customer.CustomerService.CustomerRequest;
 import com.api.supermarket.exception.BadRequestException;
 import com.api.supermarket.inventory.PurchaseOrder;
 import com.api.supermarket.inventory.PurchaseOrderService;
@@ -80,7 +77,6 @@ public class DemoDataSeeder implements ApplicationRunner {
     private final CategoryService categories;
     private final SupplierService suppliers;
     private final ProductService products;
-    private final CustomerService customers;
     private final PurchaseOrderService purchaseOrders;
     private final PromotionService promotions;
     private final QuoteService quotes;
@@ -91,7 +87,7 @@ public class DemoDataSeeder implements ApplicationRunner {
     private final int orderCount;
 
     public DemoDataSeeder(MongoTemplate mongo, UserService users, UserRepository userRepository, CategoryService categories,
-            SupplierService suppliers, ProductService products, CustomerService customers,
+            SupplierService suppliers, ProductService products,
             PurchaseOrderService purchaseOrders, PromotionService promotions, QuoteService quotes, OrderService orders,
             ReturnService returns, AppTime time,
             @Value("${app.seed.password:}") String password,
@@ -103,7 +99,6 @@ public class DemoDataSeeder implements ApplicationRunner {
         this.categories = categories;
         this.suppliers = suppliers;
         this.products = products;
-        this.customers = customers;
         this.purchaseOrders = purchaseOrders;
         this.promotions = promotions;
         this.quotes = quotes;
@@ -211,14 +206,6 @@ public class DemoDataSeeder implements ApplicationRunner {
         promotions.create(new PromotionRequest("Đơn từ 300k giảm 20k", Promotion.Type.ORDER_THRESHOLD, starts, ends, null, null,
                 null, BigDecimal.valueOf(20_000), null, null, null, BigDecimal.valueOf(300_000), null, true, null));
 
-        List<Customer> people = new ArrayList<>();
-        String[][] names = { { "Nguyễn Thị Bình", "0912000001" }, { "Trần Văn Cường", "0912000002" },
-                { "Lê Thị Dung", "0912000003" }, { "Phạm Minh Đức", "0912000004" }, { "Hoàng Thu Hà", "0912000005" },
-                { "Võ Quốc Khánh", "0912000006" }, { "Đặng Mỹ Linh", "0912000007" }, { "Bùi Gia Nam", "0912000008" } };
-        for (String[] n : names) {
-            people.add(customers.create(new CustomerRequest(n[0], n[1], null, "TP. Hồ Chí Minh", true, null)));
-        }
-
         // Đơn bán rải đều 7 ngày gần nhất, 8h–21h. Random cố định để lần nào tạo cũng giống nhau.
         Random rnd = new Random(20261107);
         List<Product> sellable = bySku.values().stream().filter(p -> !p.getSku().equals("LY-TIGER")).toList();
@@ -240,11 +227,10 @@ public class DemoDataSeeder implements ApplicationRunner {
             }
             List<QuoteItem> items = cart.entrySet().stream().map(e -> new QuoteItem(e.getKey(), e.getValue())).toList();
             boolean bank = rnd.nextInt(10) < 3;
-            String customerId = rnd.nextBoolean() ? people.get(rnd.nextInt(people.size())).getId() : null;
             JwtPrincipal cashier = cashiers.get(rnd.nextInt(cashiers.size()));
             try {
                 String hash = quotes.quote(items).quoteHash();
-                SalesOrder o = orders.create(new CreateOrderRequest(UUID.randomUUID().toString(), customerId, items,
+                SalesOrder o = orders.create(new CreateOrderRequest(UUID.randomUUID().toString(), items,
                         bank ? SalesOrder.Method.BANK_TRANSFER : SalesOrder.Method.CASH,
                         bank ? "FT" + (100000 + rnd.nextInt(900000)) : null, hash), cashier, at);
                 created++;
@@ -262,7 +248,7 @@ public class DemoDataSeeder implements ApplicationRunner {
                     List.of(new ReturnItemRequest(o.getItems().get(0).getLineNo(), 1, i != 2, i == 2 ? "Hộp móp" : "Khách đổi ý")),
                     SalesOrder.Method.CASH, null), cashier);
         }
-        log.info("Dữ liệu demo: {} sản phẩm, {} khách, {} đơn, {} phiếu trả", bySku.size(), people.size(), created,
+        log.info("Dữ liệu demo: {} sản phẩm, {} đơn, {} phiếu trả", bySku.size(), created,
                 Math.min(3, todayOrders.size()));
     }
 

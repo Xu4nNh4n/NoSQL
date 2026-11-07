@@ -17,8 +17,6 @@ import com.api.supermarket.common.CodeGenerator;
 import com.api.supermarket.common.ConflictException;
 import com.api.supermarket.common.DocumentType;
 import com.api.supermarket.common.MongoTx;
-import com.api.supermarket.customer.Customer;
-import com.api.supermarket.customer.CustomerService;
 import com.api.supermarket.dto.response.PageResponse;
 import com.api.supermarket.exception.BadRequestException;
 import com.api.supermarket.exception.ResourceNotFoundException;
@@ -39,7 +37,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 /**
- * Bán tại quầy (FR-07). Một transaction MongoDB: kiểm tra requestKey, tính lại giá, so quoteHash, cấp phát FEFO
+ * Bán tại quầy (FR-06). Một transaction MongoDB: kiểm tra requestKey, tính lại giá, so quoteHash, cấp phát FEFO
  * cho mọi dòng (kể cả quà), trừ tồn, tạo đơn có thanh toán nhúng và xếp sự kiện ORDER_CREATED.
  */
 @Service
@@ -48,7 +46,6 @@ public class OrderService {
 
     public record CreateOrderRequest(
             @NotBlank @Size(max = 64) String requestKey,
-            String customerId,
             @NotEmpty @Size(max = 100) List<@Valid QuoteItem> items,
             @NotNull SalesOrder.Method paymentMethod,
             @Size(max = 100) String transactionRef,
@@ -59,7 +56,6 @@ public class OrderService {
     private final QuoteService quotes;
     private final FefoAllocator fefo;
     private final ProductRepository products;
-    private final CustomerService customers;
     private final CodeGenerator codes;
     private final SyncQueue sync;
     private final MongoTx tx;
@@ -68,13 +64,12 @@ public class OrderService {
     private final AppTime time;
 
     public OrderService(OrderRepository orders, QuoteService quotes, FefoAllocator fefo, ProductRepository products,
-            CustomerService customers, CodeGenerator codes, SyncQueue sync, MongoTx tx, ProductCache cache,
+            CodeGenerator codes, SyncQueue sync, MongoTx tx, ProductCache cache,
             TopSalesService topSales, AppTime time) {
         this.orders = orders;
         this.quotes = quotes;
         this.fefo = fefo;
         this.products = products;
-        this.customers = customers;
         this.codes = codes;
         this.sync = sync;
         this.tx = tx;
@@ -140,16 +135,12 @@ public class OrderService {
         if (!cart.quoteHash().equals(req.quoteHash())) {
             throw new ConflictException("PRICE_CHANGED", "Giá hoặc khuyến mãi đã thay đổi, vui lòng tính lại giỏ hàng");
         }
-        Customer customer = req.customerId() == null || req.customerId().isBlank() ? null
-                : customers.loadActive(req.customerId());
 
         SalesOrder order = new SalesOrder();
         order.setOrderCode(codes.next(DocumentType.ORDER));
         order.setRequestKey(req.requestKey());
         order.setRequestFingerprint(fingerprint);
         order.setCashier(new SalesOrder.PersonRef(actor.userId(), actor.username(), null));
-        order.setCustomer(customer == null ? null
-                : new SalesOrder.PersonRef(customer.getId(), customer.getFullName(), customer.getPhone()));
         order.setOrderedAt(now);
         order.setOrderDay(now.atZone(time.zone()).toLocalDate());
         order.setStatus(SalesOrder.Status.PAID);
@@ -212,7 +203,7 @@ public class OrderService {
                 .collect(Collectors.groupingBy(QuoteItem::productId, Collectors.summingInt(QuoteItem::quantity)))
                 .entrySet().stream().sorted(java.util.Map.Entry.comparingByKey())
                 .map(e -> e.getKey() + ":" + e.getValue()).collect(Collectors.joining(","));
-        return RequestFingerprint.of(String.join("|", String.valueOf(req.customerId()), req.paymentMethod().name(),
+        return RequestFingerprint.of(String.join("|", req.paymentMethod().name(),
                 String.valueOf(ref), items));
     }
 

@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
-  Package, Boxes, ShoppingCart, Receipt, Store, UserCheck, Truck, Tags, Wallet, Users, FolderTree,
+  Package, Boxes, ShoppingCart, Receipt, Store, UserCheck, Truck, Tags, Wallet, FolderTree,
   ClipboardList, BarChart3, Server,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
@@ -21,7 +21,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onCloseMobile })
         { to: '/pos', label: 'Bán tại quầy', icon: ShoppingCart, roles: ['ADMIN', 'STAFF'] },
         { to: '/orders', label: 'Đơn hàng & trả hàng', icon: Receipt, roles: ['ADMIN', 'STAFF'] },
         { to: '/shift', label: 'Chốt ca', icon: Wallet, roles: ['ADMIN', 'STAFF'] },
-        { to: '/customers', label: 'Khách hàng', icon: Users, roles: ['ADMIN', 'STAFF'] },
         { to: '/promotions', label: 'Khuyến mãi', icon: Tags, roles: ['ADMIN'] },
       ],
     },

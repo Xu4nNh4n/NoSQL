@@ -13,7 +13,6 @@ http:
     data: |-
       {
         "requestKey": "{{$guid}}",
-        "customerId": null,
         "items": [
           { "productId": "", "quantity": 3 }
         ],

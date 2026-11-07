@@ -53,11 +53,9 @@ class SecurityAccessTest {
     @Test
     void catalogRolesAreEnforced() throws Exception {
         mvc.perform(get("/api/suppliers").header("Authorization", bearer("STAFF"))).andExpect(status().isForbidden());
-        mvc.perform(get("/api/customers").header("Authorization", bearer("WAREHOUSE"))).andExpect(status().isForbidden());
         mvc.perform(get("/api/products/active").header("Authorization", bearer("WAREHOUSE")))
                 .andExpect(status().isForbidden());
         mvc.perform(delete("/api/products/p1").header("Authorization", bearer("STAFF"))).andExpect(status().isForbidden());
-        mvc.perform(delete("/api/customers/k1").header("Authorization", bearer("STAFF"))).andExpect(status().isForbidden());
         mvc.perform(delete("/api/categories/c1").header("Authorization", bearer("WAREHOUSE")))
                 .andExpect(status().isForbidden());
     }

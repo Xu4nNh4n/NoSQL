@@ -11,12 +11,12 @@ printjson(db.products.find(
   { sku: 1, name: 1, price: 1, stockQuantity: 1 },
 ).sort({ price: 1 }).skip(0).limit(20).toArray());
 
-// [CB-M3] Thêm khách hàng tại quầy (unique phone, email chữ thường)
-db.customers.insertOne({ fullName: 'Trần Thị Bé', phone: '0912999888', email: 'be.tran@gmail.com', active: true, createdAt: new Date() });
+// [CB-M3] Thêm nhà cung cấp (index unique phone/email; email lưu chữ thường)
+db.suppliers.insertOne({ name: 'Công ty Bánh kẹo Hải Hà', phone: '0243999888', email: 'kinhdoanh@haiha.vn', active: true, createdAt: new Date() });
 
-// [CB-M4] Sửa thông tin khách (cập nhật có điều kiện theo phone) và xóa mềm (active = false)
-db.customers.updateOne({ phone: '0912999888' }, { $set: { address: 'Quận 3, TP.HCM', updatedAt: new Date() } });
-db.customers.updateOne({ phone: '0912999888' }, { $set: { active: false } });
+// [CB-M4] Sửa nhà cung cấp theo số điện thoại và ngừng giao dịch (xóa mềm: active = false)
+db.suppliers.updateOne({ phone: '0243999888' }, { $set: { address: 'Hà Nội', updatedAt: new Date() } });
+db.suppliers.updateOne({ phone: '0243999888' }, { $set: { active: false } });
 
 // [CB-M5] AP-10: chi tiết đơn theo mã (index unique orderCode), chỉ lấy các trường cần (projection)
 printjson(db.orders.findOne({ orderCode: 'HD-DEMO-0001' }, { orderCode: 1, total: 1, status: 1, 'items.name': 1, 'items.quantity': 1 }));

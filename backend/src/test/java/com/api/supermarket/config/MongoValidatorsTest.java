@@ -14,7 +14,7 @@ class MongoValidatorsTest {
     @Test
     void schemasCoverMainCollectionsAndGuardStock() {
         Map<String, Document> schemas = MongoValidators.load();
-        assertEquals(List.of("users", "customers", "products", "batches", "orders", "promotions"), List.copyOf(schemas.keySet()));
+        assertEquals(List.of("users", "products", "batches", "orders", "promotions"), List.copyOf(schemas.keySet()));
         Document stock = schemas.get("products").get("properties", Document.class).get("stockQuantity", Document.class);
         assertEquals(0, stock.getInteger("minimum"), "tồn kho không được âm kể cả khi code có lỗi");
         Document remaining = schemas.get("batches").get("properties", Document.class).get("remainingQty", Document.class);

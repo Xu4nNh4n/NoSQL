@@ -28,7 +28,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 /**
- * Chốt ca thu ngân (FR-12, AP-15). Trước khi tính tổng, xử lý các việc đồng bộ còn chờ của thu ngân để
+ * Chốt ca thu ngân (FR-11, AP-15). Trước khi tính tổng, xử lý các việc đồng bộ còn chờ của thu ngân để
  * sổ thanh toán Cassandra không thiếu; rồi đọc partition {@code (cashier_id, day)} của
  * {@code payments_by_cashier_day}. Tiền mặt phải có = thu tiền mặt − hoàn tiền mặt.
  */

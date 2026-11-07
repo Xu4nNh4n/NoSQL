@@ -23,7 +23,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
-/** Quản lý khuyến mãi (FR-11). Mỗi loại kiểm tra đúng các tham số của nó. */
+/** Quản lý khuyến mãi (FR-10). Mỗi loại kiểm tra đúng các tham số của nó. */
 @Service
 public class PromotionService {
     public static final Set<String> SORT_FIELDS = Set.of("startsAt", "endsAt", "name", "createdAt");

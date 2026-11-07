@@ -224,7 +224,7 @@ for item in CONTENT:
 # Bìa: thêm dòng phiên bản sau bảng thành viên.
 cover_p = docx.text.paragraph.Paragraph(children[4], doc._body)
 cover_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-_add_runs(cover_p, "Phiên bản 2.0 – 07/11/2026 (đồ án môn Dữ liệu NoSQL)", size=13, italic=True)
+_add_runs(cover_p, "Phiên bản 2.1 – 07/11/2026 (đồ án môn Dữ liệu NoSQL)", size=13, italic=True)
 
 # Word tự cập nhật mục lục khi mở file.
 settings = doc.settings.element  # Word cập nhật mục lục; chạy update bằng Word rồi bỏ cờ này
@@ -232,6 +232,6 @@ upd = OxmlElement("w:updateFields")
 upd.set(qn("w:val"), "true")
 settings.append(upd)
 
-doc.core_properties.title = "SRS – Hệ thống quản lý bán hàng và tồn kho siêu thị v2.0"
+doc.core_properties.title = "SRS – Hệ thống quản lý bán hàng và tồn kho siêu thị v2.1"
 doc.save(DST)
 print("saved", DST, "figures", FIG[0])

@@ -56,7 +56,7 @@ class RedisFeaturesTest {
         StringRedisTemplate t = template(values, zset);
         HeldCartService service = new HeldCartService(t, json, TIME);
 
-        HeldCart cart = service.hold("c1", new HoldRequest("Chị Lan", null, List.of(new QuoteItem("milk", 2))));
+        HeldCart cart = service.hold("c1", new HoldRequest("Chị Lan", List.of(new QuoteItem("milk", 2))));
         verify(values).set(eq(HeldCartService.key("c1", cart.holdId())), anyString(), eq(Duration.ofMinutes(30)));
         verify(zset).add(eq("pos:held-index:c1"), eq(cart.holdId()), anyDouble());
         assertEquals(TIME.now().plus(Duration.ofMinutes(30)), cart.expiresAt());
@@ -68,7 +68,7 @@ class RedisFeaturesTest {
         ValueOperations<String, String> values = mock(ValueOperations.class);
         ZSetOperations<String, String> zset = mock(ZSetOperations.class);
         StringRedisTemplate t = template(values, zset);
-        HeldCart alive = new HeldCart("h1", null, null, List.of(new QuoteItem("milk", 1)), TIME.now(), TIME.now());
+        HeldCart alive = new HeldCart("h1", null, List.of(new QuoteItem("milk", 1)), TIME.now(), TIME.now());
         when(zset.reverseRange("pos:held-index:c1", 0, -1)).thenReturn(new LinkedHashSet<>(List.of("h1", "h2")));
         when(values.multiGet(anyList())).thenReturn(java.util.Arrays.asList(json.writeValueAsString(alive), null));
 

@@ -29,10 +29,6 @@ import com.api.supermarket.catalog.supplier.SupplierService;
 import com.api.supermarket.catalog.supplier.SupplierService.SupplierRequest;
 import com.api.supermarket.common.AppTime;
 import com.api.supermarket.common.ConflictException;
-import com.api.supermarket.customer.Customer;
-import com.api.supermarket.customer.CustomerRepository;
-import com.api.supermarket.customer.CustomerService;
-import com.api.supermarket.customer.CustomerService.CustomerRequest;
 import com.api.supermarket.exception.BadRequestException;
 
 /** Nhóm hàng, nhà cung cấp, khách hàng: các quy tắc trùng lặp và xóa. */
@@ -114,37 +110,5 @@ class CatalogServicesTest {
         SupplierService service = new SupplierService(repo, products, time);
         assertThrows(BadRequestException.class,
                 () -> service.create(new SupplierRequest("Vinamilk", "0281234567", null, null, null)));
-    }
-
-    @Test
-    void customerEmailLowercasedAndPhoneUnique() {
-        CustomerRepository repo = mock(CustomerRepository.class);
-        when(repo.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        CustomerService service = new CustomerService(repo, time);
-        Customer c = service.create(new CustomerRequest("Trần Thị B", "0912345678", " B@Gmail.com ", null, null, null));
-        assertEquals("b@gmail.com", c.getEmail());
-
-        when(repo.existsByField("phone", "0912345678", null)).thenReturn(true);
-        assertThrows(BadRequestException.class,
-                () -> service.create(new CustomerRequest("Khác", "0912345678", null, null, null, null)));
-    }
-
-    @Test
-    void customerUpdateNeedsCurrentVersionAndOnlyAdminChangesStatus() {
-        CustomerRepository repo = mock(CustomerRepository.class);
-        when(repo.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        Customer c = new Customer();
-        c.setId("k1");
-        c.setActive(true);
-        c.setVersion(1L);
-        when(repo.findById("k1")).thenReturn(Optional.of(c));
-        CustomerService service = new CustomerService(repo, time);
-
-        assertThrows(ConflictException.class,
-                () -> service.update("k1", new CustomerRequest("B", "0912345678", null, null, false, 0L), false));
-        service.update("k1", new CustomerRequest("B", "0912345678", null, null, false, 1L), false);
-        assertEquals(true, c.isActive());
-        service.update("k1", new CustomerRequest("B", "0912345678", null, null, false, 1L), true);
-        assertEquals(false, c.isActive());
     }
 }

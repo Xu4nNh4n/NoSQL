@@ -26,7 +26,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
 
-/** Tính giá giỏ hàng ở quầy (FR-07 bước 1): giá hiện tại từ MongoDB, khuyến mãi từ cache Redis, quà theo tồn khả dụng. */
+/** Tính giá giỏ hàng ở quầy (FR-06 bước 1): giá hiện tại từ MongoDB, khuyến mãi từ cache Redis, quà theo tồn khả dụng. */
 @Service
 public class QuoteService {
     public record QuoteItem(@NotBlank String productId, @Min(1) @Max(9999) int quantity) {

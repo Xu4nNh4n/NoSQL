@@ -38,10 +38,8 @@ public final class SalesEvents {
                         .append("productId", l.getProductId()).append("quantity", a.getQuantity()));
             }
         }
-        SalesOrder.PersonRef c = order.getCustomer();
         Document graph = new Document("orderId", order.getId()).append("orderCode", order.getOrderCode())
                 .append("orderedAt", Date.from(order.getOrderedAt()))
-                .append("customer", c == null ? null : new Document("id", c.id()).append("name", c.name()).append("phone", c.phone()))
                 .append("items", items).append("allocations", allocations);
         return new Document("movements", movements.stream().map(StockMovement::toDocument).toList())
                 .append("payments", order.getPayments().stream().map(p -> ledger(order, p).toDocument()).toList())

@@ -20,6 +20,6 @@ class ScriptStatementsTest {
         List<String> cql = ScriptStatements.load("cassandra/schema.cql");
         assertEquals(4, cql.size());
         assertTrue(cql.stream().allMatch(s -> s.startsWith("CREATE TABLE IF NOT EXISTS")));
-        assertEquals(6, ScriptStatements.load("neo4j/constraints.cypher").size());
+        assertEquals(5, ScriptStatements.load("neo4j/constraints.cypher").size());
     }
 }

@@ -60,7 +60,7 @@ class SalesCloudTest {
         try {
             List<QuoteItem> items = List.of(new QuoteItem(productId, 3));
             PricedCart q = quotes.quote(items);
-            CreateOrderRequest req = new CreateOrderRequest(key, null, items, SalesOrder.Method.CASH, null, q.quoteHash());
+            CreateOrderRequest req = new CreateOrderRequest(key, items, SalesOrder.Method.CASH, null, q.quoteHash());
             SalesOrder order = orders.create(req, cashier);
             assertEquals(order.getId(), orders.create(req, cashier).getId(), "gửi lặp trả về đúng đơn cũ");
             assertEquals(7, mongo.findById(productId, Product.class).getStockQuantity());

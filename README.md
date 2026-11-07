@@ -6,9 +6,9 @@
 
 | CSDL | Dịch vụ | Dữ liệu và nghiệp vụ |
 |---|---|---|
-| **MongoDB** | Atlas (replica set) | Nguồn sự thật: người dùng, khách, nhóm hàng, nhà cung cấp, sản phẩm (thuộc tính linh hoạt), lô hàng, phiếu nhập, đơn (nhúng dòng hàng, lô đã xuất, thanh toán), phiếu trả, khuyến mãi 4 loại, chốt ca, `sync_queue`. Transaction nhiều document + cập nhật có điều kiện chống bán quá tồn; `$jsonSchema`; thống kê bằng `$facet` |
+| **MongoDB** | Atlas (replica set) | Nguồn sự thật: người dùng, nhóm hàng, nhà cung cấp, sản phẩm (thuộc tính linh hoạt), lô hàng, phiếu nhập, đơn (nhúng dòng hàng, lô đã xuất, thanh toán), phiếu trả, khuyến mãi 4 loại, chốt ca, `sync_queue`. Transaction nhiều document + cập nhật có điều kiện chống bán quá tồn; `$jsonSchema`; thống kê bằng `$facet` |
 | **Cassandra** | Astra DB | Sổ cái chỉ thêm: thẻ kho theo sản phẩm/tháng, thanh toán theo đơn và theo thu ngân/ngày (chốt ca), lịch sử đăng nhập TTL 90 ngày |
-| **Neo4j** | AuraDB Free | Đồ thị khách–đơn–sản phẩm–lô–NCC: truy vết và thu hồi lô, gợi ý mua kèm; dựng lại được từ MongoDB |
+| **Neo4j** | AuraDB Free | Đồ thị đơn–sản phẩm–lô–NCC: truy vết và thu hồi lô, gợi ý mua kèm; dựng lại được từ MongoDB |
 | **Redis** | Redis Cloud / Upstash | Refresh token (xoay vòng, dùng một lần), cache sản phẩm/khuyến mãi/sắp hết hàng, đơn treo 30 phút (Lua), top bán chạy (sorted set) |
 
 MongoDB ghi nghiệp vụ và bản ghi `sync_queue` trong cùng một transaction; sau commit sự kiện được ghi sang Cassandra và Neo4j bằng khóa xác định (ghi lặp an toàn), job 60 giây thử lại phần còn chờ.
@@ -19,14 +19,14 @@ MongoDB ghi nghiệp vụ và bản ghi `sync_queue` trong cùng một transacti
 |---|---|
 | `ADMIN` | Toàn bộ, thêm: khuyến mãi, nhóm hàng, người dùng, thống kê, truy vết/thu hồi lô, trạng thái hệ thống |
 | `WAREHOUSE` | Sản phẩm & thẻ kho, tồn kho theo lô, phiếu nhập, nhà cung cấp |
-| `STAFF` | Bán tại quầy, đơn hàng & trả hàng, chốt ca, khách hàng, sản phẩm |
+| `STAFF` | Bán tại quầy, đơn hàng & trả hàng, chốt ca, sản phẩm |
 
 ## Cấu trúc thư mục
 
 ```
 docker-compose.yml  Neo4j, Redis (và Cassandra tùy chọn) cho máy local
 scripts/        Bật replica set cho MongoDB cài máy
-backend/        Spring Boot 4.1 (Java 21) – package theo nghiệp vụ: auth, user, catalog, customer,
+backend/        Spring Boot 4.1 (Java 21) – package theo nghiệp vụ: auth, user, catalog,
                 inventory, promotion, sales, shift, graph, stats, sync, health, seed
 frontend/       React 19 + Vite + TypeScript + Tailwind
 nosql-scripts/  Script tạo cấu trúc, dữ liệu mẫu, truy vấn cơ bản/nâng cao, sao lưu cho từng CSDL

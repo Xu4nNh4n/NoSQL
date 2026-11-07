@@ -19,11 +19,11 @@ final class GraphRows {
     private GraphRows() {
     }
 
-    record OrderRows(List<Map<String, Object>> orders, List<Map<String, Object>> customers,
+    record OrderRows(List<Map<String, Object>> orders,
             List<Map<String, Object>> items, List<Map<String, Object>> allocations) {
 
         static OrderRows empty() {
-            return new OrderRows(new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
+            return new OrderRows(new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
         }
 
         boolean isEmpty() {
@@ -64,16 +64,6 @@ final class GraphRows {
         Date at = graph.getDate("orderedAt");
         o.put("orderedAt", at == null ? null : OffsetDateTime.ofInstant(at.toInstant(), ZoneOffset.UTC));
         into.orders().add(o);
-
-        Document c = graph.get("customer", Document.class);
-        if (c != null) {
-            Map<String, Object> cr = new HashMap<>();
-            cr.put("orderId", orderId);
-            cr.put("id", c.getString("id"));
-            cr.put("name", c.getString("name"));
-            cr.put("phone", c.getString("phone"));
-            into.customers().add(cr);
-        }
 
         Map<String, Map<String, Object>> items = new LinkedHashMap<>();
         for (Document i : graph.getList("items", Document.class, List.of())) {

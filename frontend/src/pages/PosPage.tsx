@@ -10,7 +10,7 @@ import { Modal } from '../components/ui/Modal';
 import { useToast } from '../components/ui/Toast';
 import { inputClass } from '../components/ui/Table';
 import { formatDateTime, formatVND } from '../utils/formatters';
-import type { Customer, HeldCart, PaymentMethod, PosProduct, PricedCart, SalesOrder, Suggestions, TopSales } from '../types';
+import type { HeldCart, PaymentMethod, PosProduct, PricedCart, SalesOrder, Suggestions, TopSales } from '../types';
 
 type CartItem = { productId: string; quantity: number };
 
@@ -22,8 +22,7 @@ export function PosPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [quote, setQuote] = useState<PricedCart | null>(null);
   const [quoting, setQuoting] = useState(false);
-  const [customer, setCustomer] = useState<Customer | null>(null);
-  const [phone, setPhone] = useState('');
+  const [note, setNote] = useState('');
   const [method, setMethod] = useState<PaymentMethod>('CASH');
   const [txRef, setTxRef] = useState('');
   const [paying, setPaying] = useState(false);
@@ -70,13 +69,8 @@ export function PosPage() {
     else if (shown.length === 1) { void add(shown[0].id); setKeyword(''); }
   };
 
-  const findCustomer = async () => {
-    if (!phone.trim()) { setCustomer(null); return; }
-    try { setCustomer(await api.get<Customer>(`/customers/phone/${encodeURIComponent(phone.trim())}`)); }
-    catch (e) { setCustomer(null); toast.warning(errorMessage(e)); }
-  };
 
-  const reset = () => { setCart([]); setQuote(null); setCustomer(null); setPhone(''); setTxRef(''); setMethod('CASH'); setSuggest(null); };
+  const reset = () => { setCart([]); setQuote(null); setNote(''); setTxRef(''); setMethod('CASH'); setSuggest(null); };
 
   const pay = async () => {
     if (!quote) return;
@@ -84,7 +78,7 @@ export function PosPage() {
     setPaying(true);
     try {
       const order = await api.post<SalesOrder>('/orders', {
-        requestKey: requestKey.current, customerId: customer?.id ?? null, items: cart,
+        requestKey: requestKey.current, items: cart,
         paymentMethod: method, transactionRef: method === 'BANK_TRANSFER' ? txRef.trim() : null, quoteHash: quote.quoteHash,
       });
       setReceipt(order);
@@ -101,7 +95,7 @@ export function PosPage() {
 
   const hold = async () => {
     try {
-      await api.post('/pos/held', { note: customer ? customer.fullName : phone || null, customerId: customer?.id ?? null, items: cart });
+      await api.post('/pos/held', { note: note.trim() || null, items: cart });
       toast.success('Đã treo đơn (tự hết hạn sau 30 phút)');
       reset();
     } catch (e) { toast.error(errorMessage(e)); }
@@ -196,10 +190,8 @@ export function PosPage() {
 
         <div className="mt-4 space-y-3 border-t border-gray-100 pt-4">
           <div className="flex gap-2">
-            <input className={inputClass} placeholder="SĐT khách (tùy chọn)" value={phone} onChange={e => setPhone(e.target.value)}
-              onBlur={findCustomer} onKeyDown={e => e.key === 'Enter' && findCustomer()} />
+            <input className={inputClass} placeholder="Ghi chú khi treo đơn (vd: chị áo xanh)" maxLength={100} value={note} onChange={e => setNote(e.target.value)} />
           </div>
-          {customer && <p className="text-xs text-gray-600">Khách: <b>{customer.fullName}</b></p>}
           {quote && (
             <dl className="space-y-1 text-sm">
               <div className="flex justify-between"><dt>Tạm tính</dt><dd>{formatVND(quote.grossTotal)}</dd></div>
@@ -225,7 +217,7 @@ export function PosPage() {
         {held.length === 0 ? <p className="text-sm text-gray-500">Không có đơn treo.</p> : (
           <ul className="space-y-2">{held.map(h => (
             <li key={h.holdId} className="flex items-center justify-between rounded border border-gray-200 p-2 text-sm">
-              <div><p className="font-medium">{h.note || 'Khách lẻ'} · {h.items.length} món</p>
+              <div><p className="font-medium">{h.note || 'Đơn treo'} · {h.items.length} món</p>
                 <p className="text-xs text-gray-500">Treo lúc {formatDateTime(h.heldAt)} · hết hạn {formatDateTime(h.expiresAt)}</p></div>
               <div className="flex gap-1">
                 <Button size="sm" onClick={() => resume(h)}>Mở lại</Button>

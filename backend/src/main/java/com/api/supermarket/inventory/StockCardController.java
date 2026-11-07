@@ -11,7 +11,7 @@ import com.api.supermarket.catalog.product.ProductService;
 import com.api.supermarket.common.AppTime;
 import com.api.supermarket.common.Months;
 
-/** Thẻ kho của sản phẩm theo tháng (FR-06), đọc từ Cassandra. Mọi vai trò được xem. */
+/** Thẻ kho của sản phẩm theo tháng (FR-05), đọc từ Cassandra. Mọi vai trò được xem. */
 @RestController
 public class StockCardController {
     private final StockLedger ledger;

@@ -42,7 +42,6 @@ class GraphCloudTest {
         for (String orderId : List.of(P + "o1", P + "o2")) {
             GraphRows.OrderRows rows = GraphRows.OrderRows.empty();
             Document g = new Document("orderId", orderId).append("orderCode", orderId).append("orderedAt", Date.from(Instant.now()))
-                    .append("customer", new Document("id", P + "k1").append("name", "Bình").append("phone", "0912"))
                     .append("items", List.of(
                             new Document("productId", P + "milk").append("sku", "M").append("name", "Milk").append("quantity", 2).append("gift", false),
                             new Document("productId", P + "bread").append("sku", "B").append("name", "Bread").append("quantity", 1).append("gift", false)))
@@ -53,6 +52,6 @@ class GraphCloudTest {
         }
         List<GraphQueryService.TracedOrder> trace = query.trace(P + "L1");
         assertEquals(2, trace.size(), "ghi lặp không tạo quan hệ trùng");
-        assertTrue(trace.stream().allMatch(t -> t.quantity() == 2 && "0912".equals(t.customerPhone())));
+        assertTrue(trace.stream().allMatch(t -> t.quantity() == 2));
     }
 }

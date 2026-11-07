@@ -26,7 +26,7 @@ import tools.jackson.core.JacksonException;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Đơn treo tại quầy (FR-08, AP-18) chỉ nằm trên Redis:
+ * Đơn treo tại quầy (FR-07, AP-18) chỉ nằm trên Redis:
  * <pre>
  * pos:held:{cashierId}:{holdId}   string JSON giỏ           TTL 30 phút
  * pos:held-index:{cashierId}      sorted set holdId theo giờ TTL 30 phút
@@ -44,11 +44,11 @@ public class HeldCartService {
                     + "return v",
             String.class);
 
-    public record HoldRequest(@Size(max = 100) String note, String customerId,
+    public record HoldRequest(@Size(max = 100) String note,
             @NotEmpty @Size(max = 100) List<@Valid QuoteItem> items) {
     }
 
-    public record HeldCart(String holdId, String note, String customerId, List<QuoteItem> items, Instant heldAt,
+    public record HeldCart(String holdId, String note, List<QuoteItem> items, Instant heldAt,
             Instant expiresAt) {
     }
 
@@ -76,7 +76,7 @@ public class HeldCartService {
                 throw new BadRequestException("Tối đa " + MAX_PER_CASHIER + " đơn treo mỗi thu ngân");
             }
             Instant now = time.now();
-            HeldCart cart = new HeldCart(UUID.randomUUID().toString(), req.note(), req.customerId(), req.items(), now,
+            HeldCart cart = new HeldCart(UUID.randomUUID().toString(), req.note(), req.items(), now,
                     now.plus(TTL));
             redis.opsForValue().set(key(cashierId, cart.holdId()), json.writeValueAsString(cart), TTL);
             redis.opsForZSet().add(index(cashierId), cart.holdId(), now.toEpochMilli());

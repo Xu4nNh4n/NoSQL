@@ -9,7 +9,7 @@ import { Field, inputClass, Table, Td, Toolbar } from '../components/ui/Table';
 import { formatDateTime, formatVND, vietnamDateKey } from '../utils/formatters';
 import type { ShiftClosing, ShiftSummary } from '../types';
 
-/** Chốt ca (FR-12): tổng thu đọc từ Cassandra payments_by_cashier_day sau khi đồng bộ các giao dịch còn chờ. */
+/** Chốt ca (FR-11): tổng thu đọc từ Cassandra payments_by_cashier_day sau khi đồng bộ các giao dịch còn chờ. */
 export function ShiftPage() {
   const { role } = useAuth();
   const toast = useToast();

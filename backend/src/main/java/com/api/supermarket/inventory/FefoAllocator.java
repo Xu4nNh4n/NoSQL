@@ -14,7 +14,7 @@ import com.api.supermarket.common.RetryableConflictException;
 import com.api.supermarket.domain.FefoPolicy;
 
 /**
- * Cấp phát FEFO trên MongoDB (FR-07 bước 4). Chạy bên trong transaction của người gọi:
+ * Cấp phát FEFO trên MongoDB (FR-06 bước 4). Chạy bên trong transaction của người gọi:
  * đọc lô còn hạn theo index {@code product_fefo}, lập kế hoạch bằng {@link FefoPolicy}, rồi trừ từng lô
  * bằng cập nhật có điều kiện {@code remainingQty >= số lấy}. Một lô bị đơn khác lấy trước thì ném
  * {@link RetryableConflictException} để MongoTx chạy lại cả giao dịch.

@@ -41,7 +41,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 /**
- * Trả hàng kèm hoàn tiền một bước (FR-09). Một transaction: kiểm tra hạn trả và số lượng, trả về đúng lô đã xuất
+ * Trả hàng kèm hoàn tiền một bước (FR-08). Một transaction: kiểm tra hạn trả và số lượng, trả về đúng lô đã xuất
  * (lô hạn xa nhất trước; lô đã hết hạn bắt buộc tính hàng hỏng), tính tiền hoàn theo {@link ReturnPolicy},
  * ghi phiếu trả, thêm khoản REFUND vào đơn và xếp sự kiện RETURN_CREATED.
  */

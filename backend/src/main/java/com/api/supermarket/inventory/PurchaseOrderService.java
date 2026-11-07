@@ -45,7 +45,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 /**
- * Phiếu nhập (FR-05): tạo nháp, sửa hoặc xóa khi còn nháp, nhận hàng. Nhận hàng là một transaction:
+ * Phiếu nhập (FR-04): tạo nháp, sửa hoặc xóa khi còn nháp, nhận hàng. Nhận hàng là một transaction:
  * tạo các lô, cộng tồn, đặt phiếu RECEIVED và xếp một sự kiện BATCH_RECEIVED cho cả phiếu.
  */
 @Service

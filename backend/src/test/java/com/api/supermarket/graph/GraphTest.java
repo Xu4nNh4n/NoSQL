@@ -57,7 +57,6 @@ class GraphTest {
     @SuppressWarnings("unchecked")
     void orderRowsAggregateQuantitiesPerProductAndBatch() {
         Document graph = new Document("orderId", "o1").append("orderCode", "HD1").append("orderedAt", Date.from(Instant.EPOCH))
-                .append("customer", new Document("id", "k1").append("name", "Bình").append("phone", "0912345678"))
                 .append("items", List.of(item("milk", 3, false), item("milk", 1, true), item("glass", 1, true)))
                 .append("allocations", List.of(
                         new Document("batchId", "b1").append("batchCode", "L1").append("quantity", 2),
@@ -67,7 +66,6 @@ class GraphTest {
         GraphRows.addOrder(graph, rows);
 
         assertEquals(1, rows.orders().size());
-        assertEquals(1, rows.customers().size());
         Map<String, Object> milk = rows.items().stream().filter(r -> r.get("productId").equals("milk")).findFirst().orElseThrow();
         assertEquals(4L, milk.get("quantity"));
         assertEquals(false, milk.get("gift"), "có dòng mua thật thì không phải quà");
@@ -75,14 +73,6 @@ class GraphTest {
         assertEquals(true, glass.get("gift"));
         assertEquals(2, rows.allocations().size());
         assertEquals(4L, rows.allocations().get(0).get("quantity"));
-    }
-
-    @Test
-    void walkInCustomerHasNoCustomerRow() {
-        GraphRows.OrderRows rows = GraphRows.OrderRows.empty();
-        GraphRows.addOrder(new Document("orderId", "o2").append("orderCode", "HD2").append("customer", null)
-                .append("items", List.of(item("milk", 1, false))).append("allocations", List.of()), rows);
-        assertTrue(rows.customers().isEmpty());
     }
 
     @Test
@@ -131,13 +121,13 @@ class GraphTest {
         b.setExpiryDate(LocalDate.of(2026, 11, 20));
         when(batches.findByCode("L261101-0003")).thenReturn(Optional.of(b));
         when(graph.trace("L261101-0003")).thenReturn(List.of(
-                new TracedOrder("HD1", Instant.EPOCH, 3, "k1", "Bình", "0912"),
-                new TracedOrder("HD2", Instant.EPOCH, 2, null, null, null),
-                new TracedOrder("HD3", Instant.EPOCH, 5, "k1", "Bình", "0912")));
+                new TracedOrder("HD1", Instant.EPOCH, 3),
+                new TracedOrder("HD2", Instant.EPOCH, 2),
+                new TracedOrder("HD3", Instant.EPOCH, 5)));
         RecallService.TraceResult r = new RecallService(batches, mock(BatchService.class), graph).trace(" l261101-0003 ");
         assertEquals(10, r.soldQty());
-        assertEquals(1, r.contacts().size());
-        assertEquals(8, r.contacts().get(0).quantity());
+        assertEquals(3, r.orders().size());
+        assertEquals("HD1", r.orders().get(0).orderCode());
     }
 
     @Test

@@ -18,7 +18,6 @@ export function ReceiptView({ order, returns = [], reprint = false, printedAt }:
         <Row label="Số HĐ" value={order.orderCode} />
         <Row label="Ngày" value={formatDateTime(order.orderedAt)} />
         <Row label="Thu ngân" value={order.cashier.name} />
-        <Row label="Khách" value={order.customer ? `${order.customer.name}${order.customer.phone ? ` · ${order.customer.phone}` : ''}` : 'Khách lẻ'} />
       </div>
 
       <div className={`mt-2 pt-2 ${line}`}>

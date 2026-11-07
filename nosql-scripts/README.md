@@ -6,7 +6,7 @@ Mỗi thư mục có: tạo cấu trúc → dữ liệu mẫu → truy vấn cơ
 |---|---|---:|---:|
 | [MongoDB](mongodb/) | Nguồn sự thật: danh mục, lô, phiếu nhập, đơn (nhúng dòng, lô, thanh toán), khuyến mãi | 6 | 9 |
 | [Cassandra](cassandra/) | Sổ cái chỉ thêm: thẻ kho, thanh toán theo đơn / theo thu ngân-ngày, lịch sử đăng nhập (TTL) | 4 | 6 |
-| [Neo4j](neo4j/) | Đồ thị khách–đơn–sản phẩm–lô–NCC: truy vết thu hồi, gợi ý mua kèm | 3 | 7 |
+| [Neo4j](neo4j/) | Đồ thị đơn–sản phẩm–lô–NCC: truy vết thu hồi, gợi ý mua kèm | 3 | 7 |
 | [Redis](redis/) | Dữ liệu tạm: phiên, cache, đơn treo, top bán | 3 | 5 |
 | **Tổng** | | **16** | **27** |
 
