@@ -1,57 +1,70 @@
 # Hệ thống quản lý siêu thị – Đồ án NoSQL
 
-Ứng dụng quản lý một cửa hàng bán lẻ: nhập hàng theo lô, bán tại quầy có khuyến mãi, trả hàng, chốt ca thu ngân và thu hồi lô lỗi. Đồ án dùng 4 CSDL NoSQL, mỗi CSDL gánh một nghiệp vụ riêng.
-
-> **Trạng thái:** đang chuyển từ bản Drill/MySQL sang NoSQL trên nhánh `nosql-migration`. Kế hoạch 1 (dọn dẹp) đã xong; backend hiện chỉ còn khung JWT. Xem lộ trình trong [kế hoạch 1](docs/superpowers/plans/2026-11-07-01-don-dep-nosql.md).
+Ứng dụng quản lý một cửa hàng bán lẻ: nhập hàng theo lô, bán tại quầy có khuyến mãi, trả hàng, chốt ca thu ngân và thu hồi lô lỗi. Dữ liệu nằm trên 4 CSDL NoSQL, mỗi CSDL gánh một nghiệp vụ riêng; tắt CSDL nào thì chức năng của nó biến mất nhưng việc bán vẫn chạy.
 
 ## Vai trò của 4 CSDL
 
 | CSDL | Dịch vụ | Dữ liệu và nghiệp vụ |
 |---|---|---|
-| MongoDB | Atlas | Nguồn sự thật: người dùng, khách hàng, sản phẩm (thuộc tính linh hoạt), lô hàng, phiếu nhập, đơn hàng (nhúng dòng hàng, lô đã xuất, thanh toán), khuyến mãi 4 loại, chốt ca. Transaction và cập nhật có điều kiện chống bán quá tồn |
-| Cassandra | Astra DB | Sổ cái chỉ thêm: thẻ kho theo sản phẩm và tháng, thanh toán theo đơn, thanh toán theo thu ngân và ngày (chốt ca), lịch sử đăng nhập 90 ngày (TTL) |
-| Neo4j | AuraDB Free | Truy vết và thu hồi lô (lô → đơn → khách), gợi ý mua kèm |
-| Redis | Redis Cloud / Upstash | Refresh token, cache sản phẩm và khuyến mãi, đơn treo (TTL 30 phút), top bán chạy hôm nay, thông báo realtime (Pub/Sub) |
+| **MongoDB** | Atlas (replica set) | Nguồn sự thật: người dùng, khách, nhóm hàng, nhà cung cấp, sản phẩm (thuộc tính linh hoạt), lô hàng, phiếu nhập, đơn (nhúng dòng hàng, lô đã xuất, thanh toán), phiếu trả, khuyến mãi 4 loại, chốt ca, `sync_queue`. Transaction nhiều document + cập nhật có điều kiện chống bán quá tồn; `$jsonSchema`; thống kê bằng `$facet` |
+| **Cassandra** | Astra DB | Sổ cái chỉ thêm: thẻ kho theo sản phẩm/tháng, thanh toán theo đơn và theo thu ngân/ngày (chốt ca), lịch sử đăng nhập TTL 90 ngày |
+| **Neo4j** | AuraDB Free | Đồ thị khách–đơn–sản phẩm–lô–NCC: truy vết và thu hồi lô, gợi ý mua kèm; dựng lại được từ MongoDB |
+| **Redis** | Redis Cloud / Upstash | Refresh token (xoay vòng, dùng một lần), cache sản phẩm/khuyến mãi/sắp hết hàng, đơn treo 30 phút (Lua), top bán chạy (sorted set) |
 
-MongoDB ghi trước trong một transaction kèm bản ghi `sync_queue`; Cassandra và Neo4j được ghi sau bằng khóa cố định nên ghi lại không tạo bản trùng. Redis chỉ giữ dữ liệu tạm; Redis lỗi thì hệ thống vẫn bán được.
+MongoDB ghi nghiệp vụ và bản ghi `sync_queue` trong cùng một transaction; sau commit sự kiện được ghi sang Cassandra và Neo4j bằng khóa xác định (ghi lặp an toàn), job 60 giây thử lại phần còn chờ.
 
 ## Tác nhân
 
-| Vai trò | Việc chính |
+| Vai trò | Màn hình |
 |---|---|
-| `ADMIN` | Người dùng, danh mục, khuyến mãi, thu hồi lô, xem chốt ca, thống kê, trạng thái hệ thống |
-| `WAREHOUSE` | Phiếu nhập hàng, nhận lô, điều chỉnh tồn, thẻ kho, cảnh báo hết hạn |
-| `STAFF` | Bán tại quầy, đơn treo, trả hàng, chốt ca, khách hàng |
+| `ADMIN` | Toàn bộ, thêm: khuyến mãi, nhóm hàng, người dùng, thống kê, truy vết/thu hồi lô, trạng thái hệ thống |
+| `WAREHOUSE` | Sản phẩm & thẻ kho, tồn kho theo lô, phiếu nhập, nhà cung cấp |
+| `STAFF` | Bán tại quầy, đơn hàng & trả hàng, chốt ca, khách hàng, sản phẩm |
 
 ## Cấu trúc thư mục
 
 ```
-backend/    Spring Boot 4.1 (Java 21)
-frontend/   React 19 + Vite + TypeScript
-docs/       SRS v2.0, spec thiết kế, kế hoạch triển khai
-Bruno/      Bộ request kiểm thử API
-secrets/    Secure bundle của Astra (không commit)
+backend/        Spring Boot 4.1 (Java 21) – package theo nghiệp vụ: auth, user, catalog, customer,
+                inventory, promotion, sales, shift, graph, stats, sync, health, seed
+frontend/       React 19 + Vite + TypeScript + Tailwind
+nosql-scripts/  Script tạo cấu trúc, dữ liệu mẫu, truy vấn cơ bản/nâng cao, sao lưu cho từng CSDL
+docs/           SRS v2.0 (Word), spec thiết kế, kế hoạch triển khai 1–10
+Bruno/          Bộ request kiểm thử API
+secrets/        Secure bundle của Astra (không commit)
 ```
 
 ## Chạy dự án
 
-1. Sao chép `.env.example` thành `.env` ở thư mục gốc rồi điền chuỗi kết nối 4 CSDL và `JWT_SECRET` (ít nhất 32 ký tự). Đặt file `secure-connect-*.zip` của Astra vào `secrets/`.
-2. Backend:
+1. Sao chép `.env.example` thành `.env` ở thư mục gốc, điền chuỗi kết nối 4 CSDL, `JWT_SECRET` (≥ 32 ký tự) và `APP_ADMIN_PASSWORD`. Đặt `secure-connect-*.zip` của Astra vào `secrets/` và tạo keyspace `supermarket` trên giao diện Astra.
+2. Muốn có dữ liệu demo: `APP_SEED_DEMO=true` (tài khoản `admin`, `thukho01`, `thungan01`, `thungan02`; mật khẩu `APP_SEED_PASSWORD`).
+3. Backend:
 
    ```bash
    cd backend && ./mvnw spring-boot:run
    ```
 
-3. Frontend (terminal khác):
+4. Frontend (terminal khác), mở http://localhost:3000:
 
    ```bash
    cd frontend && npm install && npm run dev
    ```
 
-Backend chạy ở `http://localhost:8080`, Swagger UI ở `/swagger-ui/index.html`.
+Swagger UI: http://localhost:8080/swagger-ui/index.html. Lúc khởi động backend tự tạo index + `$jsonSchema` MongoDB, bảng Cassandra, constraint Neo4j (`SCHEMA_INIT=true`).
+
+## Kiểm thử
+
+```bash
+cd backend && ./mvnw test
+```
+
+Chạy unit test và test phân quyền qua HTTP, không cần CSDL. Test trên cloud thật (bán đồng thời đơn vị cuối, transaction, text search, sổ cái, đồ thị) gắn tag `cloud`:
+
+```bash
+cd backend && ./mvnw test -Pcloud-tests
+```
 
 ## Tài liệu
 
-- [Mục lục tài liệu](docs/README.md)
-- [Spec thiết kế NoSQL](docs/superpowers/specs/2026-11-07-nosql-redesign-design.md)
+- [Mục lục tài liệu](docs/README.md) – SRS v2.0, spec thiết kế, 10 kế hoạch triển khai
+- [Script NoSQL](nosql-scripts/README.md)
 - Bản Drill/BigData trước đây còn trong lịch sử git ở commit `267e192`.
