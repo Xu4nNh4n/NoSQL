@@ -115,7 +115,7 @@ export function ProductsPage() {
 }
 
 function StockCard({ product, onClose }: { product: Product; onClose: () => void }) {
-  const [month, setMonth] = useState(new Date().toISOString().slice(0, 7));
+  const [month, setMonth] = useState(() => new Date().toISOString().slice(0, 7));
   const rows = useLoad(() => api.get<StockMovement[]>(`/products/${product.id}/stock-movements${qs({ month })}`), [product.id, month]);
   const net = (rows.data ?? []).filter(r => r.type !== 'RETURN_DAMAGED').reduce((s, r) => s + r.quantity, 0);
   return (

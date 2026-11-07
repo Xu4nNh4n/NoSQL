@@ -4,13 +4,19 @@ import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 
 const TITLE_MAP: Record<string, string> = {
-  '/products': 'Quản lý Sản phẩm',
-  '/inventory': 'Quản lý Kho & Lô hàng FEFO',
+  '/pos': 'Bán tại quầy',
+  '/orders': 'Đơn hàng & trả hàng',
+  '/shift': 'Chốt ca thu ngân',
+  '/customers': 'Khách hàng',
+  '/promotions': 'Khuyến mãi',
+  '/products': 'Sản phẩm & thẻ kho',
+  '/categories': 'Nhóm hàng',
+  '/inventory': 'Tồn kho theo lô',
+  '/purchase-orders': 'Phiếu nhập hàng',
   '/suppliers': 'Nhà cung cấp',
-  '/pos': 'Thu ngân tại quầy (POS)',
-  '/orders': 'Quản lý Đơn hàng & Trả hàng',
-  '/reports': 'Báo cáo Dòng tiền & Big Data',
-  '/users': 'Quản lý Nhân viên & Phân quyền',
+  '/stats': 'Thống kê bán hàng',
+  '/users': 'Người dùng',
+  '/system': 'Trạng thái hệ thống',
 };
 
 export const AppLayout: React.FC = () => {

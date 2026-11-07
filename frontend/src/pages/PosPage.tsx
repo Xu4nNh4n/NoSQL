@@ -31,7 +31,6 @@ export function PosPage() {
   const [held, setHeld] = useState<HeldCart[]>([]);
   const requestKey = useRef(newRequestKey());
 
-  const byId = useMemo(() => new Map((products.data ?? []).map(p => [p.id, p])), [products.data]);
   const shown = useMemo(() => {
     const k = keyword.trim().toLowerCase();
     const list = products.data ?? [];

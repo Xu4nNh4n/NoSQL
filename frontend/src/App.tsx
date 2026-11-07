@@ -1,139 +1,83 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { CartProvider } from './contexts/CartContext';
 import { ToastProvider } from './components/ui/Toast';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { AppLayout } from './components/layout/AppLayout';
 import type { RoleName } from './types';
 
 import { LoginPage } from './pages/LoginPage';
-import { ProductsPage } from './pages/ProductsPage';
-import { InventoryPage } from './pages/InventoryPage';
-import { SuppliersPage } from './pages/SuppliersPage';
-import { PromotionsPage } from './pages/PromotionsPage';
 import { PosPage } from './pages/PosPage';
-import { SalesOrdersPage } from './pages/SalesOrdersPage';
+import { OrdersPage } from './pages/OrdersPage';
+import { ShiftPage } from './pages/ShiftPage';
+import { CustomersPage } from './pages/CustomersPage';
+import { ProductsPage } from './pages/ProductsPage';
+import { CategoriesPage } from './pages/CategoriesPage';
+import { SuppliersPage } from './pages/SuppliersPage';
+import { PurchaseOrdersPage } from './pages/PurchaseOrdersPage';
+import { InventoryPage } from './pages/InventoryPage';
+import { PromotionsPage } from './pages/PromotionsPage';
 import { UsersPage } from './pages/UsersPage';
+import { StatsPage } from './pages/StatsPage';
+import { SystemPage } from './pages/SystemPage';
+
+const homeFor =(role: RoleName | null) => (role === 'WAREHOUSE' ? '/inventory' : role ? '/pos' : '/login');
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
-
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-[#F8FAF9] flex items-center justify-center">
-        <div className="flex items-center gap-2 text-sm text-gray-500 font-medium">
-          <svg className="animate-spin h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-          </svg>
-          Đang khởi tạo phiên làm việc...
-        </div>
-      </div>
-    );
+    return <div className="flex min-h-screen items-center justify-center text-sm text-gray-500">Đang khởi tạo phiên làm việc…</div>;
   }
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
-  return <>{children}</>;
+  return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
 };
 
-const RoleRoute: React.FC<{ allowedRoles: RoleName[]; children: React.ReactNode }> = ({
-  allowedRoles,
-  children,
-}) => {
+const RoleRoute: React.FC<{ allowedRoles: RoleName[]; children: React.ReactNode }> = ({ allowedRoles, children }) => {
   const { role } = useAuth();
-
-  if (role && !allowedRoles.includes(role)) {
-    const destination = role === 'STAFF' ? '/pos'
-      : role === 'WAREHOUSE' ? '/inventory'
-      : role === 'ADMIN' ? '/pos'
-      : '/login';
-    return <Navigate to={destination} replace />;
-  }
-
+  if (role && !allowedRoles.includes(role)) return <Navigate to={homeFor(role)} replace />;
   return <>{children}</>;
 };
 
-export const App: React.FC = () => {
-  return (
-    <ErrorBoundary>
-      <BrowserRouter>
-        <AuthProvider>
-            <ToastProvider>
-              <Routes>
-                <Route path="/" element={<Navigate to="/login" replace />} />
-                <Route path="/shop" element={<Navigate to="/login" replace />} />
-                <Route path="/login" element={<LoginPage />} />
-
-                {/* 3. Không gian làm việc nội bộ (Admin Dashboard, Thu ngân POS, Quản lý kho, Nhân viên...)
-                    Chỉ xuất hiện và cho phép truy cập khi nhân viên/quản trị viên đăng nhập hợp lệ */}
-                <Route
-                  element={
-                    <ProtectedRoute>
-                      <CartProvider>
-                        <AppLayout />
-                      </CartProvider>
-                    </ProtectedRoute>
-                  }
-                >
-                  {/* Trang phân tích của bản BigData đã bỏ; giữ đường dẫn cũ để không trắng trang. */}
-                  {['/admin', '/dashboard', '/reports', '/purchase-costs', '/supplier-prices'].map((path) => (
-                    <Route key={path} path={path} element={<Navigate to="/pos" replace />} />
-                  ))}
-                  <Route path="/suppliers" element={<RoleRoute allowedRoles={['ADMIN', 'WAREHOUSE']}><SuppliersPage /></RoleRoute>} />
-                  <Route path="/promotions" element={<RoleRoute allowedRoles={['ADMIN']}><PromotionsPage /></RoleRoute>} />
-                  <Route
-                    path="/pos"
-                    element={
-                      <RoleRoute allowedRoles={['ADMIN', 'STAFF']}>
-                        <PosPage />
-                      </RoleRoute>
-                    }
-                  />
-                  <Route
-                    path="/products"
-                    element={
-                      <RoleRoute allowedRoles={['ADMIN', 'STAFF', 'WAREHOUSE']}>
-                        <ProductsPage />
-                      </RoleRoute>
-                    }
-                  />
-                  <Route
-                    path="/inventory"
-                    element={
-                      <RoleRoute allowedRoles={['ADMIN', 'WAREHOUSE']}>
-                        <InventoryPage />
-                      </RoleRoute>
-                    }
-                  />
-                  <Route
-                    path="/orders"
-                    element={
-                      <RoleRoute allowedRoles={['ADMIN', 'STAFF']}>
-                        <SalesOrdersPage />
-                      </RoleRoute>
-                    }
-                  />
-                  <Route
-                    path="/users"
-                    element={
-                      <RoleRoute allowedRoles={['ADMIN']}>
-                        <UsersPage />
-                      </RoleRoute>
-                    }
-                  />
-                </Route>
-
-                <Route path="*" element={<Navigate to="/login" replace />} />
-              </Routes>
-            </ToastProvider>
-        </AuthProvider>
-      </BrowserRouter>
-    </ErrorBoundary>
-  );
+const Home: React.FC = () => {
+  const { role } = useAuth();
+  return <Navigate to={homeFor(role)} replace />;
 };
+
+const ALL: RoleName[] = ['ADMIN', 'WAREHOUSE', 'STAFF'];
+const routes: { path: string; roles: RoleName[]; element: React.ReactNode }[] = [
+  { path: '/pos', roles: ['ADMIN', 'STAFF'], element: <PosPage /> },
+  { path: '/orders', roles: ['ADMIN', 'STAFF'], element: <OrdersPage /> },
+  { path: '/shift', roles: ['ADMIN', 'STAFF'], element: <ShiftPage /> },
+  { path: '/customers', roles: ['ADMIN', 'STAFF'], element: <CustomersPage /> },
+  { path: '/products', roles: ALL, element: <ProductsPage /> },
+  { path: '/categories', roles: ['ADMIN'], element: <CategoriesPage /> },
+  { path: '/suppliers', roles: ['ADMIN', 'WAREHOUSE'], element: <SuppliersPage /> },
+  { path: '/purchase-orders', roles: ['ADMIN', 'WAREHOUSE'], element: <PurchaseOrdersPage /> },
+  { path: '/inventory', roles: ['ADMIN', 'WAREHOUSE'], element: <InventoryPage /> },
+  { path: '/promotions', roles: ['ADMIN'], element: <PromotionsPage /> },
+  { path: '/users', roles: ['ADMIN'], element: <UsersPage /> },
+  { path: '/stats', roles: ['ADMIN'], element: <StatsPage /> },
+  { path: '/system', roles: ['ADMIN'], element: <SystemPage /> },
+];
+
+export const App: React.FC = () => (
+  <ErrorBoundary>
+    <BrowserRouter>
+      <AuthProvider>
+        <ToastProvider>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
+              <Route path="/" element={<Home />} />
+              {routes.map(r => (
+                <Route key={r.path} path={r.path} element={<RoleRoute allowedRoles={r.roles}>{r.element}</RoleRoute>} />
+              ))}
+              <Route path="*" element={<Home />} />
+            </Route>
+          </Routes>
+        </ToastProvider>
+      </AuthProvider>
+    </BrowserRouter>
+  </ErrorBoundary>
+);
 
 export default App;

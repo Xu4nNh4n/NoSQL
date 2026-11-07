@@ -1,144 +1,152 @@
-import { useEffect, useRef, useState } from 'react';
-import { api } from '../api/client';
-import type { Product, Promotion } from '../types';
-import { normalizeProduct } from '../types';
+import { useState } from 'react';
+import { api, errorMessage, qs } from '../api/client';
+import { useLoad } from '../hooks/useLoad';
 import { Button } from '../components/ui/Button';
-import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
-import { Pagination, useListPage } from '../components/ui/Pagination';
 import { useToast } from '../components/ui/Toast';
+import { Field, inputClass, ServerPager, Table, Td, Toolbar } from '../components/ui/Table';
+import { formatDateTime, formatVND } from '../utils/formatters';
+import type { Category, Page, Product, Promotion, PromotionType, Suggestions } from '../types';
 
-const emptyForm = { productId: '', name: '', percent: '', startsAt: '', endsAt: '', active: true };
-// Promotion datetimes are Vietnam wall time, never interpreted in the browser's timezone.
-const displayTime = (value: string) => value.replace('T', ' ');
-const promotionStatus = (row: Promotion, now: number) => {
-  if (!row.active) return 'DISABLED';
-  if (now < Date.parse(row.startsAt + '+07:00')) return 'UPCOMING';
-  if (now >= Date.parse(row.endsAt + '+07:00')) return 'EXPIRED';
-  return 'ACTIVE';
-};
-const statusLabels: Record<string, string> = {
-  ACTIVE: 'Đang hiệu lực', UPCOMING: 'Chưa bắt đầu', EXPIRED: 'Hết hạn', DISABLED: 'Đã tắt',
+const TYPE_LABEL: Record<PromotionType, string> = {
+  PERCENT: 'Giảm %', FIXED: 'Giảm tiền / sản phẩm', BUY_X_GET_Y: 'Mua X tặng Y', ORDER_THRESHOLD: 'Giảm theo tổng đơn',
 };
 
-export const PromotionsPage = () => {
-  const [promotions, setPromotions] = useState<Promotion[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState('');
-  const [search, setSearch] = useState('');
-  const [status, setStatus] = useState('ALL');
-  const [now, setNow] = useState(Date.now);
-  useEffect(() => {
-    const timer = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(timer);
-  }, []);
-  const [editing, setEditing] = useState<Promotion | null>(null);
-  const [open, setOpen] = useState(false);
-  const [form, setForm] = useState(emptyForm);
-  const [formError, setFormError] = useState('');
-  const [saving, setSaving] = useState(false);
-  const mutationLock = useRef(false);
-  const { success, error } = useToast();
-  const load = async () => {
-    setLoading(true); setLoadError('');
-    try {
-      const [rows, catalog] = await Promise.all([
-        api.get<Promotion[]>('/promotions'), api.get<unknown[]>('/products/active'),
-      ]);
-      setPromotions(rows); setProducts(catalog.map(normalizeProduct));
-    } catch (e) { setLoadError(e instanceof Error ? e.message : 'Không tải được khuyến mãi'); }
-    finally { setLoading(false); }
+type Form = {
+  id?: string; name: string; type: PromotionType; startsAt: string; endsAt: string; productIds: string[]; categoryIds: string[];
+  percent: string; amount: string; buyQty: string; getQty: string; giftProductId: string; minTotal: string; maxDiscount: string;
+  active: boolean; version?: number;
+};
+
+const toLocal = (iso: string) => new Date(new Date(iso).getTime() + 7 * 3600000).toISOString().slice(0, 16);
+const fromLocal = (v: string) => new Date(`${v}:00+07:00`).toISOString();
+const num = (v: string) => (v === '' ? null : Number(v));
+
+function describe(p: Promotion): string {
+  const r = p.rule;
+  switch (p.type) {
+    case 'PERCENT': return `Giảm ${r.percent}%`;
+    case 'FIXED': return `Giảm ${formatVND(r.amount)} mỗi sản phẩm`;
+    case 'BUY_X_GET_Y': return `Mua ${r.buyQty} tặng ${r.getQty}${r.giftProductId ? ' (quà khác loại)' : ''}`;
+    case 'ORDER_THRESHOLD': return `Đơn từ ${formatVND(r.minTotal)} giảm ${r.amount ? formatVND(r.amount) : `${r.percent}%${r.maxDiscount ? ` tối đa ${formatVND(r.maxDiscount)}` : ''}`}`;
+  }
+}
+
+export function PromotionsPage() {
+  const toast = useToast();
+  const [page, setPage] = useState(0);
+  const [form, setForm] = useState<Form | null>(null);
+  const list = useLoad(() => api.get<Page<Promotion>>(`/promotions${qs({ page, size: 20 })}`), [page]);
+  const products = useLoad(() => api.get<Page<Product>>('/products?size=100&active=true'), []);
+  const categories = useLoad(() => api.get<Category[]>('/categories?active=true'), []);
+  const [suggest, setSuggest] = useState<Suggestions | null>(null);
+
+  const blank = (): Form => {
+    const now = new Date();
+    return { name: '', type: 'PERCENT', startsAt: toLocal(now.toISOString()), endsAt: toLocal(new Date(now.getTime() + 30 * 86400000).toISOString()),
+    productIds: [], categoryIds: [], percent: '10', amount: '', buyQty: '2', getQty: '1', giftProductId: '', minTotal: '', maxDiscount: '', active: true };
   };
-  useEffect(() => { void load(); }, []);
-  const openForm = (row: Promotion | null) => {
-    setEditing(row); setFormError('');
-    setForm(row ? { productId: String(row.productId), name: row.name, percent: String(row.percent),
-      startsAt: row.startsAt.slice(0, 19), endsAt: row.endsAt.slice(0, 19), active: row.active } : emptyForm);
-    setOpen(true);
-  };
-  const save = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (mutationLock.current) return;
-    if (!form.name.trim() || !form.productId || Number(form.percent) <= 0 || Number(form.percent) > 100
-      || !form.startsAt || !form.endsAt || form.endsAt <= form.startsAt) {
-      setFormError('Chọn sản phẩm, nhập tên, 0 < phần trăm ≤ 100 và ngày kết thúc sau ngày bắt đầu.'); return;
-    }
-    mutationLock.current = true; setSaving(true); setFormError('');
+  const edit = (p: Promotion) => setForm({ id: p.id, name: p.name, type: p.type, startsAt: toLocal(p.startsAt), endsAt: toLocal(p.endsAt),
+    productIds: p.scope?.productIds ?? [], categoryIds: p.scope?.categoryIds ?? [], percent: String(p.rule.percent ?? ''), amount: String(p.rule.amount ?? ''),
+    buyQty: String(p.rule.buyQty ?? ''), getQty: String(p.rule.getQty ?? ''), giftProductId: p.rule.giftProductId ?? '', minTotal: String(p.rule.minTotal ?? ''),
+    maxDiscount: String(p.rule.maxDiscount ?? ''), active: p.active, version: p.version });
+
+  const save = async () => {
+    if (!form) return;
+    const t = form.type;
+    const body = {
+      name: form.name, type: t, startsAt: fromLocal(form.startsAt), endsAt: fromLocal(form.endsAt),
+      productIds: t === 'ORDER_THRESHOLD' ? [] : form.productIds, categoryIds: t === 'PERCENT' || t === 'FIXED' ? form.categoryIds : [],
+      percent: t === 'PERCENT' || (t === 'ORDER_THRESHOLD' && form.amount === '') ? num(form.percent) : null,
+      amount: t === 'FIXED' || (t === 'ORDER_THRESHOLD' && form.amount !== '') ? num(form.amount) : null,
+      buyQty: t === 'BUY_X_GET_Y' ? num(form.buyQty) : null, getQty: t === 'BUY_X_GET_Y' ? num(form.getQty) : null,
+      giftProductId: t === 'BUY_X_GET_Y' && form.giftProductId ? form.giftProductId : null,
+      minTotal: t === 'ORDER_THRESHOLD' ? num(form.minTotal) : null,
+      maxDiscount: t === 'ORDER_THRESHOLD' && form.amount === '' ? num(form.maxDiscount) : null,
+      active: form.active, version: form.version,
+    };
     try {
-      const body = { ...form, name: form.name.trim(), productId: Number(form.productId), percent: Number(form.percent) };
-      if (editing) await api.put('/promotions/' + editing.promotionId, body);
+      if (form.id) await api.put(`/promotions/${form.id}`, body);
       else await api.post('/promotions', body);
-      setOpen(false); success('Đã lưu khuyến mãi'); await load();
-    } catch (e) { setFormError(e instanceof Error ? e.message : 'Không lưu được khuyến mãi'); }
-    finally { mutationLock.current = false; setSaving(false); }
+      toast.success('Đã lưu khuyến mãi (cache Redis được xóa, quầy áp ngay)');
+      setForm(null);
+      void list.reload();
+    } catch (e) { toast.error(errorMessage(e)); }
   };
-  const toggle = async (row: Promotion) => {
-    if (mutationLock.current) return;
-    mutationLock.current = true; setSaving(true);
-    try {
-      await api.put(`/promotions/${row.promotionId}/active`, { active: !row.active });
-      success(row.active ? 'Đã tắt khuyến mãi' : 'Đã bật khuyến mãi'); await load();
-    } catch (e) { error(e instanceof Error ? e.message : 'Không cập nhật được trạng thái'); }
-    finally { mutationLock.current = false; setSaving(false); }
+  const toggle = async (p: Promotion) => {
+    try { await api.put(`/promotions/${p.id}/active`, { active: !p.active }); void list.reload(); } catch (e) { toast.error(errorMessage(e)); }
   };
-  const filtered = promotions.filter(p => (status === 'ALL' || promotionStatus(p, now) === status)
-    && `${p.name} ${p.productName}`.toLocaleLowerCase('vi').includes(search.toLocaleLowerCase('vi')));
-  const page = useListPage(filtered, search + status);
-  return <div className="space-y-5">
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <div><h1 className="text-xl font-semibold text-gray-900">Khuyến mãi sản phẩm</h1>
-        <p className="mt-1 text-sm text-gray-500">Giờ Việt Nam (UTC+7). Mỗi sản phẩm áp dụng một mức giảm cao nhất, không cộng dồn.</p></div>
-      <Button disabled={loading || saving || !!loadError} onClick={() => openForm(null)}>Thêm khuyến mãi</Button>
+  const loadSuggest = async (productId: string) => {
+    if (!productId) { setSuggest(null); return; }
+    setSuggest(await api.get<Suggestions>(`/products/${productId}/also-bought`).catch(() => null));
+  };
+  const toggleId = (ids: string[], id: string) => (ids.includes(id) ? ids.filter(x => x !== id) : [...ids, id]);
+
+  return (
+    <div>
+      <Toolbar><Button onClick={() => setForm(blank())}>Tạo khuyến mãi</Button></Toolbar>
+      <Table headers={['Tên', 'Loại', 'Quy tắc', 'Hiệu lực', 'Trạng thái', '']} loading={list.loading} error={list.error} empty={list.data?.content.length === 0}>
+        {list.data?.content.map(p => (
+          <tr key={p.id}>
+            <Td className="font-medium">{p.name}</Td><Td>{TYPE_LABEL[p.type]}</Td><Td>{describe(p)}</Td>
+            <Td className="text-xs">{formatDateTime(p.startsAt)} → {formatDateTime(p.endsAt)}</Td>
+            <Td>{p.active ? 'Đang bật' : 'Tắt'}</Td>
+            <Td className="space-x-2 whitespace-nowrap">
+              <Button size="sm" variant="outline" onClick={() => edit(p)}>Sửa</Button>
+              <Button size="sm" variant="ghost" onClick={() => toggle(p)}>{p.active ? 'Tắt' : 'Bật'}</Button>
+            </Td>
+          </tr>))}
+      </Table>
+      <ServerPager page={list.data} onPage={setPage} />
+
+      <Modal isOpen={!!form} onClose={() => setForm(null)} title={form?.id ? 'Sửa khuyến mãi' : 'Tạo khuyến mãi'} maxWidth="2xl"
+        footer={<><Button variant="outline" onClick={() => setForm(null)}>Hủy</Button><Button onClick={save}>Lưu</Button></>}>
+        {form && (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="Tên *"><input className={inputClass} value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></Field>
+            <Field label="Loại"><select className={inputClass} value={form.type} onChange={e => setForm({ ...form, type: e.target.value as PromotionType })}>
+              {Object.entries(TYPE_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></Field>
+            <Field label="Bắt đầu"><input type="datetime-local" className={inputClass} value={form.startsAt} onChange={e => setForm({ ...form, startsAt: e.target.value })} /></Field>
+            <Field label="Kết thúc"><input type="datetime-local" className={inputClass} value={form.endsAt} onChange={e => setForm({ ...form, endsAt: e.target.value })} /></Field>
+
+            {form.type === 'PERCENT' && <Field label="Phần trăm giảm"><input type="number" className={inputClass} value={form.percent} onChange={e => setForm({ ...form, percent: e.target.value })} /></Field>}
+            {form.type === 'FIXED' && <Field label="Số tiền giảm mỗi sản phẩm"><input type="number" className={inputClass} value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} /></Field>}
+            {form.type === 'BUY_X_GET_Y' && <>
+              <Field label="Mua (X)"><input type="number" min={1} className={inputClass} value={form.buyQty} onChange={e => setForm({ ...form, buyQty: e.target.value })} /></Field>
+              <Field label="Tặng (Y)"><input type="number" min={1} className={inputClass} value={form.getQty} onChange={e => setForm({ ...form, getQty: e.target.value })} /></Field>
+              <Field label="Quà khác loại (để trống = tặng cùng sản phẩm)"><select className={inputClass} value={form.giftProductId} onChange={e => setForm({ ...form, giftProductId: e.target.value })}>
+                <option value="">— cùng sản phẩm —</option>{products.data?.content.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></Field>
+            </>}
+            {form.type === 'ORDER_THRESHOLD' && <>
+              <Field label="Tổng đơn tối thiểu"><input type="number" className={inputClass} value={form.minTotal} onChange={e => setForm({ ...form, minTotal: e.target.value })} /></Field>
+              <Field label="Giảm số tiền (để trống nếu giảm %)"><input type="number" className={inputClass} value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} /></Field>
+              {form.amount === '' && <>
+                <Field label="Giảm %"><input type="number" className={inputClass} value={form.percent} onChange={e => setForm({ ...form, percent: e.target.value })} /></Field>
+                <Field label="Giảm tối đa"><input type="number" className={inputClass} value={form.maxDiscount} onChange={e => setForm({ ...form, maxDiscount: e.target.value })} /></Field>
+              </>}
+            </>}
+
+            {form.type !== 'ORDER_THRESHOLD' && (
+              <div className="sm:col-span-2">
+                <p className="mb-1 text-xs font-semibold text-gray-700">Áp cho sản phẩm</p>
+                <div className="flex max-h-40 flex-wrap gap-1 overflow-y-auto rounded border border-gray-200 p-2">
+                  {products.data?.content.map(p => (
+                    <button key={p.id} type="button" onClick={() => { setForm({ ...form, productIds: toggleId(form.productIds, p.id) }); void loadSuggest(p.id); }}
+                      className={`rounded border px-2 py-1 text-xs ${form.productIds.includes(p.id) ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200'}`}>{p.name}</button>))}
+                </div>
+                {suggest?.available && suggest.items.length > 0 && (
+                  <p className="mt-2 text-xs text-gray-600">Neo4j gợi ý hay mua kèm: {suggest.items.map(s => `${s.name} (${s.times} đơn)`).join(', ')} – có thể dùng làm quà "mua X tặng Y".</p>)}
+              </div>)}
+            {(form.type === 'PERCENT' || form.type === 'FIXED') && (
+              <div className="sm:col-span-2">
+                <p className="mb-1 text-xs font-semibold text-gray-700">Hoặc theo nhóm hàng</p>
+                <div className="flex flex-wrap gap-1">{categories.data?.map(c => (
+                  <button key={c.id} type="button" onClick={() => setForm({ ...form, categoryIds: toggleId(form.categoryIds, c.id) })}
+                    className={`rounded border px-2 py-1 text-xs ${form.categoryIds.includes(c.id) ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200'}`}>{c.name}</button>))}</div>
+              </div>)}
+            <label className="text-sm"><input type="checkbox" checked={form.active} onChange={e => setForm({ ...form, active: e.target.checked })} /> Đang bật</label>
+          </div>)}
+      </Modal>
     </div>
-    <div className="flex flex-wrap items-end gap-3">
-      <div className="max-w-sm flex-1"><Input label="Tìm tên / sản phẩm" value={search} onChange={e => setSearch(e.target.value)} /></div>
-      <label className="text-xs font-semibold text-gray-700">Trạng thái
-        <select className="ml-2 min-h-10 rounded-md border border-gray-300 bg-white px-3 text-sm" value={status} onChange={e => setStatus(e.target.value)}>
-          <option value="ALL">Tất cả</option><option value="ACTIVE">Đang hiệu lực</option><option value="UPCOMING">Chưa bắt đầu</option><option value="EXPIRED">Hết hạn</option><option value="DISABLED">Đã tắt</option>
-        </select></label>
-      <Button variant="outline" disabled={loading || saving} onClick={() => void load()}>Tải lại</Button>
-    </div>
-    {loadError && <p role="alert" className="text-sm text-red-700">{loadError}</p>}
-    <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
-      <table className="w-full text-left text-sm"><thead className="border-b border-gray-200 text-gray-500"><tr>
-        <th className="p-3">Khuyến mãi / Sản phẩm</th><th className="p-3 text-right">Giảm</th>
-        <th className="p-3">Bắt đầu (VN)</th><th className="p-3">Kết thúc (VN)</th>
-        <th className="p-3">Trạng thái</th><th className="p-3 text-right">Thao tác</th>
-      </tr></thead><tbody className="divide-y divide-gray-100">
-        {loading ? <tr><td colSpan={6} className="p-6 text-center" role="status">Đang tải…</td></tr>
-          : loadError ? <tr><td colSpan={6} className="p-6 text-center text-gray-500">Tải lại để xem dữ liệu.</td></tr>
-          : page.rows.length === 0 ? <tr><td colSpan={6} className="p-6 text-center text-gray-500">Chưa có khuyến mãi phù hợp.</td></tr>
-          : page.rows.map(row => <tr key={row.promotionId}>
-            <td className="p-3"><p className="font-medium text-gray-900">{row.name}</p><p className="text-xs text-gray-500">#{row.promotionId} · {row.productName}</p></td>
-            <td className="p-3 text-right tabular-nums">{row.percent}%</td>
-            <td className="whitespace-nowrap p-3">{displayTime(row.startsAt)}</td><td className="whitespace-nowrap p-3">{displayTime(row.endsAt)}</td>
-            <td className="p-3">{statusLabels[promotionStatus(row, now)]}</td>
-            <td className="p-3 text-right"><div className="flex justify-end gap-2">
-              <Button size="sm" variant="outline" disabled={saving} onClick={() => openForm(row)}>Sửa</Button>
-              <Button size="sm" variant="outline" disabled={saving} onClick={() => void toggle(row)}>{row.active ? 'Tắt' : 'Bật'}</Button>
-            </div></td>
-          </tr>)}
-      </tbody></table>
-    </div>
-    <Pagination {...page} />
-    <p className="text-xs text-gray-500">Bật chương trình chưa có nghĩa được giảm ngay: cần đến ngày bắt đầu và chưa qua ngày kết thúc theo giờ Việt Nam. Nếu cùng phần trăm, ưu tiên mã khuyến mãi nhỏ nhất. Giá trên hóa đơn cũ được giữ nguyên.</p>
-    <Modal isOpen={open} onClose={() => { if (!saving) setOpen(false); }} title={editing ? 'Sửa khuyến mãi' : 'Thêm khuyến mãi'}
-      footer={<><Button variant="outline" disabled={saving} onClick={() => setOpen(false)}>Hủy</Button>
-        <Button type="submit" form="promotion-form" isLoading={saving}>Lưu khuyến mãi</Button></>}>
-      <form id="promotion-form" onSubmit={save} className="space-y-4"><fieldset disabled={saving} className="space-y-4">
-        <Input label="Tên khuyến mãi" required maxLength={150} value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
-        <label className="block text-xs font-semibold text-gray-700">Sản phẩm
-          <select required className="mt-1 min-h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm" value={form.productId} onChange={e => setForm({ ...form, productId: e.target.value })}>
-            <option value="">Chọn sản phẩm</option>
-            {editing && !products.some(p => p.id === editing.productId) && <option value={editing.productId}>{editing.productName} (ngừng bán)</option>}
-            {products.map(p => <option key={p.id} value={p.id}>{p.skuCode} · {p.name}</option>)}
-          </select></label>
-        <Input label="Phần trăm giảm" type="number" required min="0.01" max="100" step="0.01" value={form.percent} onChange={e => setForm({ ...form, percent: e.target.value })} />
-        <Input label="Bắt đầu (giờ Việt Nam)" type="datetime-local" step="1" required value={form.startsAt} onChange={e => setForm({ ...form, startsAt: e.target.value })} />
-        <Input label="Kết thúc (giờ Việt Nam)" type="datetime-local" step="1" required value={form.endsAt} onChange={e => setForm({ ...form, endsAt: e.target.value })} />
-        <label className="flex min-h-10 items-center gap-2 text-sm"><input type="checkbox" checked={form.active} onChange={e => setForm({ ...form, active: e.target.checked })} />Bật khuyến mãi trong thời gian đã chọn</label>
-      </fieldset>{formError && <p role="alert" className="text-sm text-red-700">{formError}</p>}</form>
-    </Modal>
-  </div>;
-};
+  );
+}

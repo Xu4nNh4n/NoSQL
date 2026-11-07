@@ -9,8 +9,8 @@ import { formatDateTime, formatVND, ORDER_STATUS_LABELS, PAYMENT_METHOD_LABELS, 
 import type { LedgerPayment, Page, PaymentMethod, SalesOrder, SalesReturn } from '../types';
 
 export function OrdersPage() {
-  const [from, setFrom] = useState(vietnamDateKey(new Date(Date.now() - 6 * 86400000)));
-  const [to, setTo] = useState(vietnamDateKey());
+  const [from, setFrom] = useState(() => vietnamDateKey(new Date(Date.now() - 6 * 86400000)));
+  const [to, setTo] = useState(() => vietnamDateKey());
   const [status, setStatus] = useState('');
   const [code, setCode] = useState('');
   const [page, setPage] = useState(0);

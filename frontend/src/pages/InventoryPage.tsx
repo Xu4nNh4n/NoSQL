@@ -1,574 +1,194 @@
-import { Pagination, useListPage } from '../components/ui/Pagination';
-import React, { useState, useEffect } from 'react';
-import {
-  Plus,
-  SlidersHorizontal,
-  Calendar,
-  ChevronDown,
-  ChevronRight,
-  AlertTriangle,
-  RefreshCw,
-  Search,
-} from 'lucide-react';
-import { api } from '../api/client';
-import type {
-  InventoryBatch,
-  Product,
-  InventoryBatchRequest,
-  BatchAdjustmentRequest,
-  Supplier,
-} from '../types';
-import { normalizeProduct } from '../types';
-import { formatDate, formatVND, BATCH_STATUS_LABELS } from '../utils/formatters';
+import { useState } from 'react';
+import { api, errorMessage, qs } from '../api/client';
+import { useAuth } from '../contexts/AuthContext';
+import { useLoad } from '../hooks/useLoad';
 import { Button } from '../components/ui/Button';
-import { Input } from '../components/ui/Input';
-import { Select } from '../components/ui/Select';
 import { Modal } from '../components/ui/Modal';
-import { Card } from '../components/ui/Card';
 import { useToast } from '../components/ui/Toast';
+import { Field, inputClass, ServerPager, Table, Tabs, Td, Toolbar } from '../components/ui/Table';
+import { formatDate, formatDateTime, formatVND } from '../utils/formatters';
+import type { Batch, LowStockItem, Page, Product, TraceResult } from '../types';
 
-interface OptionPage {
-  content: any[];
-  totalPages: number;
-}
+type Tab = 'batches' | 'low' | 'soon' | 'expired' | 'trace';
 
-async function loadAllOptions<T>(endpoint: string, normalize: (raw: any) => T): Promise<T[]> {
-  const first = await api.get<OptionPage | any[]>(`${endpoint}?page=0&size=100`);
-  if (Array.isArray(first)) return first.map(normalize);
-  const records = [...first.content];
-  for (let page = 1; page < first.totalPages; page++) {
-    const next = await api.get<OptionPage>(`${endpoint}?page=${page}&size=100`);
-    records.push(...next.content);
-  }
-  return records.map(normalize);
-}
-
-function batchExpiryTime(batch: InventoryBatch): number {
-  return batch.expiryDate ? new Date(`${batch.expiryDate}T00:00:00`).getTime() : Number.POSITIVE_INFINITY;
-}
-
-function displayedBatchStatus(batch: InventoryBatch): InventoryBatch['status'] {
-  if (batch.status !== 'ACTIVE') return batch.status;
-  if (batch.remainingQuantity <= 0) return 'DEPLETED';
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return batchExpiryTime(batch) < today.getTime() ? 'EXPIRED' : 'ACTIVE';
-}
-
-export const InventoryPage: React.FC = () => {
-  const [batches, setBatches] = useState<InventoryBatch[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
-  const [expandedProductIds, setExpandedProductIds] = useState<Set<number>>(new Set());
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('ALL');
-
-  // Receive Batch Modal State
-  const [isReceiveOpen, setIsReceiveOpen] = useState(false);
-  const [receiveData, setReceiveData] = useState<InventoryBatchRequest>({
-    productId: 1,
-    supplierId: 0,
-    batchCode: '',
-    quantity: 50,
-    unitCost: 10000,
-    manufacturingDate: '',
-    expiryDate: '',
-  });
-
-  // Adjustment Modal State
-  const [isAdjustOpen, setIsAdjustOpen] = useState(false);
-  const [selectedBatch, setSelectedBatch] = useState<InventoryBatch | null>(null);
-  const [adjustData, setAdjustData] = useState<BatchAdjustmentRequest>({
-    adjustmentQuantity: 0,
-    reason: 'Kiểm kê định kỳ thực tế',
-  });
-
-  const { success, error } = useToast();
-
-  const fetchBatchesAndOptions = async () => {
-    setIsLoading(true);
-    setLoadError('');
-    try {
-      const [prodList, bList, supplierList] = await Promise.all([
-        loadAllOptions('/products', normalizeProduct),
-        api.get<any[]>('/inventory/batches'),
-        api.get<Supplier[]>('/suppliers'),
-      ]);
-      setProducts(prodList);
-      setSuppliers(supplierList);
-      setSelectedProductId((current) => current !== null && !prodList.some((product) => product.id === current) ? null : current);
-      const productsById = new Map(prodList.map((product) => [product.id, product]));
-      setBatches(
-          bList.map((b: any) => ({
-            id: b.batchId ?? b.id ?? 0,
-            productId: b.productId,
-            productName: productsById.get(b.productId)?.name || '',
-            skuCode: productsById.get(b.productId)?.skuCode || '',
-            supplierName: b.supplierName ?? '',
-            batchCode: b.batchCode ?? b.code ?? '',
-            receivedQuantity: b.receivedQuantity ?? b.received ?? 0,
-            remainingQuantity: b.remainingQuantity ?? b.remaining ?? 0,
-            damagedQuantity: b.damagedQuantity ?? b.damaged ?? 0,
-            availableQuantity: b.availableQuantity ?? 0,
-            unitCost: b.unitCost ?? 0,
-            manufacturingDate: b.manufacturingDate,
-            expiryDate: b.expiryDate,
-            createdAt: b.receivedAt,
-            status: b.status || 'ACTIVE',
-          }))
-      );
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Không tải được thông tin kho';
-      setLoadError(message);
-      error(message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchBatchesAndOptions();
-  }, []);
-
-  const handleOpenReceive = () => {
-    const prodId = selectedProductId || products[0]?.id || 1;
-    setReceiveData({
-      productId: prodId,
-      supplierId: 0,
-      // Backend assigns the next short numeric code when this is empty.
-      batchCode: '',
-      quantity: 50,
-      unitCost: 10000,
-      manufacturingDate: '',
-      expiryDate: '',
-    });
-    setIsReceiveOpen(true);
-  };
-
-  const handleReceiveBatch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      await api.post('/inventory/batches', { ...receiveData,
-        manufacturingDate: receiveData.manufacturingDate || null,
-        expiryDate: receiveData.expiryDate || null });
-      success('Đã nhập lô hàng mới vào kho thành công (chuẩn FEFO)');
-      setIsReceiveOpen(false);
-      await fetchBatchesAndOptions();
-    } catch (err: unknown) {
-      if (err instanceof Error) error(err.message);
-    }
-  };
-
-  const handleOpenAdjust = (batch: InventoryBatch) => {
-    setSelectedBatch(batch);
-    setAdjustData({
-      adjustmentQuantity: 0,
-      reason: 'Kiểm kê kho thực tế',
-    });
-    setIsAdjustOpen(true);
-  };
-
-  const handleAdjustBatch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedBatch) return;
-    try {
-      const payload = {
-        quantity: -Math.abs(adjustData.adjustmentQuantity),
-        reason: adjustData.reason || 'Kiểm kê kho',
-      };
-      await api.post(`/inventory/batches/${selectedBatch.id}/adjustments`, payload);
-      success(`Đã điều chỉnh số lượng tồn lô ${selectedBatch.batchCode}`);
-      setIsAdjustOpen(false);
-      await fetchBatchesAndOptions();
-    } catch (err: unknown) {
-      if (err instanceof Error) error(err.message);
-    }
-  };
-
-  // Within each product, dated lots come first; tie-break like the FEFO allocation policy.
-  const sortedBatches = [...batches].sort((a, b) => {
-    if (a.productId !== b.productId) return b.productId - a.productId;
-    const expiryA = batchExpiryTime(a);
-    const expiryB = batchExpiryTime(b);
-    if (expiryA !== expiryB) return expiryA < expiryB ? -1 : 1;
-    return String(a.createdAt || '').localeCompare(String(b.createdAt || '')) || a.id - b.id;
-  });
-
-  const filteredBatches = sortedBatches.filter((b) => {
-    const matchesSearch =
-      b.batchCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (b.productName && b.productName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (b.skuCode && b.skuCode.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (b.supplierName && b.supplierName.toLowerCase().includes(searchTerm.toLowerCase()));
-
-    const matchesProduct = selectedProductId === null || b.productId === selectedProductId;
-    const matchesStatus = statusFilter === 'ALL' || displayedBatchStatus(b) === statusFilter;
-    return matchesSearch && matchesProduct && matchesStatus;
-  });
-
-  const groupedBatches = Array.from(
-    filteredBatches.reduce((groups, batch) => {
-      const group = groups.get(batch.productId) || [];
-      group.push(batch);
-      groups.set(batch.productId, group);
-      return groups;
-    }, new Map<number, InventoryBatch[]>()).entries()
+export function InventoryPage() {
+  const { role } = useAuth();
+  const [tab, setTab] = useState<Tab>('batches');
+  const tabs: { key: Tab; label: string }[] = [
+    { key: 'batches', label: 'Lô hàng (FEFO)' },
+    { key: 'low', label: 'Sắp hết hàng' },
+    { key: 'soon', label: 'Sắp hết hạn (3 ngày)' },
+    { key: 'expired', label: 'Đã hết hạn' },
+    ...(role === 'ADMIN' ? [{ key: 'trace' as Tab, label: 'Truy vết & thu hồi lô' }] : []),
+  ];
+  return (
+    <div>
+      <Tabs tabs={tabs} value={tab} onChange={setTab} />
+      {tab === 'batches' && <BatchesTab />}
+      {tab === 'low' && <LowStockTab />}
+      {tab === 'soon' && <BatchList url="/inventory/batches/expiring-soon" note="Job 07:00 tính sẵn và lưu Redis 24 giờ." />}
+      {tab === 'expired' && <BatchList url="/inventory/batches/expired" note="Lô hết hạn còn tồn: điều chỉnh giảm ở tab Lô hàng." />}
+      {tab === 'trace' && <TraceTab />}
+    </div>
   );
+}
 
-  const pagination = useListPage(groupedBatches, JSON.stringify([selectedProductId, searchTerm, statusFilter]));
+function BatchesTab() {
+  const toast = useToast();
+  const [productId, setProductId] = useState('');
+  const [page, setPage] = useState(0);
+  const products = useLoad(() => api.get<Page<Product>>('/products?size=100&active=true'), []);
+  const list = useLoad(() => api.get<Page<Batch>>(`/inventory/batches${qs({ productId, page, size: 20 })}`), [productId, page]);
+  const [adjust, setAdjust] = useState<{ batch: Batch; quantity: number; reason: string } | null>(null);
+  const [loose, setLoose] = useState<{ productId: string; quantity: number; unitCost: number; mfgDate: string; expiryDate: string } | null>(null);
+  const [today] = useState(() => new Date().toISOString().slice(0, 10));
 
-  const toggleProductLots = (productId: number) => {
-    setExpandedProductIds((current) => {
-      const next = new Set(current);
-      if (next.has(productId)) next.delete(productId);
-      else next.add(productId);
-      return next;
-    });
+  const saveAdjust = async () => {
+    if (!adjust) return;
+    try {
+      await api.post(`/inventory/batches/${adjust.batch.id}/adjustments`, { quantity: adjust.quantity, reason: adjust.reason });
+      toast.success('Đã điều chỉnh giảm tồn');
+      setAdjust(null);
+      void list.reload();
+    } catch (e) { toast.error(errorMessage(e)); }
   };
-
-  const productCount = new Set(batches.map((batch) => batch.productId)).size;
-  const filteredProductCount = new Set(filteredBatches.map((batch) => batch.productId)).size;
-  const selectedProduct = products.find((product) => product.id === selectedProductId);
-  const hasFilters = selectedProductId !== null || searchTerm !== '' || statusFilter !== 'ALL';
-  const resetFilters = () => {
-    setSelectedProductId(null);
-    setSearchTerm('');
-    setStatusFilter('ALL');
+  const saveLoose = async () => {
+    if (!loose) return;
+    try {
+      await api.post('/inventory/batches', { ...loose, mfgDate: loose.mfgDate || null, expiryDate: loose.expiryDate || null });
+      toast.success('Đã nhập lô');
+      setLoose(null);
+      void list.reload();
+    } catch (e) { toast.error(errorMessage(e)); }
   };
 
   return (
-    <div className="space-y-6">
-      {/* Top Banner */}
-      <div className="page-heading">
-        <div>
-          <h2 className="text-base font-bold text-gray-900">Quản lý Kho & Lô hàng FEFO</h2>
-          <p className="text-xs text-gray-500">
-            Một sản phẩm có thể có nhiều lô nhập. Trong từng sản phẩm, lô có hạn gần nhất được ưu tiên xuất trước.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            leftIcon={<RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />}
-            onClick={() => fetchBatchesAndOptions()}
-            disabled={isLoading}
-          >
-            Tải lại
-          </Button>
-          <Button
-            size="sm"
-            variant="primary"
-            leftIcon={<Plus className="w-3.5 h-3.5" />}
-            onClick={handleOpenReceive}
-            disabled={isLoading || products.length === 0 || !!loadError}
-          >
-            Nhập lô mới
-          </Button>
-        </div>
-      </div>
+    <>
+      <Toolbar>
+        <Field label="Sản phẩm"><select className={inputClass} value={productId} onChange={e => { setProductId(e.target.value); setPage(0); }}>
+          <option value="">Tất cả</option>{products.data?.content.map(p => <option key={p.id} value={p.id}>{p.sku} · {p.name}</option>)}</select></Field>
+        <Button variant="outline" onClick={() => setLoose({ productId: products.data?.content[0]?.id ?? '', quantity: 10, unitCost: 0, mfgDate: '', expiryDate: '' })}>Nhập lô lẻ</Button>
+      </Toolbar>
+      <Table headers={['Mã lô', 'Sản phẩm', 'NCC', 'Nhận', 'Còn', 'Hỏng', 'Giá vốn', 'Hạn dùng', 'Nhận lúc', '']}
+        loading={list.loading} error={list.error} empty={list.data?.content.length === 0}>
+        {list.data?.content.map(b => {
+          const expired = !!b.expiryDate && b.expiryDate < today;
+          return (
+            <tr key={b.id} className={expired ? 'bg-rose-50' : ''}>
+              <Td className="font-mono text-xs">{b.batchCode}</Td><Td>{b.productName}</Td><Td>{b.supplierName}</Td>
+              <Td>{b.receivedQty}</Td><Td className="font-semibold">{b.remainingQty}</Td><Td>{b.damagedQty}</Td>
+              <Td>{formatVND(b.unitCost)}</Td><Td className={expired ? 'text-rose-600' : ''}>{b.expiryDate ? formatDate(b.expiryDate) : 'Không hạn'}</Td>
+              <Td className="text-xs">{formatDateTime(b.receivedAt)}<br />{b.purchaseOrderCode ?? 'lô lẻ'}</Td>
+              <Td>{b.remainingQty > 0 && <Button size="sm" variant="outline" onClick={() => setAdjust({ batch: b, quantity: 1, reason: '' })}>Điều chỉnh</Button>}</Td>
+            </tr>);
+        })}
+      </Table>
+      <ServerPager page={list.data} onPage={setPage} />
 
-      {loadError && (
-        <div role="alert" className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
-          Không tải được dữ liệu kho: {loadError}. Bấm “Tải lại” để lấy danh sách mới.
-        </div>
-      )}
-      {/* Filter Bar */}
-      <Card>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          <div className="lg:col-span-2">
-            <Input
-              label="Tìm lô hàng"
-              placeholder="Tìm theo mã lô (Lot/Batch), tên sản phẩm hoặc SKU..."
-              leftIcon={<Search className="w-4 h-4" />}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <div>
-            <Select
-              label="Sản phẩm"
-              value={selectedProductId === null ? 'ALL' : String(selectedProductId)}
-              onChange={(e) => setSelectedProductId(e.target.value === 'ALL' ? null : Number(e.target.value))}
-              options={[
-                { value: 'ALL', label: 'Tất cả sản phẩm' },
-                ...products.map((product) => ({ value: String(product.id), label: `${product.name} · SKU ${product.skuCode}` })),
-              ]}
-              disabled={isLoading || !!loadError}
-            />
-          </div>
-          <div>
-            <Select
-              label="Trạng thái lô"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              options={[
-                { value: 'ALL', label: 'Tất cả trạng thái lô' },
-                { value: 'ACTIVE', label: 'Đang sử dụng / còn hạn' },
-                { value: 'EXPIRED', label: 'Hết hạn (EXPIRED)' },
-                { value: 'DEPLETED', label: 'Hết hàng (DEPLETED)' },
-                { value: 'QUARANTINED', label: 'Cách ly / Hỏng (QUARANTINED)' },
-              ]}
-            />
-          </div>
-        </div>
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 pt-3">
-          <p aria-live="polite" className="text-xs text-gray-600">
-            {isLoading ? 'Đang tải toàn bộ kho…' : loadError ? 'Chưa xác nhận được số liệu kho' : (
-              <>Toàn kho: <strong>{productCount} sản phẩm / {batches.length} lô</strong>.
-                {' '}Đang xem {filteredProductCount} sản phẩm / {filteredBatches.length} lô
-                {selectedProduct ? ` của ${selectedProduct.name}` : ''}.</>
-            )}
-          </p>
-          {hasFilters && (
-            <Button variant="ghost" size="sm" onClick={resetFilters}>Xóa bộ lọc</Button>
-          )}
-        </div>
-        <p className="mt-2 text-xs text-gray-500">
-          Kho được nhóm theo sản phẩm. Mở từng sản phẩm để xem hạn dùng và kiểm kê riêng từng lô; tồn khả dụng là tổng hàng có thể bán của các lô.
-          {selectedProduct && !loadError && !isLoading && (
-            <> Tồn khả dụng của {selectedProduct.name}: <strong>{selectedProduct.availableQuantity}</strong> (tất cả lô).</>
-          )}
-        </p>
-      </Card>
-
-      {/* Product groups with expandable batch details */}
-      <Card title="Kho theo sản phẩm & lô hàng">
-        <div className="overflow-x-auto -mx-5 -my-5">
-          <table className="w-full min-w-[1040px] text-left text-sm">
-            <thead className="border-b border-gray-200 text-gray-600 font-medium">
-              <tr>
-                <th className="px-4 py-3">Sản phẩm</th>
-                <th className="px-4 py-3">Lô hàng</th>
-                <th className="px-4 py-3">Hạn sử dụng (FEFO)</th>
-                <th className="px-4 py-3 text-right">Giá nhập/đơn vị</th>
-                <th className="px-4 py-3 text-right">Nhập</th>
-                <th className="px-4 py-3 text-right">Tồn lại</th>
-                <th className="px-4 py-3 text-right">Hỏng</th>
-                <th className="px-4 py-3 text-right">Khả dụng</th>
-                <th className="px-4 py-3 text-center">Trạng thái</th>
-                <th className="px-4 py-3 text-center">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 bg-white">
-              {isLoading || loadError || filteredBatches.length === 0 ? (
-                <tr>
-                  <td colSpan={10} className="text-center py-10 text-gray-400">
-                    {isLoading ? 'Đang tải danh sách lô kho...' : loadError ? 'Danh sách chưa tải được. Vui lòng tải lại.' : hasFilters ? 'Không có lô phù hợp. Xóa bộ lọc để xem toàn bộ kho.' : 'Kho chưa có lô hàng. Chọn “Nhập lô mới” để bắt đầu.'}
-                  </td>
-                </tr>
-              ) : (
-                pagination.rows.flatMap(([productId, lots]) => {
-                  const expanded = expandedProductIds.has(productId);
-                  const firstExpiry = lots.find((lot) => lot.expiryDate)?.expiryDate;
-                  const total = (field: 'receivedQuantity' | 'remainingQuantity' | 'damagedQuantity' | 'availableQuantity') =>
-                    lots.reduce((sum, lot) => sum + lot[field], 0);
-                  const groupRow = (
-                    <tr key={`product-${productId}`} className="bg-blue-50/40 hover:bg-blue-50/70">
-                      <td className="px-4 py-3.5 text-gray-900">
-                        <div className="font-semibold">{lots[0].productName || `Sản phẩm #${productId}`}</div>
-                        <div className="mt-0.5 text-[11px] text-gray-500">SKU {lots[0].skuCode || '—'}</div>
-                      </td>
-                      <td className="px-4 py-3.5 text-gray-600">{lots.length} lô</td>
-                      <td className="px-4 py-3.5 font-medium text-gray-700">
-                        {firstExpiry ? formatDate(firstExpiry) : 'Không có hạn dùng'}
-                      </td>
-                      <td className="px-4 py-3.5 text-right text-xs text-gray-500">Theo từng lô</td>
-                      <td className="px-4 py-3.5 text-right text-gray-500">{total('receivedQuantity')}</td>
-                      <td className="px-4 py-3.5 text-right font-medium text-gray-700">{total('remainingQuantity')}</td>
-                      <td className="px-4 py-3.5 text-right text-rose-600 font-medium">{total('damagedQuantity')}</td>
-                      <td className="px-4 py-3.5 text-right font-bold text-blue-700 text-sm">{total('availableQuantity')}</td>
-                      <td className="px-4 py-3.5 text-center text-gray-500">Tổng các lô</td>
-                      <td className="px-4 py-3.5 text-center">
-                        <Button size="sm" variant="outline" leftIcon={expanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />} onClick={() => toggleProductLots(productId)}>
-                          {expanded ? 'Ẩn lô' : 'Xem lô'}
-                        </Button>
-                      </td>
-                    </tr>
-                  );
-                  if (!expanded) return [groupRow];
-
-                  const lotRows = lots.map((b) => {
-                    const status = displayedBatchStatus(b);
-                    const isExpiringSoon = b.expiryDate && status === 'ACTIVE'
-                      && batchExpiryTime(b) - Date.now() < 30 * 86400000;
-                    const statusInfo = BATCH_STATUS_LABELS[status] || {
-                      label: status,
-                      color: 'text-gray-700',
-                      bg: 'bg-gray-50 border-gray-200',
-                    };
-                    return (
-                      <tr key={`batch-${b.id}`} className="bg-white hover:bg-gray-50/70">
-                        <td className="px-4 py-3.5 pl-9 text-gray-500">
-                          <div>↳ {b.productName || `Sản phẩm #${b.productId}`}</div>
-                          <div className="mt-1 text-xs">Nhà cung cấp: {b.supplierName || 'Chưa ghi nhận'}</div>
-                        </td>
-                        <td className="px-4 py-3.5 font-mono font-medium text-blue-800">{b.batchCode}</td>
-                        <td className="px-4 py-3.5">
-                          <div className="flex items-center gap-1.5 font-semibold text-gray-800">
-                            <Calendar className="w-3.5 h-3.5 text-gray-400" />
-                            <span>{b.expiryDate ? formatDate(b.expiryDate) : 'Không có hạn dùng'}</span>
-                            {isExpiringSoon && (
-                              <span title="Hạn dùng dưới 30 ngày">
-                                <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3.5 text-right whitespace-nowrap text-gray-700">{formatVND(b.unitCost)}</td>
-                        <td className="px-4 py-3.5 text-right text-gray-500">{b.receivedQuantity}</td>
-                        <td className="px-4 py-3.5 text-right font-medium text-gray-700">{b.remainingQuantity}</td>
-                        <td className="px-4 py-3.5 text-right text-rose-600 font-medium">{b.damagedQuantity}</td>
-                        <td className="px-4 py-3.5 text-right font-bold text-blue-700 text-sm">{b.availableQuantity}</td>
-                        <td className="px-4 py-3.5 text-center">
-                          <span className={`inline-flex px-2 py-0.5 rounded-full text-[11px] font-medium border ${statusInfo.bg} ${statusInfo.color}`}>
-                            {statusInfo.label}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3.5 text-center">
-                          <Button size="sm" variant="outline" leftIcon={<SlidersHorizontal className="w-3 h-3" />} onClick={() => handleOpenAdjust(b)}>
-                            Kiểm kê lô
-                          </Button>
-                        </td>
-                      </tr>
-                    );
-                  });
-                  return [groupRow, ...lotRows];
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </Card>
-
-      <Pagination {...pagination} />
-
-      {/* Receive Batch Modal */}
-      <Modal
-        isOpen={isReceiveOpen}
-        onClose={() => setIsReceiveOpen(false)}
-        title="Nhập lô hàng mới (Áp dụng FEFO)"
-        maxWidth="lg"
-        footer={
-          <>
-            <Button variant="outline" size="sm" onClick={() => setIsReceiveOpen(false)}>
-              Hủy
-            </Button>
-            <Button variant="primary" size="sm" type="submit" form="receive-batch">
-              Xác nhận nhập kho
-            </Button>
-          </>
-        }
-      >
-        <form id="receive-batch" onSubmit={handleReceiveBatch} className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <Select
-              label="Sản phẩm nhập"
-              value={receiveData.productId.toString()}
-              onChange={(e) => setReceiveData({ ...receiveData, productId: Number(e.target.value) })}
-              options={products.map((p: Product) => ({ value: p.id.toString(), label: `${p.name} (${p.skuCode})` }))}
-            />
-            <Select label="Nhà cung cấp" value={String(receiveData.supplierId || '')}
-              onChange={(e) => setReceiveData({ ...receiveData, supplierId: Number(e.target.value) })} required
-              options={[{ value: '', label: 'Chọn nhà cung cấp' }, ...suppliers.filter(s => s.isActive).map(s => ({ value: String(s.supplierId), label: s.supplierName }))]} />
-          </div>
-
-          <div className="grid grid-cols-3 gap-3">
-            <Input
-              label="Mã lô (để trống để tạo tự động)"
-              value={receiveData.batchCode}
-              onChange={(e) => setReceiveData({ ...receiveData, batchCode: e.target.value })}
-            />
-            <Input
-              label="Số lượng nhập"
-              type="number"
-              min={1}
-              value={receiveData.quantity}
-              onChange={(e) => setReceiveData({ ...receiveData, quantity: Number(e.target.value) })}
-              required
-            />
-            <Input
-              label="Đơn giá vốn (₫)"
-              type="number"
-              min={0}
-              value={receiveData.unitCost}
-              onChange={(e) => setReceiveData({ ...receiveData, unitCost: Number(e.target.value) })}
-              required
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <Input
-              label="Ngày sản xuất"
-              type="date"
-              value={receiveData.manufacturingDate || ''}
-              onChange={(e) => setReceiveData({ ...receiveData, manufacturingDate: e.target.value })}
-            />
-            <Input
-              label="Hạn sử dụng (nếu có)"
-              type="date"
-              value={receiveData.expiryDate}
-              onChange={(e) => setReceiveData({ ...receiveData, expiryDate: e.target.value })}
-            />
-          </div>
-        </form>
+      <Modal isOpen={!!adjust} onClose={() => setAdjust(null)} title={`Điều chỉnh giảm lô ${adjust?.batch.batchCode ?? ''}`}
+        footer={<><Button variant="outline" onClick={() => setAdjust(null)}>Hủy</Button><Button variant="danger" onClick={saveAdjust}>Giảm tồn</Button></>}>
+        {adjust && (
+          <div className="grid gap-3">
+            <p className="text-sm text-gray-600">Còn {adjust.batch.remainingQty}. Chỉ được giảm; muốn tăng phải nhập lô.</p>
+            <Field label="Số lượng giảm"><input type="number" min={1} max={adjust.batch.remainingQty} className={inputClass} value={adjust.quantity} onChange={e => setAdjust({ ...adjust, quantity: Number(e.target.value) })} /></Field>
+            <Field label="Lý do *"><input className={inputClass} placeholder="Hư hỏng, hết hạn, hao hụt…" value={adjust.reason} onChange={e => setAdjust({ ...adjust, reason: e.target.value })} /></Field>
+            {adjust.batch.adjustments?.length > 0 && <ul className="text-xs text-gray-500">{adjust.batch.adjustments.map(a => <li key={a.id}>{formatDateTime(a.at)} · −{a.quantity} · {a.reason} · {a.by}</li>)}</ul>}
+          </div>)}
       </Modal>
 
-      {/* Adjust Batch Modal */}
-      <Modal
-        isOpen={isAdjustOpen}
-        onClose={() => setIsAdjustOpen(false)}
-        title={`Điều chỉnh tồn kho lô: ${selectedBatch?.batchCode || ''}`}
-        footer={
-          <>
-            <Button variant="outline" size="sm" onClick={() => setIsAdjustOpen(false)}>
-              Hủy
-            </Button>
-            <Button variant="primary" size="sm" type="submit" form="adjust-batch">
-              Lưu kết quả kiểm kê
-            </Button>
-          </>
-        }
-      >
-        <form id="adjust-batch" onSubmit={handleAdjustBatch} className="space-y-4">
-          <div className="p-3 bg-gray-50 rounded-lg text-xs space-y-1">
-            <p>
-              Sản phẩm: <span className="font-semibold text-gray-900">{selectedBatch?.productName}</span>
-            </p>
-            <p>
-              Tồn khả dụng hiện tại:{' '}
-              <span className="font-bold text-blue-700">{selectedBatch?.availableQuantity}</span>
-            </p>
-            <p>
-              Hạn dùng: <span className="font-medium">{formatDate(selectedBatch?.expiryDate)}</span>
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 gap-3">
-            <Input
-              label="Số lượng cần giảm khỏi lô"
-              type="number"
-              min={1}
-              value={adjustData.adjustmentQuantity}
-              onChange={(e) =>
-                setAdjustData({ ...adjustData, adjustmentQuantity: Number(e.target.value) })
-              }
-              helperText="Nhập số món bị thiếu hoặc phải loại khỏi tồn bán được"
-              required
-            />
-          </div>
-
-          <Input
-            label="Lý do điều chỉnh kiểm kê"
-            value={adjustData.reason}
-            onChange={(e) => setAdjustData({ ...adjustData, reason: e.target.value })}
-            required
-          />
-        </form>
+      <Modal isOpen={!!loose} onClose={() => setLoose(null)} title="Nhập lô lẻ (ngoài phiếu nhập)"
+        footer={<><Button variant="outline" onClick={() => setLoose(null)}>Hủy</Button><Button onClick={saveLoose}>Nhập lô</Button></>}>
+        {loose && (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="sm:col-span-2"><Field label="Sản phẩm"><select className={inputClass} value={loose.productId} onChange={e => setLoose({ ...loose, productId: e.target.value })}>
+              {products.data?.content.map(p => <option key={p.id} value={p.id}>{p.sku} · {p.name}</option>)}</select></Field></div>
+            <Field label="Số lượng"><input type="number" min={1} className={inputClass} value={loose.quantity} onChange={e => setLoose({ ...loose, quantity: Number(e.target.value) })} /></Field>
+            <Field label="Giá vốn"><input type="number" min={0} className={inputClass} value={loose.unitCost} onChange={e => setLoose({ ...loose, unitCost: Number(e.target.value) })} /></Field>
+            <Field label="Ngày sản xuất"><input type="date" className={inputClass} value={loose.mfgDate} onChange={e => setLoose({ ...loose, mfgDate: e.target.value })} /></Field>
+            <Field label="Hạn dùng"><input type="date" className={inputClass} value={loose.expiryDate} onChange={e => setLoose({ ...loose, expiryDate: e.target.value })} /></Field>
+          </div>)}
       </Modal>
+    </>
+  );
+}
+
+function LowStockTab() {
+  const list = useLoad(() => api.get<LowStockItem[]>('/inventory/low-stock'), []);
+  return (
+    <>
+      <p className="mb-3 text-sm text-gray-500">Tồn khả dụng = tổng tồn của các lô còn hạn (aggregation MongoDB, cache Redis 1 phút).</p>
+      <Table headers={['SKU', 'Sản phẩm', 'Khả dụng', 'Tồn (gồm lô hết hạn)', 'Ngưỡng']} loading={list.loading} error={list.error} empty={list.data?.length === 0}>
+        {list.data?.map(i => (
+          <tr key={i.productId}><Td className="font-mono text-xs">{i.sku}</Td><Td>{i.name}</Td>
+            <Td className="font-semibold text-rose-600">{i.available}</Td><Td>{i.stockQuantity}</Td><Td>{i.reorderPoint}</Td></tr>))}
+      </Table>
+    </>
+  );
+}
+
+function BatchList({ url, note }: { url: string; note: string }) {
+  const list = useLoad(() => api.get<Batch[]>(url), [url]);
+  return (
+    <>
+      <p className="mb-3 text-sm text-gray-500">{note}</p>
+      <Table headers={['Mã lô', 'Sản phẩm', 'Còn', 'Hạn dùng', 'NCC']} loading={list.loading} error={list.error} empty={list.data?.length === 0}>
+        {list.data?.map(b => (
+          <tr key={b.id}><Td className="font-mono text-xs">{b.batchCode}</Td><Td>{b.productName}</Td><Td>{b.remainingQty}</Td>
+            <Td>{b.expiryDate ? formatDate(b.expiryDate) : '—'}</Td><Td>{b.supplierName}</Td></tr>))}
+      </Table>
+    </>
+  );
+}
+
+function TraceTab() {
+  const toast = useToast();
+  const [code, setCode] = useState('');
+  const [result, setResult] = useState<TraceResult | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [reason, setReason] = useState('');
+
+  const trace = async () => {
+    if (!code.trim()) return;
+    setLoading(true);
+    try { setResult(await api.get<TraceResult>(`/batches/${encodeURIComponent(code.trim())}/trace`)); }
+    catch (e) { toast.error(errorMessage(e)); setResult(null); }
+    finally { setLoading(false); }
+  };
+  const recall = async () => {
+    if (!result || !reason.trim()) { toast.warning('Nhập lý do thu hồi'); return; }
+    if (!confirm(`Thu hồi lô ${result.batchCode}: giảm toàn bộ ${result.remainingQty} còn tồn?`)) return;
+    try {
+      setResult(await api.post<TraceResult>(`/batches/${encodeURIComponent(result.batchCode)}/recall`, { reason }));
+      toast.success('Đã thu hồi lô; danh sách khách cần liên hệ ở bên dưới');
+    } catch (e) { toast.error(errorMessage(e)); }
+  };
+
+  return (
+    <div className="space-y-4">
+      <Toolbar>
+        <Field label="Mã lô"><input className={inputClass} placeholder="L261107-0001" value={code} onChange={e => setCode(e.target.value)} onKeyDown={e => e.key === 'Enter' && trace()} /></Field>
+        <Button isLoading={loading} onClick={trace}>Truy vết (Neo4j)</Button>
+      </Toolbar>
+      {result && (
+        <>
+          <div className="rounded-lg border border-gray-200 bg-white p-4 text-sm">
+            <p className="font-semibold">{result.batchCode} · {result.productName} ({result.productSku})</p>
+            <p className="text-gray-600">NCC {result.supplierName ?? '—'} · HSD {result.expiryDate ? formatDate(result.expiryDate) : '—'} · nhận {result.receivedQty} · đã bán {result.soldQty} · còn {result.remainingQty}</p>
+            {result.remainingQty > 0 && (
+              <div className="mt-3 flex flex-wrap items-end gap-2">
+                <Field label="Lý do thu hồi"><input className={inputClass} value={reason} onChange={e => setReason(e.target.value)} placeholder="NCC báo lỗi bao bì" /></Field>
+                <Button variant="danger" onClick={recall}>Thu hồi lô</Button>
+              </div>)}
+          </div>
+          <h4 className="font-semibold">Khách cần liên hệ ({result.contacts.length})</h4>
+          <Table headers={['Khách', 'SĐT', 'Số lượng đã mua']} empty={result.contacts.length === 0}>
+            {result.contacts.map(c => <tr key={c.customerId}><Td>{c.name}</Td><Td>{c.phone}</Td><Td>{c.quantity}</Td></tr>)}
+          </Table>
+          <h4 className="font-semibold">Các đơn đã lấy hàng từ lô ({result.orders.length})</h4>
+          <Table headers={['Đơn', 'Thời điểm', 'SL', 'Khách']} empty={result.orders.length === 0}>
+            {result.orders.map(o => <tr key={o.orderCode}><Td>{o.orderCode}</Td><Td>{formatDateTime(o.orderedAt)}</Td><Td>{o.quantity}</Td><Td>{o.customerName ?? 'Khách lẻ'}</Td></tr>)}
+          </Table>
+        </>)}
     </div>
   );
-};
+}

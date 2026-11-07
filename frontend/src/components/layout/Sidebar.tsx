@@ -1,14 +1,8 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
-  Package,
-  Boxes,
-  ShoppingCart,
-  Receipt,
-  Store,
-  UserCheck,
-  Truck,
-  Tags,
+  Package, Boxes, ShoppingCart, Receipt, Store, UserCheck, Truck, Tags, Wallet, Users, FolderTree,
+  ClipboardList, BarChart3, Server,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -22,30 +16,31 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onCloseMobile })
 
   const navSections = [
     {
-      title: 'BÁN HÀNG & THU NGÂN',
+      title: 'BÁN HÀNG',
       items: [
-        { to: '/pos', label: 'Thu ngân tại quầy (POS)', icon: ShoppingCart, roles: ['ADMIN', 'STAFF'] },
+        { to: '/pos', label: 'Bán tại quầy', icon: ShoppingCart, roles: ['ADMIN', 'STAFF'] },
+        { to: '/orders', label: 'Đơn hàng & trả hàng', icon: Receipt, roles: ['ADMIN', 'STAFF'] },
+        { to: '/shift', label: 'Chốt ca', icon: Wallet, roles: ['ADMIN', 'STAFF'] },
+        { to: '/customers', label: 'Khách hàng', icon: Users, roles: ['ADMIN', 'STAFF'] },
         { to: '/promotions', label: 'Khuyến mãi', icon: Tags, roles: ['ADMIN'] },
-        { to: '/orders', label: 'Quản lý đơn & Trả hàng', icon: Receipt, roles: ['ADMIN', 'STAFF'] },
       ],
     },
     {
-      title: 'QUẢN LÝ HÀNG HÓA',
+      title: 'HÀNG HÓA & KHO',
       items: [
-        { to: '/products', label: 'Sản phẩm & Giá bán', icon: Package, roles: ['ADMIN', 'STAFF', 'WAREHOUSE'] },
-        { to: '/inventory', label: 'Kho & Lô hàng FEFO', icon: Boxes, roles: ['ADMIN', 'WAREHOUSE'] },
-      ],
-    },
-    {
-      title: 'ĐỐI TÁC & NHẬP HÀNG',
-      items: [
+        { to: '/products', label: 'Sản phẩm & thẻ kho', icon: Package, roles: ['ADMIN', 'STAFF', 'WAREHOUSE'] },
+        { to: '/categories', label: 'Nhóm hàng', icon: FolderTree, roles: ['ADMIN'] },
+        { to: '/inventory', label: 'Tồn kho theo lô', icon: Boxes, roles: ['ADMIN', 'WAREHOUSE'] },
+        { to: '/purchase-orders', label: 'Phiếu nhập', icon: ClipboardList, roles: ['ADMIN', 'WAREHOUSE'] },
         { to: '/suppliers', label: 'Nhà cung cấp', icon: Truck, roles: ['ADMIN', 'WAREHOUSE'] },
       ],
     },
     {
-      title: 'HỆ THỐNG & NHÂN SỰ',
+      title: 'QUẢN TRỊ',
       items: [
-        { to: '/users', label: 'Quản lý nhân viên', icon: UserCheck, roles: ['ADMIN'] },
+        { to: '/stats', label: 'Thống kê', icon: BarChart3, roles: ['ADMIN'] },
+        { to: '/users', label: 'Người dùng', icon: UserCheck, roles: ['ADMIN'] },
+        { to: '/system', label: 'Trạng thái hệ thống', icon: Server, roles: ['ADMIN'] },
       ],
     },
   ];
@@ -77,7 +72,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onCloseMobile })
           </div>
           <div>
             <h1 className="text-sm font-bold text-gray-900 tracking-tight leading-none">SUPERMARKET</h1>
-            <p className="text-xs text-gray-500 mt-1">Bán hàng · Kho · Phân tích</p>
+            <p className="text-xs text-gray-500 mt-1">MongoDB · Cassandra · Neo4j · Redis</p>
           </div>
         </div>
 

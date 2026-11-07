@@ -64,7 +64,7 @@ export function ShiftPage() {
 
 function AdminShifts() {
   const toast = useToast();
-  const [day, setDay] = useState(vietnamDateKey());
+  const [day, setDay] = useState(() => vietnamDateKey());
   const list = useLoad(() => api.get<ShiftClosing[]>(`/shifts${qs({ day })}`), [day]);
   const reopen = async (id: string) => {
     try { await api.post(`/shifts/${id}/reopen`); toast.success('Đã mở lại ca'); void list.reload(); }
