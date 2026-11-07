@@ -13,6 +13,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import com.api.supermarket.common.DatastoreUnavailableException;
 import com.api.supermarket.dto.response.ApiErrorResponse;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -132,6 +133,20 @@ public class GlobalExceptionHandler {
         ));
     }
 
+
+    // CSDL phụ (Cassandra, Neo4j) đang tắt: trả 503 để client biết thử lại sau, không phải lỗi code.
+    @ExceptionHandler(DatastoreUnavailableException.class)
+    public ResponseEntity<ApiErrorResponse> handleDatastoreUnavailable(
+            DatastoreUnavailableException ex, HttpServletRequest request) {
+        log.warn("Datastore unavailable= {}, path= {}, cause= {}", ex.datastore(), request.getRequestURI(),
+                String.valueOf(ex.getCause()));
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(new ApiErrorResponse(
+                Instant.now().toString(),
+                HttpStatus.SERVICE_UNAVAILABLE.value(),
+                HttpStatus.SERVICE_UNAVAILABLE.getReasonPhrase(),
+                ex.getMessage(),
+                request.getRequestURI()));
+    }
 
     // note: Hàm này là fallback cuối cùng cho các lỗi chưa được xử lý riêng.
     // Ví dụ: lỗi code, lỗi null bất ngờ, lỗi database không dự đoán trước...
