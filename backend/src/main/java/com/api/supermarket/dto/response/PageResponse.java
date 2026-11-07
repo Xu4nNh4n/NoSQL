@@ -27,6 +27,12 @@ public class PageResponse<T> { // T là kiểu dữ liệu tổng quát, có th�
         this.last = last;
     }
 
+    /** Chuyển một trang của Spring Data sang PageResponse. */
+    public static <T> PageResponse<T> of(org.springframework.data.domain.Page<T> page) {
+        return new PageResponse<>(page.getContent(), page.getNumber(), page.getSize(), page.getTotalElements(),
+                page.getTotalPages(), page.isLast());
+    }
+
     // Getter và Setter cho các thuộc tính
     public List<T> getContent() {
         return content;

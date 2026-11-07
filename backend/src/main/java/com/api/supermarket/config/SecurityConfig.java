@@ -45,7 +45,6 @@ public class SecurityConfig {
                     .accessDeniedHandler(jwtAccessDeniedHandler)
                 )
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/product-images/*").permitAll()
                         // note: Mo Swagger/OpenAPI de xem tai lieu API va import vao Bruno/Postman.
                         .requestMatchers(
                                 "/swagger-ui/**",

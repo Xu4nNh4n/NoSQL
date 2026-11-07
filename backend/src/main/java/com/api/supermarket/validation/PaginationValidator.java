@@ -10,6 +10,15 @@ public final class PaginationValidator {
         //Không cho tạo object vì class này chỉ chứa các phương thức tĩnh
     }
 
+    /** Kiểm tra tham số rồi dựng PageRequest có sắp xếp. */
+    public static org.springframework.data.domain.PageRequest pageRequest(int page, int size, String sortBy,
+            String sortDir, Set<String> allowedSortFields) {
+        validate(page, size, sortBy, sortDir, allowedSortFields);
+        return org.springframework.data.domain.PageRequest.of(page, size,
+                org.springframework.data.domain.Sort.by(
+                        org.springframework.data.domain.Sort.Direction.fromString(sortDir), sortBy));
+    }
+
     public  static void validate(
         int page,
         int size,
