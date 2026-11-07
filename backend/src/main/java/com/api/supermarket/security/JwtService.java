@@ -31,6 +31,10 @@ public class JwtService {
         this.expirationMs = expirationMs;
     }
 
+    public long expiresInSeconds() {
+        return expirationMs / 1000;
+    }
+
     public String generateToken(JwtPrincipal principal) {
         Date now = new Date();
         return Jwts.builder()

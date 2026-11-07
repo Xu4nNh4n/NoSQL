@@ -41,6 +41,33 @@ public class RedisSafe {
         }, false);
     }
 
+    /** Lấy và xóa trong một lệnh (GETDEL): giá trị chỉ được dùng một lần. */
+    public Optional<String> getAndDelete(String key) {
+        return call("GETDEL " + key, () -> Optional.ofNullable(redis.opsForValue().getAndDelete(key)), Optional.empty());
+    }
+
+    public boolean sAdd(String key, Duration ttl, String... members) {
+        return call("SADD " + key, () -> {
+            redis.opsForSet().add(key, members);
+            redis.expire(key, ttl);
+            return true;
+        }, false);
+    }
+
+    public Set<String> sMembers(String key) {
+        return call("SMEMBERS " + key, () -> {
+            Set<String> members = redis.opsForSet().members(key);
+            return members == null ? Set.<String>of() : members;
+        }, Set.of());
+    }
+
+    public boolean sRem(String key, String... members) {
+        return call("SREM " + key, () -> {
+            redis.opsForSet().remove(key, (Object[]) members);
+            return true;
+        }, false);
+    }
+
     public boolean delete(String... keys) {
         return call("DEL", () -> {
             redis.delete(List.of(keys));
