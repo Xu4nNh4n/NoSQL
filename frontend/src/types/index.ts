@@ -1,427 +1,404 @@
-// ==========================================
-// AUTHENTICATION & USERS
-// ==========================================
-export type RoleName = 'ADMIN' | 'STAFF' | 'WAREHOUSE';
+// Kiểu dữ liệu khớp API backend bản NoSQL. ID là chuỗi (ObjectId của MongoDB), tiền là số VND nguyên.
 
+export type RoleName = 'ADMIN' | 'WAREHOUSE' | 'STAFF';
+
+export interface ApiErrorResponse {
+  timestamp: string;
+  status: number;
+  error: string;
+  message: string;
+  path: string;
+}
+
+export interface Page<T> {
+  content: T[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  last: boolean;
+}
+
+// ---------- Tài khoản ----------
 export interface User {
-  id: number;
+  id: string;
   username: string;
   fullName?: string;
   email?: string;
   phone?: string;
   role: RoleName;
   active: boolean;
-  address?: string;
-}
-
-export interface AccountProfile {
-  userId: number;
-  username: string;
-  fullName: string;
-  email?: string;
-  phone?: string;
-  address?: string;
-  role: RoleName;
-}
-
-export interface UserItem {
-  userId: number;
-  fullName: string;
-  userName: string;
-  email?: string;
-  phone?: string;
-  roleName: string;
-  isActive: boolean;
-  createAt?: string;
-}
-
-export interface RoleOption {
-  roleId: number;
-  roleName: string;
-  description?: string;
-}
-
-export interface CreateUserForm {
-  fullName: string;
-  username: string;
-  password: string;
-  email?: string;
-  phone?: string;
-  roleId: number;
-  isActive: boolean;
-}
-
-export interface UpdateUserForm {
-  fullName: string;
-  username: string;
-  password?: string;
-  email?: string;
-  phone?: string;
-  roleId: number;
-  isActive: boolean;
-}
-
-export interface LoginResponse {
-  userId: number;
-  username: string;
-  role: RoleName;
-  message: string;
-  accessToken: string;
-}
-
-// ==========================================
-// PRODUCTS & STOCK
-// ==========================================
-export interface Product {
-  id: number;
-  productId?: number;
-  skuCode: string;
-  name: string;
-  productName?: string;
-  description?: string;
-  barcode?: string;
-  costPrice: number;
-  sellingPrice: number;
-  price?: number;
-  minStockLevel: number;
-  maxStockLevel: number;
-  totalQuantity: number;
-  stockQuantity?: number;
-  availableQuantity: number;
-  damagedQuantity?: number;
-  unit: string;
-  imageUrl?: string;
-  active: boolean;
-  isActive?: boolean;
-  categoryName?: string;
-}
-
-export function normalizeProduct(raw: any): Product {
-  if (!raw) {
-    return {
-      id: 0,
-      skuCode: '',
-      name: '',
-      costPrice: 0,
-      sellingPrice: 0,
-      minStockLevel: 0,
-      maxStockLevel: 0,
-      totalQuantity: 0,
-      availableQuantity: 0,
-      unit: 'Cái',
-      active: true,
-      categoryName: '',
-    };
-  }
-  const id = raw.id ?? raw.productId ?? 0;
-  const name = raw.name ?? raw.productName ?? 'Sản phẩm';
-  const price = raw.sellingPrice ?? raw.price ?? 0;
-  const available = raw.availableQuantity ?? raw.stockQuantity ?? raw.totalQuantity ?? 0;
-  const total = raw.totalQuantity ?? raw.stockQuantity ?? available;
-  return {
-    id,
-    productId: id,
-    skuCode: raw.skuCode || '',
-    name,
-    productName: name,
-    description: raw.description || '',
-    barcode: raw.barcode || raw.skuCode || '',
-    costPrice: raw.costPrice ?? 0,
-    sellingPrice: price,
-    price,
-    minStockLevel: raw.minStockLevel ?? raw.reorderPoint ?? 5,
-    maxStockLevel: raw.maxStockLevel ?? 500,
-    totalQuantity: total,
-    stockQuantity: total,
-    availableQuantity: available,
-    damagedQuantity: raw.damagedQuantity ?? 0,
-    unit: raw.unit || 'Cái',
-    imageUrl: raw.imageUrl,
-    active: raw.active ?? raw.isActive ?? true,
-    isActive: raw.isActive ?? raw.active ?? true,
-    categoryName: raw.categoryName ?? raw.category?.categoryName ?? '',
-  };
-}
-
-export interface ProductRequest {
-  skuCode: string;
-  productName: string;
-  price: number;
-  stockQuantity: number;
-  reorderPoint: number;
-  imageUrl?: string;
-  categoryName: string;
-  isActive: boolean;
-}
-
-export interface StockMovement {
-  movementId: number;
-  productId: number;
-  orderId?: number;
-  movementType: 'OPENING' | 'RECEIPT' | 'SALE' | 'RETURN' | 'RETURN_DAMAGED' | 'ADJUSTMENT';
-  quantity: number;
-  note?: string;
-  createdAt: string;
-  performedBy?: string;
-}
-
-// ==========================================
-// INVENTORY BATCHES (FEFO)
-// ==========================================
-export interface InventoryBatch {
-  id: number;
-  productId: number;
-  productName?: string;
-  skuCode?: string;
-  supplierName?: string;
-  batchCode: string;
-  receivedQuantity: number;
-  remainingQuantity: number;
-  damagedQuantity: number;
-  availableQuantity: number;
-  unitCost: number;
-  manufacturingDate?: string;
-  expiryDate?: string | null;
-  status: 'ACTIVE' | 'EXPIRED' | 'DEPLETED' | 'QUARANTINED';
   createdAt?: string;
 }
 
-export interface InventoryBatchRequest {
-  productId: number;
-  supplierId: number;
-  batchCode: string;
-  quantity: number;
-  unitCost: number;
-  manufacturingDate?: string;
-  expiryDate: string;
+export interface TokenResponse {
+  accessToken: string;
+  refreshToken: string | null;
+  expiresIn: number;
+  user: User;
 }
 
-export interface Supplier {
-  supplierId: number;
-  supplierName: string;
-  contactName?: string;
-  phone?: string;
-  address?: string;
-  isActive: boolean;
+export interface LoginEvent {
+  at: string;
+  success: boolean;
+  ip?: string;
+  userAgent?: string;
 }
 
-export interface BatchAdjustmentRequest {
-  adjustmentQuantity: number;
-  reason: string;
+export interface RoleOption {
+  name: RoleName;
+  description: string;
 }
 
-// ==========================================
-// SALES ORDERS & POS
-// ==========================================
-export type OrderType = 'IN_STORE';
-export type PaymentMethod = 'CASH' | 'BANK_TRANSFER';
-export type OrderStatus =
-  | 'PAID'
-  | 'PARTIALLY_RETURNED'
-  | 'RETURNED';
-
-export type PaymentStatus =
-  | 'PAID'
-  | 'REFUND_PENDING'
-  | 'REFUNDED'
-  | 'PARTIALLY_REFUNDED';
-
-export interface OrderBatchAllocation {
-  batchId: number;
-  batchCode: string;
-  expiryDate?: string;
-  quantity: number;
-  returnedQuantity: number;
-  status: string;
-}
-
-export interface SalesOrderItem {
-  id: number;
-  orderItemId?: number;
-  productId: number;
-  productName: string;
-  skuCode: string;
-  quantity: number;
-  unitPrice: number;
-  originalUnitPrice: number;
-  netUnitPrice: number;
-  grossSubtotal: number;
-  discountAmount: number;
-  promotionSnapshot?: PromotionSnapshot | null;
-  totalPrice: number;
-  batchId?: number;
-  batchCode?: string;
-  returnedQuantity?: number;
-  batchAllocations?: OrderBatchAllocation[];
-}
-
-export interface SalesOrder {
-  id: number;
-  orderId?: number;
-  orderCode: string;
-  customerName?: string;
-  customerPhone?: string;
-  cashierName?: string;
-  staffName?: string;
-  orderType: OrderType;
-  status: OrderStatus;
-  paymentMethod: PaymentMethod;
-  paymentStatus: PaymentStatus;
-  totalAmount: number;
-  subtotal?: number;
-  discountAmount?: number;
-  finalAmount: number;
-  note?: string;
-  items: SalesOrderItem[];
-  createdAt: string;
-  updatedAt?: string;
-}
-
-export function normalizeOrder(raw: any): SalesOrder {
-  if (!raw) {
-    return {
-      id: 0,
-      orderCode: '',
-      cashierName: 'Thu ngân',
-      orderType: 'IN_STORE',
-      status: 'PAID',
-      paymentMethod: 'CASH',
-      paymentStatus: 'PAID',
-      totalAmount: 0,
-      finalAmount: 0,
-      items: [],
-      createdAt: new Date().toISOString(),
-    };
-  }
-  const id = raw.id ?? raw.orderId ?? 0;
-  const total = raw.finalAmount ?? raw.totalAmount ?? raw.subtotal ?? 0;
-  const rawItems = raw.items || [];
-  return {
-    id,
-    orderId: id,
-    orderCode: raw.orderCode || String(id),
-    customerName: raw.customerName,
-    customerPhone: raw.customerPhone,
-    cashierName: raw.staffName ?? raw.cashierName ?? 'Thu ngân',
-    staffName: raw.staffName,
-    orderType: raw.orderType || 'IN_STORE',
-    status: raw.status || 'PAID',
-    paymentMethod: raw.paymentMethod || 'CASH',
-    paymentStatus: raw.paymentStatus || 'PAID',
-    totalAmount: total,
-    subtotal: raw.subtotal ?? total,
-    discountAmount: raw.discountAmount ?? 0,
-    finalAmount: total,
-    note: raw.note,
-    createdAt: raw.createdAt || new Date().toISOString(),
-    updatedAt: raw.updatedAt,
-    items: rawItems.map((i: any) => ({
-      id: i.id ?? i.orderItemId ?? 0,
-      orderItemId: i.orderItemId ?? i.id ?? 0,
-      productId: i.productId ?? i.product?.productId ?? i.product?.id ?? 0,
-      productName: i.productName ?? i.product?.productName ?? i.product?.name ?? 'Sản phẩm',
-      skuCode: i.skuCode ?? i.product?.skuCode ?? '',
-      quantity: i.quantity ?? 1,
-      returnedQuantity: i.returnedQuantity ?? 0,
-      batchAllocations: i.batchAllocations ?? [],
-      unitPrice: i.unitPrice ?? i.price ?? i.product?.price ?? 0,
-      originalUnitPrice: i.originalUnitPrice ?? i.unitPrice ?? i.price ?? 0,
-      netUnitPrice: i.netUnitPrice ?? i.unitPrice ?? i.price ?? 0,
-      grossSubtotal: i.grossSubtotal ?? (i.unitPrice ?? i.price ?? 0) * (i.quantity ?? 1),
-      discountAmount: i.discountAmount ?? 0,
-      promotionSnapshot: i.promotionSnapshot,
-      totalPrice: i.totalPrice ?? i.subTotal ?? (i.netUnitPrice ?? i.unitPrice ?? i.product?.price ?? 0) * (i.quantity ?? 1),
-      batchId: i.batchId,
-      batchCode: i.batchCode,
-    })),
-  };
-}
-
-export interface CreateOrderItemRequest {
-  productId: number;
-  quantity: number;
-}
-
-export interface CreateOrderRequest {
-  quoteToken: string;
-  paymentReference?: string;
-  customerName?: string;
-  customerPhone?: string;
-  orderType: OrderType;
-  paymentMethod: PaymentMethod;
-  note?: string;
-  items: CreateOrderItemRequest[];
-}
-
-export interface PromotionSnapshot {
-  promotionId: number;
+// ---------- Danh mục ----------
+export interface Category {
+  id: string;
   name: string;
-  percent: number;
-  startsAt: string;
-  endsAt: string;
-}
-
-export interface Promotion extends PromotionSnapshot {
-  productId: number;
-  productName: string;
+  description?: string;
   active: boolean;
 }
 
-export interface PosQuoteItem {
-  productId: number;
-  quantity: number;
-  originalUnitPrice: number;
-  netUnitPrice: number;
-  grossSubtotal: number;
-  discountAmount: number;
-  subTotal: number;
-  promotionSnapshot: PromotionSnapshot | null;
+export interface Supplier {
+  id: string;
+  name: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  active: boolean;
 }
 
-export interface PosQuote {
-  quoteToken: string;
-  quotedAt: string;
-  timezone: string;
-  subtotal: number;
-  discountAmount: number;
-  totalAmount: number;
-  items: PosQuoteItem[];
+export type AttributeValue = string | number | boolean;
+
+export interface Product {
+  id: string;
+  sku: string;
+  name: string;
+  price: number;
+  categoryId: string;
+  categoryName: string;
+  supplierId?: string;
+  reorderPoint: number;
+  imageUrl?: string;
+  active: boolean;
+  attributes: Record<string, AttributeValue>;
+  stockQuantity: number;
+  damagedQuantity: number;
+  createdAt?: string;
+  version: number;
 }
 
-export interface ReturnItemRequest {
-  orderItemId: number;
-  batchId?: number;
+export interface PosProduct {
+  id: string;
+  sku: string;
+  name: string;
+  price: number;
+  categoryId: string;
+  categoryName: string;
+  imageUrl?: string;
+  stockQuantity: number;
+}
+
+export interface Customer {
+  id: string;
+  fullName: string;
+  phone: string;
+  email?: string;
+  address?: string;
+  active: boolean;
+  version: number;
+}
+
+// ---------- Kho ----------
+export interface BatchAdjustment {
+  id: string;
   quantity: number;
-  restock: boolean;
   reason: string;
+  by: string;
+  at: string;
 }
 
-export interface ReturnOrderRequest {
-  requestKey: string;
-  items: ReturnItemRequest[];
+export interface Batch {
+  id: string;
+  batchCode: string;
+  productId: string;
+  productSku: string;
+  productName: string;
+  supplierId?: string;
+  supplierName?: string;
+  purchaseOrderCode?: string;
+  receivedQty: number;
+  remainingQty: number;
+  damagedQty: number;
+  unitCost: number;
+  mfgDate?: string;
+  expiryDate?: string;
+  receivedAt: string;
+  receivedBy: string;
+  adjustments: BatchAdjustment[];
 }
 
-export interface SalesOrderReturnResponse {
-  returnId: number;
-  orderId: number;
+export interface LowStockItem {
+  productId: string;
+  sku: string;
+  name: string;
+  reorderPoint: number;
+  available: number;
+  stockQuantity: number;
+}
+
+export interface StockMovement {
+  id: string;
+  productId: string;
+  createdAt: string;
+  type: 'RECEIPT' | 'SALE' | 'RETURN' | 'RETURN_DAMAGED' | 'ADJUSTMENT';
+  quantity: number;
+  batchCode: string;
+  refType: string;
+  refCode?: string;
+  note?: string;
+  performedBy: string;
+}
+
+export interface PurchaseOrderLine {
+  lineNo: number;
+  productId: string;
+  sku: string;
+  productName: string;
+  orderedQty: number;
+  unitCost: number;
+  receivedQty: number;
+  mfgDate?: string;
+  expiryDate?: string;
+  batchCode?: string;
+}
+
+export interface PurchaseOrder {
+  id: string;
+  poCode: string;
+  supplierId: string;
+  supplierName: string;
+  status: 'DRAFT' | 'RECEIVED';
+  note?: string;
+  lines: PurchaseOrderLine[];
+  createdBy: string;
+  createdAt: string;
+  receivedAt?: string;
+  version: number;
+}
+
+// ---------- Khuyến mãi ----------
+export type PromotionType = 'PERCENT' | 'FIXED' | 'BUY_X_GET_Y' | 'ORDER_THRESHOLD';
+
+export interface Promotion {
+  id: string;
+  name: string;
+  type: PromotionType;
+  active: boolean;
+  startsAt: string;
+  endsAt: string;
+  scope: { productIds: string[]; categoryIds: string[] };
+  rule: {
+    percent?: number;
+    amount?: number;
+    buyQty?: number;
+    getQty?: number;
+    giftProductId?: string;
+    minTotal?: number;
+    maxDiscount?: number;
+  };
+  version: number;
+}
+
+export interface PromotionSnapshot {
+  promotionId: string;
+  name: string;
+  type: PromotionType;
+  discount: number;
+  freeUnits?: number;
+}
+
+export interface PricedLine {
+  lineNo: number;
+  productId: string;
+  sku: string;
+  name: string;
+  quantity: number;
+  unitPrice: number;
+  grossAmount: number;
+  netAmount: number;
+  gift: boolean;
+  promotion?: PromotionSnapshot;
+}
+
+export interface PricedCart {
+  lines: PricedLine[];
+  orderPromotion?: PromotionSnapshot;
+  grossTotal: number;
+  discountTotal: number;
+  total: number;
+  warnings: string[];
+  quoteHash: string;
+}
+
+// ---------- Bán hàng ----------
+export type PaymentMethod = 'CASH' | 'BANK_TRANSFER';
+export type OrderStatus = 'PAID' | 'PARTIALLY_RETURNED' | 'RETURNED';
+
+export interface PersonRef {
+  id: string;
+  name: string;
+  phone?: string;
+}
+
+export interface OrderLine {
+  lineNo: number;
+  productId: string;
+  sku: string;
+  name: string;
+  quantity: number;
+  unitPrice: number;
+  grossAmount: number;
+  netAmount: number;
+  gift: boolean;
+  promotion?: PromotionSnapshot;
+  returnedQuantity: number;
+  allocations: { batchId: string; batchCode: string; expiryDate?: string; quantity: number; returnedQuantity: number }[];
+}
+
+export interface OrderPayment {
+  paymentId: string;
+  type: 'PAYMENT' | 'REFUND';
+  method: PaymentMethod;
+  amount: number;
+  reference?: string;
+  returnCode?: string;
+  at: string;
+  by: string;
+}
+
+export interface SalesOrder {
+  id: string;
+  orderCode: string;
+  cashier: PersonRef;
+  customer?: PersonRef;
+  orderedAt: string;
+  status: OrderStatus;
+  paymentMethod: PaymentMethod;
+  transactionRef?: string;
+  grossTotal: number;
+  discountTotal: number;
+  total: number;
+  refundedTotal: number;
+  orderPromotion?: PromotionSnapshot;
+  items: OrderLine[];
+  payments: OrderPayment[];
+}
+
+export interface LedgerPayment {
+  paymentId: string;
+  orderCode?: string;
+  type: 'PAYMENT' | 'REFUND';
+  method: PaymentMethod;
+  amount: number;
+  reference?: string;
+  returnCode?: string;
+  createdAt: string;
+}
+
+export interface SalesReturn {
+  id: string;
+  returnCode: string;
   orderCode: string;
   refundAmount: number;
-  refundStatus: 'NO_REFUND' | 'REFUND_PENDING' | 'REFUNDED' | 'REJECTED';
-  returnedAt: string;
-  items: Array<{
-    orderItemId: number;
-    productId: number;
-    productName: string;
-    quantity: number;
-    restock: boolean;
-    reason: string;
-  }>;
+  refundMethod: PaymentMethod;
+  createdAt: string;
+  items: { lineNo: number; name: string; quantity: number; restock: boolean; reason: string; refundAmount: number }[];
 }
 
-export interface ApiErrorResponse {
-  timestamp?: string;
-  status: number;
+export interface HeldCart {
+  holdId: string;
+  note?: string;
+  customerId?: string;
+  items: { productId: string; quantity: number }[];
+  heldAt: string;
+  expiresAt: string;
+}
+
+export interface TopSales {
+  day: string;
+  available: boolean;
+  items: { productId: string; sku?: string; name: string; quantity: number }[];
+}
+
+export interface Suggestions {
+  available: boolean;
+  items: { productId: string; sku: string; name: string; times: number }[];
+}
+
+// ---------- Ca, đồ thị, thống kê, vận hành ----------
+export interface ShiftClosing {
+  id: string;
+  cashierId: string;
+  cashierName: string;
+  day: string;
+  cashIn: number;
+  bankIn: number;
+  cashRefund: number;
+  bankRefund: number;
+  expectedCash: number;
+  countedCash: number;
+  difference: number;
+  note?: string;
+  status: 'CLOSED' | 'REOPENED';
+  closedAt: string;
+}
+
+export interface ShiftSummary {
+  cashierId: string;
+  day: string;
+  cashIn: number;
+  bankIn: number;
+  cashRefund: number;
+  bankRefund: number;
+  expectedCash: number;
+  paymentCount: number;
+  refundCount: number;
+  closing?: ShiftClosing;
+}
+
+export interface TraceResult {
+  batchCode: string;
+  productSku: string;
+  productName: string;
+  supplierName?: string;
+  expiryDate?: string;
+  receivedQty: number;
+  remainingQty: number;
+  soldQty: number;
+  orders: { orderCode: string; orderedAt: string; quantity: number; customerName?: string; customerPhone?: string }[];
+  contacts: { customerId: string; name: string; phone: string; quantity: number }[];
+}
+
+export interface SalesStats {
+  from: string;
+  to: string;
+  totals: { orders: number; gross: number; discount: number; revenue: number; refunds: number; netRevenue: number };
+  daily: { day: string; orders: number; gross: number; discount: number; revenue: number; refunds: number; netRevenue: number }[];
+  byCategory: { categoryId: string; categoryName: string; quantity: number; revenue: number }[];
+  topProducts: { productId: string; sku: string; name: string; quantity: number; revenue: number }[];
+}
+
+export interface DatastoreStatus {
+  name: string;
+  role: string;
+  up: boolean;
+  latencyMs: number;
   error?: string;
-  message: string;
-  path?: string;
+}
+
+export interface SyncStatusView {
+  pending: number;
+  failed: number;
+  oldestPendingAt?: string;
+  recentFailures: { id: string; type: string; refId: string; attempts: number; lastError: string; createdAt: string }[];
 }
