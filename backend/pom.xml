@@ -12,11 +12,23 @@
 	<artifactId>supermarket-bigdata</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>supermarket-bigdata</name>
-	<description>Supermarket Management RESTful API - BigData Project</description>
+	<description>Supermarket Management RESTful API - NoSQL Project</description>
 
 	<properties>
 		<java.version>21</java.version>
+		<surefire.excludedGroups>cloud</surefire.excludedGroups>
+		<surefire.groups></surefire.groups>
 	</properties>
+
+	<profiles>
+		<profile>
+			<id>cloud-tests</id>
+			<properties>
+				<surefire.excludedGroups></surefire.excludedGroups>
+				<surefire.groups>cloud</surefire.groups>
+			</properties>
+		</profile>
+	</profiles>
 
     <dependencies>
         <dependency>
@@ -27,6 +39,18 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-actuator</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-mongodb</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-redis</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.neo4j.driver</groupId>
+			<artifactId>neo4j-java-driver</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>io.jsonwebtoken</groupId>
@@ -92,6 +116,15 @@
 
 	<build>
 		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<!-- Test cần CSDL cloud thật chạy bằng: ./mvnw test -Pcloud-tests -->
+					<excludedGroups>${surefire.excludedGroups}</excludedGroups>
+					<groups>${surefire.groups}</groups>
+				</configuration>
+			</plugin>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
