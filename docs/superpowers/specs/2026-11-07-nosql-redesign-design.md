@@ -7,7 +7,7 @@ Ngày: 2026-11-07 · Nhánh: `nosql-migration` · Mốc trước khi chuyển: c
 **Chủ dự án đã nói**
 
 - Môn học đổi từ BigData sang NoSQL; bắt buộc dùng 4 CSDL: MongoDB, Cassandra, Neo4j, Redis.
-- Bỏ hết Apache Drill và Docker; dùng thẳng dịch vụ cloud.
+- Bỏ hết Apache Drill và Docker đóng gói ứng dụng. Ban đầu dùng thẳng dịch vụ cloud; sau đó chuyển sang chạy CSDL trên máy (MongoDB cài máy + Cassandra, Neo4j, Redis trong Docker Compose) cho nhẹ khi demo, cloud vẫn dùng được qua `.env` (mục 20).
 - Mỗi CSDL phải gánh một nghiệp vụ thật, không chỉ là bản sao.
 - Giữ đơn giản, nhưng không chỉ có bán tại quầy: làm đủ vòng nhập hàng → bán → trả → chốt ca → thu hồi lô.
 - Có khuyến mãi nhiều loại, không chỉ giảm %: thêm mua X tặng Y, giảm tiền, giảm theo tổng đơn.
@@ -15,7 +15,7 @@ Ngày: 2026-11-07 · Nhánh: `nosql-migration` · Mốc trước khi chuyển: c
 
 **Giả định (sửa nếu sai)**
 
-- Dịch vụ cloud: MongoDB Atlas (M0), DataStax Astra DB (Cassandra, đang dùng), Neo4j AuraDB Free, Redis Cloud hoặc Upstash.
+- CSDL chạy được ở hai nơi: trên máy (MongoDB 8 replica set 1 node, Cassandra 4.1, Neo4j 5.26, Redis 7.4) hoặc cloud (MongoDB Atlas M0, DataStax Astra DB, Neo4j AuraDB Free, Redis Cloud/Upstash).
 - Redis bản free có thể không lưu bền, nên Redis chỉ giữ dữ liệu tạm.
 - Một cửa hàng, một múi giờ `Asia/Ho_Chi_Minh`, tiền VND không có số lẻ.
 
@@ -24,9 +24,9 @@ Ngày: 2026-11-07 · Nhánh: `nosql-migration` · Mốc trước khi chuyển: c
 - Demo được vòng nghiệp vụ đầy đủ bằng 3 tài khoản (ADMIN, WAREHOUSE, STAFF).
 - Mỗi CSDL có ít nhất một chức năng trên giao diện mà nếu tắt CSDL đó thì chức năng biến mất.
 - Không bán quá tồn khi bán đồng thời; bấm lặp không tạo đơn hay hoàn tiền hai lần.
-- Không còn MySQL, JPA, Drill, Docker trong repo.
+- Không còn MySQL, JPA, Drill trong repo; Docker chỉ dùng để chạy CSDL (`docker-compose.yml`), không đóng gói backend/frontend.
 
-**Ngoài phạm vi**: bán online, tích điểm, cổng thanh toán, dashboard phân tích kiểu BigData (Drill, Parquet), giới hạn số suất khuyến mãi, nhiều chi nhánh, thông báo đẩy realtime, sao lưu bằng giao diện (sao lưu làm bằng script). Trang thống kê đơn giản bằng aggregation MongoDB vẫn nằm trong phạm vi (mục 19, FR-14), vì mẫu chấm điểm yêu cầu "chức năng hỗ trợ: thống kê, biểu đồ, xuất file".
+**Ngoài phạm vi**: bán online, hồ sơ khách hàng và tích điểm (đã bỏ, mục 20), cổng thanh toán, dashboard phân tích kiểu BigData (Drill, Parquet), giới hạn số suất khuyến mãi, nhiều chi nhánh, thông báo đẩy realtime, sao lưu bằng giao diện (sao lưu làm bằng script). Trang thống kê đơn giản bằng aggregation MongoDB vẫn nằm trong phạm vi (mục 19, FR-14), vì mẫu chấm điểm yêu cầu "chức năng hỗ trợ: thống kê, biểu đồ, xuất file".
 
 ## 2. Tác nhân
 
@@ -45,7 +45,7 @@ React (Vite)  ──REST/JSON + JWT──►  Spring Boot 4.1 (Java 21)
                                         │
         ┌───────────────┬───────────────┼────────────────┬────────────────┐
         ▼               ▼               ▼                ▼
-   MongoDB Atlas    Astra DB        Neo4j Aura        Redis Cloud
+   MongoDB          Cassandra       Neo4j             Redis
    (nguồn sự thật)  (sổ cái)        (quan hệ)         (tạm, nhanh)
         │
         └─ sync_queue ──(job mỗi 60s + gọi ngay sau commit)──► Cassandra, Neo4j
@@ -70,14 +70,18 @@ Biến môi trường (`.env`, không commit):
 
 | Biến | Ý nghĩa |
 |---|---|
-| `MONGODB_URI`, `MONGODB_DATABASE` | Chuỗi kết nối Atlas, tên database (`supermarket`, `supermarket_dev`) |
-| `CASSANDRA_MODE` | `ASTRA` hoặc `LOCAL` |
-| `ASTRA_SECURE_BUNDLE`, `APPLICATION_TOKEN`, `CASSANDRA_KEYSPACE` | Kết nối Astra |
-| `NEO4J_URI`, `NEO4J_USERNAME`, `NEO4J_PASSWORD` | Kết nối Aura |
-| `REDIS_URL` | `rediss://...` |
-| `JWT_SECRET`, `JWT_ACCESS_MINUTES` (15), `JWT_REFRESH_DAYS` (7) | Xác thực |
+| `MONGODB_URI`, `MONGODB_DATABASE` | Local: `mongodb://127.0.0.1:27017/?directConnection=true`; cloud: chuỗi Atlas. Database `supermarket` |
+| `MONGODB_INIT_REPLSET` | `true` (local): backend tự `replSetInitiate` replica set 1 node `rs0` lần đầu |
+| `CASSANDRA_MODE` | `LOCAL` (Docker, tự tạo keyspace 1 bản sao) hoặc `ASTRA` |
+| `CASSANDRA_HOST`, `CASSANDRA_PORT`, `CASSANDRA_DATACENTER` | Kết nối Cassandra local |
+| `ASTRA_SECURE_BUNDLE`, `APPLICATION_TOKEN`, `CASSANDRA_KEYSPACE` | Kết nối Astra; keyspace `supermarket` |
+| `NEO4J_URI`, `NEO4J_USERNAME`, `NEO4J_PASSWORD` | Local `bolt://localhost:7687` hoặc Aura `neo4j+s://...` |
+| `REDIS_URL` | Local `redis://localhost:6379` hoặc cloud `rediss://...` |
+| `JWT_SECRET`, `JWT_ACCESS_MS` (900000 = 15 phút), `JWT_REFRESH_DAYS` (7) | Xác thực |
+| `APP_ADMIN_PASSWORD` | Mật khẩu tài khoản `admin` tạo lúc khởi động khi chưa có người dùng |
 | `APP_TIMEZONE` (`Asia/Ho_Chi_Minh`), `RETURN_WINDOW_DAYS` (7) | Nghiệp vụ |
-| `APP_SEED_DEMO` | `true` thì tạo dữ liệu mẫu lúc khởi động nếu database trống |
+| `APP_SEED_DEMO`, `APP_SEED_PASSWORD`, `APP_SEED_ORDERS` (80) | Tạo dữ liệu mẫu lúc khởi động nếu chưa có sản phẩm; mật khẩu trống thì dùng mật khẩu admin |
+| `SYNC_ENABLED`, `SCHEMA_INIT` | Bật job đồng bộ; tạo index, `$jsonSchema`, bảng Cassandra, constraint Neo4j lúc khởi động |
 
 File `secure-connect-*.zip` chuyển vào thư mục `secrets/` (đã nằm trong `.gitignore`).
 
@@ -310,13 +314,13 @@ Giữ tiền tố `/api`. Thay đổi so với code cũ:
 | Suppliers | Giữ như cũ | |
 | Products | Giữ như cũ, thêm `attributes`, `categoryId`, `supplierId` | |
 | Stock card | `GET /products/{id}/stock-movements?month=2026-11` | Đọc Cassandra |
-| Batches | `GET /inventory/batches`, `POST /inventory/batches`, `POST /inventory/batches/{id}/adjustments`, `GET /inventory/batches/expired` | |
-| Purchase orders | `GET/POST /purchase-orders`, `PUT/DELETE /purchase-orders/{id}` (chỉ khi `DRAFT`), `POST /purchase-orders/{id}/receive` | Mới |
+| Batches | `GET/POST /inventory/batches`, `GET /inventory/batches/{id}`, `POST /inventory/batches/{id}/adjustments`, `GET /inventory/batches/expiring-soon`, `GET /inventory/batches/expired`, `GET /inventory/low-stock` | Sắp hết hạn: cache Redis 24 giờ |
+| Purchase orders | `GET/POST /purchase-orders`, `GET /purchase-orders/{id}`, `PUT/DELETE /purchase-orders/{id}` (chỉ khi `DRAFT`), `POST /purchase-orders/{id}/receive` | Mới; frontend xem chi tiết và in phiếu A4 |
 | Orders | `POST /orders/quote`, `POST /orders`, `GET /orders`, `GET /orders/{id}`, `GET /orders/code/{code}`, `POST /orders/{id}/returns`, `GET /orders/{id}/returns`, `GET /orders/{id}/payments` | Trả hàng 1 bước; payments đọc Cassandra |
 | Held carts | `GET/POST /pos/held`, `GET/DELETE /pos/held/{holdId}` | Mới, Redis |
-| Promotions | `GET/POST /promotions`, `PUT /promotions/{id}`, `PUT /promotions/{id}/active` | Mở rộng 4 loại |
-| Shifts | `GET /shifts/me/today`, `POST /shifts/me/close`, `GET /shifts?day=` | Mới |
-| Graph | `GET /batches/{code}/trace`, `GET /products/{id}/also-bought`, `POST /admin/graph/rebuild` | Mới, Neo4j |
+| Promotions | `GET/POST /promotions`, `GET /promotions/active`, `GET/PUT /promotions/{id}`, `PUT /promotions/{id}/active` | Mở rộng 4 loại |
+| Shifts | `GET /shifts/me/today`, `POST /shifts/me/close`, `GET /shifts?day=`, `GET /shifts/cashier/{cashierId}`, `POST /shifts/{id}/reopen` | Mới |
+| Graph | `GET /batches/{code}/trace`, `POST /batches/{code}/recall`, `GET /products/{id}/also-bought`, `POST /admin/graph/rebuild` | Mới, Neo4j |
 | Top sales | `GET /stats/top-sales/today` | Mới, Redis |
 | Ops | `GET /health/datastores`, `GET /admin/sync/status`, `POST /admin/sync/retry` | Trang trạng thái 4 CSDL, dùng khi demo |
 
@@ -327,16 +331,21 @@ Lỗi trả theo `ApiErrorResponse` hiện có; mã 400/401/403/404/409 như SRS
 Package `com.api.supermarket`, chia theo module nghiệp vụ, mỗi module có `*Controller`, `*Service`, document và DTO riêng:
 
 ```
-config/        MongoConfig, CassandraConfig, Neo4jConfig, RedisConfig, SecurityConfig, OpenApiConfig, SchedulingConfig
-common/        ApiErrorResponse, exceptions, PageResponse, PaginationValidator, CodeGenerator(counters), Clock/AppTime, RedisSafe
-auth/          AuthController, AuthService, JwtService, RefreshTokenStore(Redis), filters
+config/        MongoConfig, CassandraSessionProvider, Neo4jConfig, SecurityConfig, OpenApiConfig, AsyncConfig, TimeConfig,
+               MongoReplicaSetInitializer, MongoIndexInitializer, MongoValidators, Cassandra/Neo4jSchemaInitializer
+common/        AppTime, CodeGenerator(counters), MongoTx, RedisSafe, các exception xung đột / CSDL không khả dụng
+dto/, exception/, validation/, security/   ApiErrorResponse, PageResponse, GlobalExceptionHandler, PaginationValidator, JWT
+domain/        FefoPolicy (thuần Java)
+auth/          AuthController, AuthService, RefreshTokenStore(Redis), LoginHistoryStore(Cassandra), PasswordPolicy
 user/  catalog/(category, supplier, product)
-inventory/     BatchService, FefoPolicy, PurchaseOrderService, StockCardReader(Cassandra)
-sales/         OrderService, ReturnService, ReturnPolicy, QuoteService, HeldCartService(Redis), TopSalesService(Redis)
+inventory/     BatchService, FefoAllocator, PurchaseOrderService, StockLedger(Cassandra), LowStockService
+sales/         OrderService, ReturnService, ReturnPolicy, QuoteService, PaymentLedger(Cassandra), HeldCartService(Redis), TopSalesService(Redis)
 promotion/     PromotionService, PromotionEngine (thuần Java)
 shift/         ShiftService
-graph/         GraphWriter, GraphQueryService, GraphRebuildService (Neo4j)
-sync/          SyncQueue document, SyncService, SyncJob, CassandraLedgerWriter
+graph/         GraphWriter, GraphQueryService, RecallService, GraphRebuildService (Neo4j)
+stats/         StatsService ($facet), PosPanelService, ExpiringSoonService (cron 07:00)
+sync/          SyncQueue, SyncService, SyncJob
+health/        /health/datastores
 seed/          DemoDataSeeder (APP_SEED_DEMO)
 ```
 
@@ -346,18 +355,21 @@ seed/          DemoDataSeeder (APP_SEED_DEMO)
 
 | Trang | Tác nhân | Thay đổi |
 |---|---|---|
-| Đăng nhập | Tất cả | Thêm tự làm mới token |
-| Bán tại quầy | STAFF, ADMIN | Khuyến mãi tự áp, dòng quà, đơn treo, gợi ý mua kèm, top bán chạy |
+| Đăng nhập | Tất cả | Thêm tự làm mới token; chọn nhanh tài khoản demo |
+| Bán tại quầy | STAFF, ADMIN | Khuyến mãi tự áp, dòng quà, đơn treo có ghi chú, gợi ý mua kèm, top bán chạy, in hóa đơn 80 mm |
 | Đơn hàng | STAFF, ADMIN | Trả hàng 1 bước, lịch sử thanh toán, in lại hóa đơn |
 | Chốt ca | STAFF, ADMIN | Mới |
 | Sản phẩm | Tất cả xem | Thuộc tính linh hoạt, tab "Thẻ kho" (gộp `StockHistoryPage`) |
 | Nhóm hàng | ADMIN | Mới |
 | Nhà cung cấp | ADMIN, WAREHOUSE | Giữ |
-| Phiếu nhập hàng | ADMIN, WAREHOUSE | Mới |
-| Tồn kho theo lô | ADMIN, WAREHOUSE | Thêm "Truy vết / Thu hồi" (ADMIN) |
+| Phiếu nhập hàng | ADMIN, WAREHOUSE | Mới; xem chi tiết (dòng hàng, lô, NSX, HSD, tổng tiền), in phiếu nhập kho A4 |
+| Tồn kho theo lô | ADMIN, WAREHOUSE | Danh sách sản phẩm bấm để xổ lô theo FEFO; tab sắp hết hàng / sắp hết hạn / đã hết hạn nhóm theo sản phẩm; "Truy vết / Thu hồi" (ADMIN) |
 | Khuyến mãi | ADMIN | Form theo 4 loại, khung gợi ý mua kèm |
 | Người dùng | ADMIN | Bỏ MANAGER |
 | Trạng thái hệ thống | ADMIN | Mới: tình trạng 4 CSDL, sync queue, nút dựng lại Neo4j |
+| Thống kê | ADMIN | Mới: số liệu tổng, doanh thu theo ngày, theo nhóm hàng, top 10, xuất CSV |
+
+Giao diện chung: kiểu terminal (chữ JetBrains Mono, nhấn vàng), chế độ tối/sáng lưu trong `localStorage` (mặc định theo hệ điều hành), phân trang đánh số dùng chung, thanh trên có đổi mật khẩu và đăng xuất. Bảng màu Tailwind (gray/blue/white) trỏ về biến CSS nên các trang tự đổi theo chế độ. Ảnh chụp màn hình ở `img/giao-dien/`.
 
 ID chuyển từ `number` sang `string` trong `types/index.ts`. Trang chủ sau đăng nhập: ADMIN và STAFF vào Bán tại quầy, WAREHOUSE vào Tồn kho.
 
@@ -365,7 +377,7 @@ ID chuyển từ `number` sang `string` trong `types/index.ts`. Trang chủ sau 
 
 | Đường dẫn | Lý do |
 |---|---|
-| `drill/`, `analytics/`, `docker-compose.yml`, `.dockerignore` | Drill, Docker |
+| `drill/`, `analytics/`, `docker-compose.yml` cũ, `.dockerignore` | Drill, Docker đóng gói app (`docker-compose.yml` mới chỉ chạy CSDL) |
 | `SQL/`, `database/` (sau khi chuyển `secure-connect-*.zip` sang `secrets/`) | MySQL, seed và benchmark cũ |
 | `.tmp/` (348 MB: Maven tạm, backup MySQL) | Rác của bản cũ |
 | `docs/benchmark/`, `docs/word/`, `docs/ai/`, `docs/antigravity/`, `docs/01_lo_trinh_va_kien_truc/`, `docs/KE_HOACH_*.md`, `docs/NOSQL_BIGDATA_PROJECT_PLAN.txt`, `docs/promotions-contract.md`, `docs/superpowers/plans/2026-10-*` | Tài liệu Drill/BigData; vẫn còn trong commit `267e192` |
@@ -374,22 +386,22 @@ ID chuyển từ `number` sang `string` trong `types/index.ts`. Trang chủ sau 
 | Backend `pom.xml`: JPA, MySQL, H2, `spring-boot-starter-data-jpa-test` | Không còn dùng |
 | Frontend: `DashboardPage`, `ReportsPage`, `CashFlowReportsPage`, `OperationalAnalyticsPage`, `PurchaseCostsPage`, `StockHistoryPage` (gộp vào Sản phẩm), `components/analytics/`, `components/chart/`, `components/shop/` | Trang phân tích và phần shop cũ |
 
-Giữ lại và chuyển sang chỗ mới: `FefoPolicy`, `ReturnPolicy`, logic JWT, `GlobalExceptionHandler`, `PaginationValidator`, cấu hình kết nối Astra, `Bruno/` (cập nhật request), `img/`, SRS `.docx`.
+Giữ lại và chuyển sang chỗ mới: `FefoPolicy`, `ReturnPolicy`, logic JWT, `GlobalExceptionHandler`, `PaginationValidator`, cấu hình kết nối Astra, `Bruno/` (cập nhật request), SRS `.docx`. Lần dọn sau (mục 20) bỏ thêm hình và báo cáo BigData trong `img/`, `target/` và `logs/` ở thư mục gốc, file mẫu Vite, component không dùng.
 
 ## 16. Kiểm thử
 
-Không có Docker nên không dùng Testcontainers.
+Không dùng Testcontainers. Unit/service test (193 test) chạy không cần CSDL; test gắn tag `cloud` chạy với CSDL thật (local Docker hoặc cloud) bằng `./mvnw test -Pcloud-tests`.
 
 - **Unit test (JUnit, chạy mọi lúc)**: `PromotionEngine` (đủ 4 loại, chọn khuyến mãi tốt nhất, chia tiền khớp tổng), `FefoPolicy`, công thức hoàn tiền, kiểm tra ngày lô, sinh mã. Đây là phần nhiều logic nhất nên phủ kỹ nhất.
 - **Service test (Mockito)**: luồng bán, trả, nhận phiếu nhập với repository giả lập.
-- **Test trên cloud (tag `cloud`, chạy tay với database `_dev`)**:
+- **Test với CSDL thật (tag `cloud`, chạy tay)**:
   - Hai luồng cùng mua đơn vị hàng cuối: đúng một luồng thành công, tồn không âm (NFR-03).
   - Gửi lặp `requestKey`: không tạo đơn thứ hai.
   - Tắt Redis (URL sai): vẫn bán được.
   - Gọi lại `SyncService` hai lần: Cassandra không có dòng trùng.
 - **Kiểm tra tay bằng Bruno** cho các API mới; checklist demo theo 3 tài khoản.
 
-## 17. Sửa SRS (bản v2.0)
+## 17. Sửa SRS (bản v2.0, nay là v2.1)
 
 - Mục 1.2 và 8.2: bỏ "khuyến mãi và giảm giá" khỏi *ngoài phạm vi*.
 - Mục 2.3: còn 3 vai trò, bỏ MANAGER.
@@ -491,9 +503,9 @@ Tối thiểu cho toàn đồ án là 12 truy vấn cơ bản và 18 truy vấn 
 
 Schema validation `$jsonSchema` và index cũng được backend tạo lúc khởi động nếu còn thiếu, nên script và app luôn khớp nhau.
 
-### 19.5 Phân tán và CAP khi dùng cloud (mục 4.8 của mẫu)
+### 19.5 Phân tán và CAP (mục 4.8 của mẫu)
 
-Không dùng Docker, nên phần cụm mô tả theo dịch vụ cloud:
+Bảng dưới mô tả cụm khi dùng cloud. Khi chạy trên máy, mỗi CSDL chỉ có 1 node: MongoDB replica set 1 node `rs0` (đủ cho transaction, không chịu lỗi), Cassandra 1 node keyspace RF 1 (`LOCAL_QUORUM` = 1 bản sao), Neo4j và Redis 1 container (Redis `maxmemory 128mb`, `noeviction`). Mô hình nhất quán trong code không đổi giữa hai cách chạy.
 
 | CSDL | Cụm | Sao chép | CAP | Ghi chú cấu hình |
 |---|---|---|---|---|
@@ -508,10 +520,23 @@ Kiểm thử chịu lỗi (mục khuyến khích) thay bằng: tắt Redis và N
 
 | Hồ sơ | File |
 |---|---|
-| SRS + SDS (Chương 1–4), khung Chương 5–8 | `docs/nop-bai/BaoCao_DoAn_NoSQL_SieuThi.docx` |
-| Bảng minh chứng và tự đánh giá | `docs/nop-bai/BaoCaoMinhChung_DoAn_DuLieuNoSQL.docx` |
+| SRS v2.1 | `docs/SRS_He_thong_quan_ly_sieu_thi_v2_0.docx` (dựng từ `docs/srs-assets/`) |
+| Báo cáo đồ án, bảng minh chứng | Chưa tạo (dự kiến `docs/nop-bai/`) |
+| Ảnh chụp giao diện | `img/giao-dien/` (tối và sáng) |
 | Script từng CSDL | `nosql-scripts/` |
 | Kịch bản kiểm thử | Chương 7 của báo cáo + `Bruno/` |
 | SRS cũ v1.1 | Thay bằng Chương 3 của báo cáo |
 
 API thêm: `GET /api/stats/sales?from=&to=`, `GET /api/stats/sales.csv`, `GET /api/pos/products/{id}/panel`, `GET /api/users/{id}/logins?month=`, `GET /api/auth/me/logins?month=`. Trang frontend thêm: **Thống kê**.
+
+## 20. Thay đổi sau khi triển khai (07/11/2026)
+
+| Thay đổi | Lý do | Ảnh hưởng |
+|---|---|---|
+| Chạy CSDL trên máy: MongoDB cài máy bật replica set 1 node (`scripts/mongo-local-replset.ps1` + `MongoReplicaSetInitializer`), Cassandra/Neo4j/Redis trong `docker-compose.yml` có giới hạn RAM | Nhẹ, không phụ thuộc mạng khi demo; Astra bundle cũ hết hiệu lực | Cloud vẫn dùng được qua `.env`; mục 1, 3, 19.5 |
+| Bỏ quản lý khách hàng (FR-03 cũ), đánh số lại còn 14 FR | Bán lẻ tại quầy, không có cách nhận diện khách nếu không có chương trình thành viên | Đơn, đơn treo không còn `customerId`; Neo4j bỏ `:Customer`/`:PLACED`; truy vết lô trả danh sách đơn |
+| Ô ghi chú khi treo đơn thay cho số điện thoại khách | Nhận lại đúng đơn treo | `HoldRequest.note` |
+| In lại hóa đơn (80 mm), xem chi tiết và in phiếu nhập kho (A4) | Khách xin in lại; thủ kho cần phiếu giấy có chữ ký | Hook in dùng chung đặt khổ giấy bằng `@page` |
+| Tồn kho nhóm theo sản phẩm, bấm để xổ lô; phân trang đánh số | Dễ nhìn khi nhiều lô | Chỉ frontend |
+| Giao diện kiểu terminal, chế độ tối/sáng; nút đổi mật khẩu ở thanh trên | Yêu cầu giao diện | Chỉ frontend; dùng API `PUT /auth/password` có sẵn |
+| Seeder: mật khẩu demo trống thì dùng mật khẩu admin | `APP_SEED_PASSWORD=` trong `.env` là chuỗi rỗng | `DemoDataSeeder` |
