@@ -1,0 +1,51 @@
+# Chỉ chạy CSDL, không đóng gói backend/frontend.
+#   docker compose up -d                       Neo4j + Redis
+#   docker compose --profile cassandra up -d   thêm Cassandra local (khi không dùng Astra)
+#   docker compose stop                        tắt, giữ dữ liệu
+# MongoDB dùng bản cài máy (service "MongoDB"), Cassandra mặc định dùng Astra DB.
+# Biến (NEO4J_PASSWORD...) đọc từ .env cùng thư mục.
+
+services:
+  redis:
+    image: redis:7.4-alpine
+    container_name: sm-redis
+    command: ["redis-server", "--save", "60", "1", "--appendonly", "no", "--maxmemory", "128mb", "--maxmemory-policy", "noeviction"]
+    ports: ["127.0.0.1:6379:6379"]
+    volumes: [redis-data:/data]
+    mem_limit: 192m
+    restart: unless-stopped
+
+  neo4j:
+    image: neo4j:5.26-community
+    container_name: sm-neo4j
+    environment:
+      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:?Đặt NEO4J_PASSWORD (>= 8 ký tự) trong .env}
+      NEO4J_server_memory_heap_initial__size: 256m
+      NEO4J_server_memory_heap_max__size: 512m
+      NEO4J_server_memory_pagecache_size: 128m
+      NEO4J_db_tx__log_rotation_retention__policy: 100M size
+    ports: ["127.0.0.1:7474:7474", "127.0.0.1:7687:7687"]
+    volumes: [neo4j-data:/data]
+    mem_limit: 900m
+    restart: unless-stopped
+
+  cassandra:
+    image: cassandra:4.1
+    container_name: sm-cassandra
+    profiles: ["cassandra"]
+    environment:
+      MAX_HEAP_SIZE: 512M
+      HEAP_NEWSIZE: 128M
+      CASSANDRA_CLUSTER_NAME: supermarket
+      CASSANDRA_DC: datacenter1
+      CASSANDRA_ENDPOINT_SNITCH: GossipingPropertyFileSnitch
+      CASSANDRA_NUM_TOKENS: 4
+    ports: ["127.0.0.1:9042:9042"]
+    volumes: [cassandra-data:/var/lib/cassandra]
+    mem_limit: 1200m
+    restart: unless-stopped
+
+volumes:
+  redis-data:
+  neo4j-data:
+  cassandra-data:

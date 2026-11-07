@@ -24,6 +24,8 @@ MongoDB ghi nghiệp vụ và bản ghi `sync_queue` trong cùng một transacti
 ## Cấu trúc thư mục
 
 ```
+docker-compose.yml  Neo4j, Redis (và Cassandra tùy chọn) cho máy local
+scripts/        Bật replica set cho MongoDB cài máy
 backend/        Spring Boot 4.1 (Java 21) – package theo nghiệp vụ: auth, user, catalog, customer,
                 inventory, promotion, sales, shift, graph, stats, sync, health, seed
 frontend/       React 19 + Vite + TypeScript + Tailwind
@@ -35,21 +37,42 @@ secrets/        Secure bundle của Astra (không commit)
 
 ## Chạy dự án
 
-1. Sao chép `.env.example` thành `.env` ở thư mục gốc, điền chuỗi kết nối 4 CSDL, `JWT_SECRET` (≥ 32 ký tự) và `APP_ADMIN_PASSWORD`. Đặt `secure-connect-*.zip` của Astra vào `secrets/` và tạo keyspace `supermarket` trên giao diện Astra.
-2. Muốn có dữ liệu demo: `APP_SEED_DEMO=true` (tài khoản `admin`, `thukho01`, `thungan01`, `thungan02`; mật khẩu `APP_SEED_PASSWORD`).
-3. Backend:
+Có hai cách đặt CSDL, trộn được với nhau qua `.env`:
+
+| CSDL | Chạy máy | Cloud |
+|---|---|---|
+| MongoDB | Bản cài Windows (service `MongoDB`) bật replica set 1 node | Atlas |
+| Cassandra | `docker compose --profile cassandra up -d` (heap 512 MB) | Astra DB (mặc định, không tốn RAM) |
+| Neo4j | `docker compose up -d` (heap 512 MB) | AuraDB |
+| Redis | `docker compose up -d` (128 MB) | Redis Cloud / Upstash |
+
+1. Sao chép `.env.example` thành `.env`, điền `JWT_SECRET` (≥ 32 ký tự), `APP_ADMIN_PASSWORD`, chuỗi kết nối. Astra: đặt `secure-connect-*.zip` vào `secrets/`, keyspace tạo trên giao diện Astra.
+2. MongoDB cài máy (một lần, PowerShell quyền Administrator) – thêm `replication.replSetName: rs0` vào `mongod.cfg` và khởi động lại service; backend tự `replSetInitiate` khi `MONGODB_INIT_REPLSET=true`:
+
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File scripts\mongo-local-replset.ps1
+   ```
+
+3. Bật Docker Desktop rồi chạy Neo4j + Redis (Neo4j Browser: http://localhost:7474):
+
+   ```bash
+   docker compose up -d
+   ```
+
+4. Muốn có dữ liệu demo: `APP_SEED_DEMO=true` (tài khoản `admin`, `thukho01`, `thungan01`, `thungan02`; mật khẩu `APP_SEED_PASSWORD`, để trống thì dùng `APP_ADMIN_PASSWORD`).
+5. Backend:
 
    ```bash
    cd backend && ./mvnw spring-boot:run
    ```
 
-4. Frontend (terminal khác), mở http://localhost:3000:
+6. Frontend (terminal khác), mở http://localhost:3000:
 
    ```bash
    cd frontend && npm install && npm run dev
    ```
 
-Swagger UI: http://localhost:8080/swagger-ui/index.html. Lúc khởi động backend tự tạo index + `$jsonSchema` MongoDB, bảng Cassandra, constraint Neo4j (`SCHEMA_INIT=true`).
+Swagger UI: http://localhost:8080/swagger-ui/index.html. Lúc khởi động backend tự tạo index + `$jsonSchema` MongoDB, bảng Cassandra, constraint Neo4j (`SCHEMA_INIT=true`). Tắt CSDL docker: `docker compose stop` (dữ liệu giữ trong volume).
 
 ## Kiểm thử
 
