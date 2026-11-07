@@ -1,0 +1,17 @@
+info:
+  name: deactivateProduct
+  type: http
+  seq: 7
+  tags:
+    - catalog
+
+http:
+  method: DELETE
+  url: "{{baseUrl}}/api/products/{id}"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

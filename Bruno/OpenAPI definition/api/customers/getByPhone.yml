@@ -1,0 +1,17 @@
+info:
+  name: getByPhone
+  type: http
+  seq: 2
+  tags:
+    - catalog
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/customers/phone/0912345678"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

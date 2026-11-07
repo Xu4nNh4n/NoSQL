@@ -1,0 +1,17 @@
+info:
+  name: deleteCategory
+  type: http
+  seq: 4
+  tags:
+    - catalog
+
+http:
+  method: DELETE
+  url: "{{baseUrl}}/api/categories/{id}"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

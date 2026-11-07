@@ -1,0 +1,17 @@
+info:
+  name: deactivateCustomer
+  type: http
+  seq: 5
+  tags:
+    - catalog
+
+http:
+  method: DELETE
+  url: "{{baseUrl}}/api/customers/{id}"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

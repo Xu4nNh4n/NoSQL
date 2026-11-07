@@ -1,0 +1,17 @@
+info:
+  name: getProducts
+  type: http
+  seq: 1
+  tags:
+    - catalog
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/products?page=0&size=20&sortBy=name&sortDir=asc&keyword=sua tuoi&categoryId=&minPrice=&maxPrice=&active=true"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

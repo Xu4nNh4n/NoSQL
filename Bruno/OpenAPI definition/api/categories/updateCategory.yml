@@ -1,0 +1,25 @@
+info:
+  name: updateCategory
+  type: http
+  seq: 3
+  tags:
+    - catalog
+
+http:
+  method: PUT
+  url: "{{baseUrl}}/api/categories/{id}"
+  body:
+    type: json
+    data: |-
+      {
+        "name": "Sữa & chế phẩm",
+        "description": "",
+        "active": true
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

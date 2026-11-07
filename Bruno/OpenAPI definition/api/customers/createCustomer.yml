@@ -1,0 +1,26 @@
+info:
+  name: createCustomer
+  type: http
+  seq: 3
+  tags:
+    - catalog
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/customers"
+  body:
+    type: json
+    data: |-
+      {
+        "fullName": "Trần Thị B",
+        "phone": "0912345678",
+        "email": "b@gmail.com",
+        "address": "Q.3, TP.HCM"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

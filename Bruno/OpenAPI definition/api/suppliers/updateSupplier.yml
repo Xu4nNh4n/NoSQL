@@ -1,0 +1,27 @@
+info:
+  name: updateSupplier
+  type: http
+  seq: 4
+  tags:
+    - catalog
+
+http:
+  method: PUT
+  url: "{{baseUrl}}/api/suppliers/{id}"
+  body:
+    type: json
+    data: |-
+      {
+        "name": "Vinamilk",
+        "phone": "0281234567",
+        "email": "",
+        "address": "",
+        "active": true
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

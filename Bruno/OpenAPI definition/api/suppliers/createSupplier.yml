@@ -1,0 +1,26 @@
+info:
+  name: createSupplier
+  type: http
+  seq: 2
+  tags:
+    - catalog
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/suppliers"
+  body:
+    type: json
+    data: |-
+      {
+        "name": "Vinamilk",
+        "phone": "0281234567",
+        "email": "sales@vinamilk.vn",
+        "address": "TP.HCM"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

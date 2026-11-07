@@ -1,0 +1,33 @@
+info:
+  name: createProduct
+  type: http
+  seq: 5
+  tags:
+    - catalog
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/products"
+  body:
+    type: json
+    data: |-
+      {
+        "sku": "SUA-TT-1L",
+        "name": "Sữa tươi 1L",
+        "price": 32000,
+        "categoryId": "",
+        "supplierId": "",
+        "reorderPoint": 20,
+        "imageUrl": "",
+        "attributes": {
+          "dungTich": "1L",
+          "hanSuDungNgay": 10
+        }
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

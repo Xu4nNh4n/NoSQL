@@ -1,0 +1,17 @@
+info:
+  name: getSuppliers
+  type: http
+  seq: 1
+  tags:
+    - catalog
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/suppliers?page=0&size=20&sortBy=name&sortDir=asc&keyword="
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

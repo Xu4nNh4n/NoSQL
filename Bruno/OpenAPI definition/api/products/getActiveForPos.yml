@@ -1,0 +1,17 @@
+info:
+  name: getActiveForPos
+  type: http
+  seq: 2
+  tags:
+    - catalog
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/products/active"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
