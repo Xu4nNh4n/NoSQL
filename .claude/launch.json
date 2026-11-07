@@ -1,0 +1,18 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "backend",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": ["/c", "cd /d D:\\Code\\code\\Java\\Backend\\SuperMarketAPI-BigData\\backend && call .\\mvnw.cmd spring-boot:run -Dspring-boot.run.jvmArguments=-Xmx768m"],
+      "port": 8080,
+      "url": "http://localhost:8080"
+    },
+    {
+      "name": "frontend",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": ["/c", "cd /d D:\\Code\\code\\Java\\Backend\\SuperMarketAPI-BigData\\frontend && npm run dev"],
+      "port": 3000
+    }
+  ]
+}
