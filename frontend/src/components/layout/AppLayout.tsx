@@ -4,8 +4,6 @@ import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 
 const TITLE_MAP: Record<string, string> = {
-  '/admin': 'Bàn làm việc Quản trị (Dashboard)',
-  '/dashboard': 'Bàn làm việc Quản trị (Dashboard)',
   '/products': 'Quản lý Sản phẩm',
   '/inventory': 'Quản lý Kho & Lô hàng FEFO',
   '/suppliers': 'Nhà cung cấp',

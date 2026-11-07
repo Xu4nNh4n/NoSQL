@@ -1,17 +1,14 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
-  LayoutDashboard,
   Package,
   Boxes,
   ShoppingCart,
   Receipt,
-  BarChart3,
   Store,
   UserCheck,
   Truck,
   Tags,
-  FileSpreadsheet,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -25,37 +22,24 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onCloseMobile })
 
   const navSections = [
     {
-      title: 'TỔNG QUAN',
-      items: [
-        { to: '/admin', label: 'Bàn làm việc (Dashboard)', icon: LayoutDashboard, roles: ['ADMIN', 'MANAGER'] },
-      ],
-    },
-    {
       title: 'BÁN HÀNG & THU NGÂN',
       items: [
-        { to: '/pos', label: 'Thu ngân tại quầy (POS)', icon: ShoppingCart, roles: ['STAFF'] },
-        { to: '/promotions', label: 'Khuyến mãi', icon: Tags, roles: ['ADMIN', 'MANAGER'] },
-        { to: '/orders', label: 'Quản lý đơn & Trả hàng', icon: Receipt, roles: ['ADMIN', 'MANAGER', 'STAFF'] },
+        { to: '/pos', label: 'Thu ngân tại quầy (POS)', icon: ShoppingCart, roles: ['ADMIN', 'STAFF'] },
+        { to: '/promotions', label: 'Khuyến mãi', icon: Tags, roles: ['ADMIN'] },
+        { to: '/orders', label: 'Quản lý đơn & Trả hàng', icon: Receipt, roles: ['ADMIN', 'STAFF'] },
       ],
     },
     {
       title: 'QUẢN LÝ HÀNG HÓA',
       items: [
-        { to: '/products', label: 'Sản phẩm & Giá bán', icon: Package, roles: ['ADMIN', 'MANAGER', 'STAFF', 'WAREHOUSE'] },
-        { to: '/inventory', label: 'Kho & Lô hàng FEFO', icon: Boxes, roles: ['ADMIN', 'MANAGER', 'WAREHOUSE'] },
+        { to: '/products', label: 'Sản phẩm & Giá bán', icon: Package, roles: ['ADMIN', 'STAFF', 'WAREHOUSE'] },
+        { to: '/inventory', label: 'Kho & Lô hàng FEFO', icon: Boxes, roles: ['ADMIN', 'WAREHOUSE'] },
       ],
     },
     {
       title: 'ĐỐI TÁC & NHẬP HÀNG',
       items: [
-        { to: '/suppliers', label: 'Nhà cung cấp', icon: Truck, roles: ['ADMIN', 'MANAGER', 'WAREHOUSE'] },
-        { to: '/purchase-costs', label: 'Giá nhập theo lô', icon: FileSpreadsheet, roles: ['ADMIN', 'MANAGER', 'WAREHOUSE'] },
-      ],
-    },
-    {
-      title: 'BÁO CÁO & DỮ LIỆU',
-      items: [
-        { to: '/reports', label: 'Đối soát & Big Data', icon: BarChart3, roles: ['ADMIN', 'MANAGER'] },
+        { to: '/suppliers', label: 'Nhà cung cấp', icon: Truck, roles: ['ADMIN', 'WAREHOUSE'] },
       ],
     },
     {

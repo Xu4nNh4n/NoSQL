@@ -1,7 +1,7 @@
 // ==========================================
 // AUTHENTICATION & USERS
 // ==========================================
-export type RoleName = 'ADMIN' | 'MANAGER' | 'STAFF' | 'WAREHOUSE';
+export type RoleName = 'ADMIN' | 'STAFF' | 'WAREHOUSE';
 
 export interface User {
   id: number;
@@ -418,160 +418,10 @@ export interface SalesOrderReturnResponse {
   }>;
 }
 
-// ==========================================
-// ANALYTICS & BIG DATA
-// ==========================================
-export interface CashFlowRow {
-  event_date?: string;
-  report_date?: string;
-  collected_amount?: number;
-  total_received?: number;
-  refunded_amount?: number;
-  total_refunded?: number;
-  net_cash_amount?: number;
-  net_revenue?: number;
-}
-
-export interface DrillReportMetadata {
-  timeZone?: string;
-  queryId?: string;
-  queryIds?: string[];
-  queryState?: string;
-  sql?: string;
-  generatedAt?: string;
-  profilesUrl?: string;
-  requestElapsedMs?: number;
-  reportKind?: string;
-  dataset?: 'OPERATIONS' | 'SIMULATED';
-  sourceNames?: string[];
-  from?: string;
-  to?: string;
-  stockAsOf?: string;
-  definition?: string;
-  managementAction?: string;
-  assumptions?: string[];
-  rowLimit?: number;
-  missingExportDates?: string[];
-  dataSources?: { date?: string; dateVietnam?: string; format: 'JSON' | 'PARQUET' | 'CASSANDRA'; queriedAt?: string; exportedAt?: string; reference?: string; sourceName?: string }[];
-}
-
-export interface CashFlowReport extends DrillReportMetadata {
-  columns: string[];
-  rows: CashFlowRow[];
-}
-
-export interface DashboardRow {
-  event_date: string | number;
-  collected_amount: number;
-  refunded_amount: number;
-  net_cash_amount: number;
-  payment_count: number;
-  low_stock_count: number;
-  out_of_stock_count: number;
-}
-
-export interface DashboardReport {
-  rows: DashboardRow[];
-  queryId?: string;
-}
-
-export interface ReconciliationRow {
-  export_available?: boolean;
-  event_date: string | number;
-  mysql_order_count: number;
-  mysql_order_subtotal: number;
-  mysql_item_subtotal: number;
-  mysql_item_gross_subtotal?: number;
-  gross_mismatch_amount?: number;
-  net_checked_order_count?: number;
-  net_skipped_order_count?: number;
-  net_subtotal_delta?: number;
-  net_mismatch_amount?: number;
-  item_subtotal_delta: number;
-  mysql_payment_count: number;
-  astra_payment_count: number;
-  mysql_collected_amount: number;
-  astra_collected_amount: number;
-  collected_delta: number;
-  mysql_refund_count: number;
-  astra_refund_count: number;
-  mysql_refunded_amount: number;
-  astra_refunded_amount: number;
-  refunded_delta: number;
-  quality_status: 'PASS' | 'WARN' | 'FAIL' | string;
-}
-
-export interface ReconciliationReport extends DrillReportMetadata {
-  columns: string[];
-  rows: ReconciliationRow[];
-}
-
-export interface IntegrationStatus {
-  status?: string;
-  mysqlConnected?: boolean;
-  cassandraEnabled?: boolean;
-  cassandraConnected?: boolean;
-  cassandraMode?: 'LOCAL' | 'ASTRA';
-  availableExportDates?: { OPERATIONS: string[]; SIMULATED: string[] };
-  drillConnected?: boolean;
-  astraPendingOutbox?: number;
-  astraSentOutbox?: number;
-  drillStatus?: string;
-  astra?: { pending: number; sent: number };
-  posLog?: { pending: number; sent: number };
-}
-
 export interface ApiErrorResponse {
   timestamp?: string;
   status: number;
   error?: string;
   message: string;
   path?: string;
-}
-
-export interface PaymentLogRow {
-  payment_record_id: number | string;
-  mysql_order_id: number | string | null;
-  log_order_id: number | string | null;
-  mysql_event_type: string | null;
-  log_event_type: string | null;
-  mysql_amount: number | null;
-  log_amount: number | null;
-  mysql_created_at: string | number | null;
-  log_event_time: string | number | null;
-  mysql_payment_method: string | null;
-  log_payment_method: string | null;
-  log_count: number;
-  amount_delta: number;
-  comparison_status: 'MATCH' | 'CHECK';
-}
-
-export interface PaymentLogReport extends Omit<DrillReportMetadata, 'dataSources'> {
-  rows: PaymentLogRow[];
-  columns?: string[];
-  dataSources?: string[];
-  missingUtcPartitions?: string[];
-  comparisonMeaning?: string;
-}
-
-export interface StockHistoryRow {
-  snapshot_date: string | number;
-  product_id: string | number;
-  product_name: string | null;
-  opening_quantity: number | string | null;
-  received_quantity: number | string | null;
-  sold_quantity: number | string | null;
-  returned_quantity: number | string | null;
-  adjustment_delta: number | string | null;
-  closing_quantity: number | string | null;
-  generated_at: string | number | null;
-}
-
-export interface StockHistoryReport {
-  rows: StockHistoryRow[];
-  columns?: string[];
-  from?: string;
-  to?: string;
-  sourceNames?: string[];
-  rowLimit?: number;
 }

@@ -10,7 +10,6 @@ import {
   Unlock,
   ShieldCheck,
   ShieldAlert,
-  Building,
   ShoppingBag,
   Package,
 } from 'lucide-react';
@@ -26,7 +25,7 @@ import { Badge } from '../components/ui/Badge';
 import { Modal } from '../components/ui/Modal';
 import { useToast } from '../components/ui/Toast';
 
-const EMPLOYEE_ROLES = new Set(['ADMIN', 'MANAGER', 'STAFF', 'WAREHOUSE']);
+const EMPLOYEE_ROLES = new Set(['ADMIN', 'STAFF', 'WAREHOUSE']);
 type EmployeePage = { content: UserItem[]; totalPages: number };
 
 async function loadEmployees(): Promise<UserItem[]> {
@@ -301,13 +300,6 @@ export const UsersPage: React.FC = () => {
             Quản trị viên (ADMIN)
           </span>
         );
-      case 'MANAGER':
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
-            <Building className="w-3 h-3 text-blue-600" />
-            Quản lý (MANAGER)
-          </span>
-        );
       case 'STAFF':
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
@@ -415,7 +407,6 @@ export const UsersPage: React.FC = () => {
               options={[
                 { value: 'ALL', label: 'Tất cả vai trò nhân viên' },
                 { value: 'ADMIN', label: 'Quản trị viên (ADMIN)' },
-                { value: 'MANAGER', label: 'Quản lý cửa hàng (MANAGER)' },
                 { value: 'STAFF', label: 'Thu ngân / Bán hàng (STAFF)' },
                 { value: 'WAREHOUSE', label: 'Thủ kho (WAREHOUSE)' },
               ]}
@@ -619,7 +610,6 @@ export const UsersPage: React.FC = () => {
             options={roles.map((r) => {
               let label = r.roleName;
               if (r.roleName === 'ADMIN') label = 'Quản trị viên (ADMIN) - Toàn quyền quản trị';
-              if (r.roleName === 'MANAGER') label = 'Quản lý cửa hàng (MANAGER) - Kho, sản phẩm, báo cáo';
               if (r.roleName === 'STAFF') label = 'Thu ngân / Bán hàng (STAFF) - Quầy POS & Đơn hàng';
               if (r.roleName === 'WAREHOUSE') label = 'Thủ kho (WAREHOUSE) - Quản lý lô FEFO & Nhập xuất';
               return { value: String(r.roleId), label };
@@ -702,7 +692,6 @@ export const UsersPage: React.FC = () => {
             options={roles.map((r) => {
               let label = r.roleName;
               if (r.roleName === 'ADMIN') label = 'Quản trị viên (ADMIN) - Toàn quyền quản trị';
-              if (r.roleName === 'MANAGER') label = 'Quản lý cửa hàng (MANAGER) - Kho, sản phẩm, báo cáo';
               if (r.roleName === 'STAFF') label = 'Thu ngân / Bán hàng (STAFF) - Quầy POS & Đơn hàng';
               if (r.roleName === 'WAREHOUSE') label = 'Thủ kho (WAREHOUSE) - Quản lý lô FEFO & Nhập xuất';
               return { value: String(r.roleId), label };

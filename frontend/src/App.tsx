@@ -8,15 +8,12 @@ import { AppLayout } from './components/layout/AppLayout';
 import type { RoleName } from './types';
 
 import { LoginPage } from './pages/LoginPage';
-import { DashboardPage } from './pages/DashboardPage';
 import { ProductsPage } from './pages/ProductsPage';
 import { InventoryPage } from './pages/InventoryPage';
 import { SuppliersPage } from './pages/SuppliersPage';
-import { PurchaseCostsPage } from './pages/PurchaseCostsPage';
 import { PromotionsPage } from './pages/PromotionsPage';
 import { PosPage } from './pages/PosPage';
 import { SalesOrdersPage } from './pages/SalesOrdersPage';
-import { ReportsPage } from './pages/ReportsPage';
 import { UsersPage } from './pages/UsersPage';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -52,7 +49,7 @@ const RoleRoute: React.FC<{ allowedRoles: RoleName[]; children: React.ReactNode 
   if (role && !allowedRoles.includes(role)) {
     const destination = role === 'STAFF' ? '/pos'
       : role === 'WAREHOUSE' ? '/inventory'
-      : role === 'ADMIN' || role === 'MANAGER' ? '/admin'
+      : role === 'ADMIN' ? '/pos'
       : '/login';
     return <Navigate to={destination} replace />;
   }
@@ -82,23 +79,16 @@ export const App: React.FC = () => {
                     </ProtectedRoute>
                   }
                 >
-                  <Route
-                    path="/admin"
-                    element={
-                      <RoleRoute allowedRoles={['ADMIN', 'MANAGER']}>
-                        <DashboardPage />
-                      </RoleRoute>
-                    }
-                  />
-                  <Route path="/dashboard" element={<Navigate to="/admin" replace />} />
-                  <Route path="/suppliers" element={<RoleRoute allowedRoles={['ADMIN', 'MANAGER', 'WAREHOUSE']}><SuppliersPage /></RoleRoute>} />
-                  <Route path="/purchase-costs" element={<RoleRoute allowedRoles={['ADMIN', 'MANAGER', 'WAREHOUSE']}><PurchaseCostsPage /></RoleRoute>} />
-                  <Route path="/supplier-prices" element={<Navigate to="/purchase-costs" replace />} />
-                  <Route path="/promotions" element={<RoleRoute allowedRoles={['ADMIN', 'MANAGER']}><PromotionsPage /></RoleRoute>} />
+                  {/* Trang phân tích của bản BigData đã bỏ; giữ đường dẫn cũ để không trắng trang. */}
+                  {['/admin', '/dashboard', '/reports', '/purchase-costs', '/supplier-prices'].map((path) => (
+                    <Route key={path} path={path} element={<Navigate to="/pos" replace />} />
+                  ))}
+                  <Route path="/suppliers" element={<RoleRoute allowedRoles={['ADMIN', 'WAREHOUSE']}><SuppliersPage /></RoleRoute>} />
+                  <Route path="/promotions" element={<RoleRoute allowedRoles={['ADMIN']}><PromotionsPage /></RoleRoute>} />
                   <Route
                     path="/pos"
                     element={
-                      <RoleRoute allowedRoles={['STAFF']}>
+                      <RoleRoute allowedRoles={['ADMIN', 'STAFF']}>
                         <PosPage />
                       </RoleRoute>
                     }
@@ -106,7 +96,7 @@ export const App: React.FC = () => {
                   <Route
                     path="/products"
                     element={
-                      <RoleRoute allowedRoles={['ADMIN', 'MANAGER', 'STAFF', 'WAREHOUSE']}>
+                      <RoleRoute allowedRoles={['ADMIN', 'STAFF', 'WAREHOUSE']}>
                         <ProductsPage />
                       </RoleRoute>
                     }
@@ -114,7 +104,7 @@ export const App: React.FC = () => {
                   <Route
                     path="/inventory"
                     element={
-                      <RoleRoute allowedRoles={['ADMIN', 'MANAGER', 'WAREHOUSE']}>
+                      <RoleRoute allowedRoles={['ADMIN', 'WAREHOUSE']}>
                         <InventoryPage />
                       </RoleRoute>
                     }
@@ -122,16 +112,8 @@ export const App: React.FC = () => {
                   <Route
                     path="/orders"
                     element={
-                      <RoleRoute allowedRoles={['ADMIN', 'MANAGER', 'STAFF']}>
+                      <RoleRoute allowedRoles={['ADMIN', 'STAFF']}>
                         <SalesOrdersPage />
-                      </RoleRoute>
-                    }
-                  />
-                  <Route
-                    path="/reports"
-                    element={
-                      <RoleRoute allowedRoles={['ADMIN', 'MANAGER']}>
-                        <ReportsPage />
                       </RoleRoute>
                     }
                   />

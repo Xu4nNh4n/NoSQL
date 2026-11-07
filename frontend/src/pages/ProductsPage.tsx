@@ -24,7 +24,7 @@ import { useAuth } from '../contexts/AuthContext';
 
 export const ProductsPage: React.FC = () => {
   const { role } = useAuth();
-  const canManage = role === 'ADMIN' || role === 'MANAGER' || role === 'WAREHOUSE';
+  const canManage = role === 'ADMIN' || role === 'WAREHOUSE';
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchKeyword, setSearchKeyword] = useState('');

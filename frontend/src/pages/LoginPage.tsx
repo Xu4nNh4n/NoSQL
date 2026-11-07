@@ -20,10 +20,8 @@ export const LoginPage: React.FC = () => {
 
     try {
       const res = await login(username, password);
-      if (res.role === 'STAFF') {
+      if (res.role === 'STAFF' || res.role === 'ADMIN') {
         navigate('/pos');
-      } else if (res.role === 'ADMIN' || res.role === 'MANAGER') {
-        navigate('/admin');
       } else if (res.role === 'WAREHOUSE') {
         navigate('/inventory');
       } else {
