@@ -12,7 +12,7 @@ export function Table({ headers, children, loading, error, empty }: {
   return (
     <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
       <table className="min-w-full text-sm">
-        <thead className="bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+        <thead className="border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
           <tr>{headers.map((h, i) => <th key={i} className="px-3 py-2.5 whitespace-nowrap">{h}</th>)}</tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
@@ -60,7 +60,7 @@ export function Pager({ page, totalPages, totalElements, onPage }: { page: numbe
         {pageItems(page, totalPages).map((p, i) => p === 'gap'
           ? <span key={`gap-${i}`} className="px-1 text-gray-400">…</span>
           : <button key={p} type="button" aria-current={p === page ? 'page' : undefined} onClick={() => onPage(p)}
-              className={`${btn} ${p === page ? 'border-blue-600 bg-blue-600 font-semibold text-white' : 'border-gray-300 bg-white hover:bg-gray-50'}`}>{p + 1}</button>)}
+              className={`${btn} ${p === page ? 'border-blue-600 bg-blue-600 font-semibold text-accent-fg' : 'border-gray-300 bg-white hover:bg-gray-50'}`}>{p + 1}</button>)}
         <button type="button" className={`${btn} border-gray-300 bg-white hover:bg-gray-50`} disabled={page >= totalPages - 1} onClick={() => onPage(page + 1)} aria-label="Trang sau">›</button>
       </div>
     </nav>
@@ -100,4 +100,4 @@ export function Field({ label, children }: { label: string; children: React.Reac
   );
 }
 
-export const inputClass = 'w-full min-h-10 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-700';
+export const inputClass = 'w-full min-h-10 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-600';

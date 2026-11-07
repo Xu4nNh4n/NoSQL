@@ -49,7 +49,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         {toasts.map((t) => (
           <div
             key={t.id}
-            className={`pointer-events-auto flex items-start gap-3 p-3.5 rounded-xl border shadow-lg bg-white transition-all transform animate-in fade-in slide-in-from-bottom-2 duration-200 ${
+            className={`pointer-events-auto flex items-start gap-3 p-3.5 rounded-lg border shadow-lg bg-white text-gray-900 transition-all transform animate-in fade-in slide-in-from-bottom-2 duration-200 ${
               t.type === 'success'
                 ? 'border-blue-200 text-blue-950'
                 : t.type === 'error'

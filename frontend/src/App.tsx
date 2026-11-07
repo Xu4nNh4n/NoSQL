@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import { ToastProvider } from './components/ui/Toast';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { AppLayout } from './components/layout/AppLayout';
@@ -25,7 +26,7 @@ const homeFor =(role: RoleName | null) => (role === 'WAREHOUSE' ? '/inventory' :
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
   if (isLoading) {
-    return <div className="flex min-h-screen items-center justify-center text-sm text-gray-500">Đang khởi tạo phiên làm việc…</div>;
+    return <div className="flex min-h-screen items-center justify-center text-sm text-gray-500">~/supermarket $ đang khởi tạo phiên làm việc…</div>;
   }
   return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
 };
@@ -58,6 +59,7 @@ const routes: { path: string; roles: RoleName[]; element: React.ReactNode }[] = 
 ];
 
 export const App: React.FC = () => (
+  <ThemeProvider>
   <ErrorBoundary>
     <BrowserRouter>
       <AuthProvider>
@@ -76,6 +78,7 @@ export const App: React.FC = () => (
       </AuthProvider>
     </BrowserRouter>
   </ErrorBoundary>
+  </ThemeProvider>
 );
 
 export default App;

@@ -1,15 +1,17 @@
-import { Menu, ShoppingCart, LogOut, ShieldCheck, User as UserIcon } from 'lucide-react';
+import { Menu, ShoppingCart, LogOut, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { Button } from '../ui/Button';
+import { ThemeToggle } from '../ui/ThemeToggle';
 
 interface HeaderProps {
   onToggleMobileMenu: () => void;
   isMobileMenuOpen: boolean;
   pageTitle?: string;
+  section?: string;
 }
 
-export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu, isMobileMenuOpen, pageTitle }) => {
+/** Thanh trên: đường dẫn kiểu terminal "~/supermarket $ <mục> › <trang>", nút đổi giao diện, người dùng. */
+export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu, isMobileMenuOpen, pageTitle, section }) => {
   const { user, role, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -19,63 +21,53 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu, isMobileMenu
   };
 
   return (
-    <header className="min-h-16 bg-white border-b border-gray-200 sticky top-0 z-30 flex items-center justify-between gap-3 px-4 sm:px-6">
-      {/* Left: Hamburger & Page Title */}
-      <div className="flex items-center gap-3">
+    <header className="sticky top-0 z-30 flex min-h-16 items-center justify-between gap-3 border-b border-gray-200 bg-[var(--c-bg)]/95 px-4 backdrop-blur sm:px-6">
+      <div className="flex min-w-0 items-center gap-3">
         <button
           type="button"
           onClick={onToggleMobileMenu}
           aria-label="Mở điều hướng"
           aria-expanded={isMobileMenuOpen}
           aria-controls="main-navigation"
-          className="p-1.5 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 lg:hidden cursor-pointer"
+          className="cursor-pointer rounded-md border border-gray-300 p-1.5 text-gray-600 hover:text-gray-900 lg:hidden"
         >
-          <Menu className="w-5 h-5" />
+          <Menu className="h-5 w-5" />
         </button>
-        <div className="flex items-center gap-2">
-          <h2 className="text-sm sm:text-base font-semibold text-gray-900 tracking-tight truncate">
-            {pageTitle || 'Hệ thống Quản lý Siêu thị'}
-          </h2>
+        <div className="flex min-w-0 items-center gap-2 text-[13px]">
+          <span className="hidden shrink-0 text-gray-500 md:inline">~/supermarket $ {section ?? (role ?? '').toLowerCase()}</span>
+          <ChevronRight className="hidden h-3.5 w-3.5 shrink-0 text-gray-400 md:inline" />
+          <h2 className="truncate font-semibold text-gray-900">{pageTitle || 'Hệ thống Quản lý Siêu thị'}</h2>
         </div>
       </div>
 
-      {/* Right: Actions & User Info */}
-      <div className="flex items-center gap-3">
-        {/* Fast POS Button */}
-        {role === 'STAFF' && <Button
-          size="sm"
-          variant="outline"
-          leftIcon={<ShoppingCart className="w-4 h-4 text-blue-600" />}
-          onClick={() => navigate('/pos')}
-          className="hidden md:inline-flex border-blue-300 text-blue-700 hover:bg-blue-50 text-xs"
-        >
-          Mở quầy POS
-        </Button>}
+      <div className="flex items-center gap-2">
+        {role === 'STAFF' && (
+          <button
+            type="button"
+            onClick={() => navigate('/pos')}
+            className="hidden h-9 cursor-pointer items-center gap-2 rounded-md bg-accent px-3 text-xs font-semibold text-accent-fg hover:bg-[var(--a-hover)] md:inline-flex"
+          >
+            <ShoppingCart className="h-4 w-4" /> Mở quầy POS
+          </button>
+        )}
+        <ThemeToggle />
 
-        {/* User Card */}
-        <div className="flex items-center gap-2.5 pl-3 border-l border-gray-200">
-          <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-800 flex items-center justify-center font-semibold text-xs border border-blue-200">
-            {user?.username ? user.username.charAt(0).toUpperCase() : <UserIcon className="w-4 h-4" />}
+        <div className="ml-1 flex items-center gap-2.5 border-l border-gray-200 pl-3">
+          <div className="flex h-8 w-8 items-center justify-center rounded-md border border-gray-300 text-xs font-bold text-gray-900">
+            {(user?.username ?? '?').charAt(0).toUpperCase()}
           </div>
-          <div className="hidden sm:block text-left">
-            <p className="text-xs font-semibold text-gray-900 leading-tight">
-              {user?.fullName || user?.username || 'Nhân viên'}
-            </p>
-            <div className="flex items-center gap-1 text-[11px] text-gray-500">
-              <ShieldCheck className="w-3 h-3 text-blue-600" />
-              <span>{user?.role || 'STAFF'}</span>
-            </div>
+          <div className="hidden text-left sm:block">
+            <p className="text-xs font-semibold leading-tight text-gray-900">{user?.fullName || user?.username || 'Nhân viên'}</p>
+            <p className="text-[11px] text-gray-500">{user?.role || 'STAFF'}</p>
           </div>
-
-          {/* Logout */}
           <button
             type="button"
             onClick={handleLogout}
             title="Đăng xuất"
             aria-label="Đăng xuất tài khoản"
-            className="p-1.5 rounded-lg text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer ml-1"
+            className="ml-1 cursor-pointer rounded-md p-1.5 text-gray-500 transition-colors hover:bg-rose-50 hover:text-rose-600"
           >
-            <LogOut className="w-4 h-4" />
+            <LogOut className="h-4 w-4" />
           </button>
         </div>
       </div>

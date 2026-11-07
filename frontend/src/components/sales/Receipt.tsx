@@ -6,9 +6,9 @@ export const STORE_NAME = 'SIÊU THỊ & POS';
 /** Nội dung hóa đơn khổ 80mm: dùng cho xem trước trên màn hình và bản in. */
 export function ReceiptView({ order, returns = [], reprint = false, printedAt }: { order: SalesOrder; returns?: SalesReturn[]; reprint?: boolean; printedAt?: string }) {
   const ref = order.transactionRef ?? order.payments.find(p => p.type === 'PAYMENT')?.reference;
-  const line = 'border-t border-dashed border-gray-400';
+  const line = 'border-t border-dashed border-[#9ca3af]';
   return (
-    <div className="mx-auto w-full max-w-[80mm] bg-white font-mono text-[12px] leading-snug text-black">
+    <div className="mx-auto w-full max-w-[80mm] bg-[#ffffff] font-mono text-[12px] leading-snug text-[#000000]">
       <div className="text-center">
         <p className="text-sm font-bold">{STORE_NAME}</p>
         <p className="mt-1 font-bold">HÓA ĐƠN BÁN HÀNG</p>

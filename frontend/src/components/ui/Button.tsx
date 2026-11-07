@@ -19,7 +19,7 @@ export const Button: React.FC<ButtonProps> = ({
   className = '',
   ...props
 }) => {
-  const baseStyles = 'inline-flex min-h-10 items-center justify-center font-medium rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-700 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer';
+  const baseStyles = 'inline-flex min-h-10 items-center justify-center font-medium rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--c-bg)] focus-visible:ring-blue-600 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer';
 
   const sizeStyles = {
     sm: 'text-sm px-3 gap-1.5',
@@ -28,11 +28,11 @@ export const Button: React.FC<ButtonProps> = ({
   };
 
   const variantStyles = {
-    primary: 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500 shadow-xs',
-    secondary: 'bg-gray-100 text-gray-800 hover:bg-gray-200 focus:ring-gray-400',
-    outline: 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:ring-blue-500',
-    danger: 'bg-rose-600 text-white hover:bg-rose-700 focus:ring-rose-500 shadow-xs',
-    ghost: 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 focus:ring-gray-300',
+    primary: 'bg-accent text-accent-fg font-semibold hover:bg-[var(--a-hover)]',
+    secondary: 'border border-gray-200 bg-gray-100 text-gray-800 hover:bg-gray-200',
+    outline: 'border border-gray-300 bg-transparent text-gray-800 hover:border-gray-400 hover:bg-gray-50',
+    danger: 'bg-rose-600 text-white font-semibold hover:bg-rose-700',
+    ghost: 'text-gray-600 hover:bg-gray-100 hover:text-gray-900',
   };
 
   return (

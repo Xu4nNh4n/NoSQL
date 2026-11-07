@@ -45,7 +45,7 @@ export const Modal: React.FC<ModalProps> = ({
     <div className="fixed inset-0 z-50 overflow-y-auto">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-slate-900/40 backdrop-blur-2xs transition-opacity"
+        className="fixed inset-0 bg-black/60 transition-opacity"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -56,12 +56,12 @@ export const Modal: React.FC<ModalProps> = ({
           role="dialog"
           aria-modal="true"
           aria-labelledby="app-modal-title"
-          className={`relative transform overflow-hidden rounded-xl bg-white text-left shadow-xl transition-all w-full my-8 border border-gray-200 ${maxWidthStyles[effectiveWidth]}`}
+          className={`relative transform overflow-hidden rounded-lg bg-white text-left shadow-2xl transition-all w-full my-8 border border-gray-200 ${maxWidthStyles[effectiveWidth]}`}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
-            <h3 id="app-modal-title" className="text-base font-semibold text-gray-900">{title}</h3>
+          <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
+            <h3 id="app-modal-title" className="text-base font-bold text-gray-900">{title}</h3>
             <button
               type="button"
               onClick={onClose}
@@ -77,7 +77,7 @@ export const Modal: React.FC<ModalProps> = ({
 
           {/* Footer */}
           {footer && (
-            <div className="flex items-center justify-end gap-2 border-t border-gray-100 bg-gray-50/60 px-5 py-3">
+            <div className="flex items-center justify-end gap-2 border-t border-gray-200 bg-gray-50 px-5 py-3">
               {footer}
             </div>
           )}

@@ -13,9 +13,12 @@ export const Card: React.FC<CardProps> = ({ children, className = '', title, act
   return (
     <section className={`bg-white border border-gray-200 rounded-lg overflow-hidden ${className}`}>
       {title && (
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
+        <div className="px-5 pt-4 pb-3 border-b border-gray-200">
+          <div className="seg-stripe mb-3 w-40" />
+          <div className="flex items-center justify-between gap-3">
+          <h3 className="text-sm font-bold text-gray-900">{title}</h3>
           {rightAction && <div>{rightAction}</div>}
+          </div>
         </div>
       )}
       <div className="p-5">{children}</div>

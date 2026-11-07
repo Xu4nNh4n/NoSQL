@@ -3,36 +3,38 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 
-const TITLE_MAP: Record<string, string> = {
-  '/pos': 'Bán tại quầy',
-  '/orders': 'Đơn hàng & trả hàng',
-  '/shift': 'Chốt ca thu ngân',
-  '/promotions': 'Khuyến mãi',
-  '/products': 'Sản phẩm & thẻ kho',
-  '/categories': 'Nhóm hàng',
-  '/inventory': 'Tồn kho theo lô',
-  '/purchase-orders': 'Phiếu nhập hàng',
-  '/suppliers': 'Nhà cung cấp',
-  '/stats': 'Thống kê bán hàng',
-  '/users': 'Người dùng',
-  '/system': 'Trạng thái hệ thống',
+/** Tên trang và "thư mục" hiện trên đường dẫn kiểu terminal ở thanh trên. */
+const PAGES: Record<string, { title: string; section: string }> = {
+  '/pos': { title: 'Bán tại quầy', section: 'ban-hang' },
+  '/orders': { title: 'Đơn hàng & trả hàng', section: 'ban-hang' },
+  '/shift': { title: 'Chốt ca thu ngân', section: 'ban-hang' },
+  '/promotions': { title: 'Khuyến mãi', section: 'ban-hang' },
+  '/products': { title: 'Sản phẩm & thẻ kho', section: 'kho' },
+  '/categories': { title: 'Nhóm hàng', section: 'kho' },
+  '/inventory': { title: 'Tồn kho theo lô', section: 'kho' },
+  '/purchase-orders': { title: 'Phiếu nhập hàng', section: 'kho' },
+  '/suppliers': { title: 'Nhà cung cấp', section: 'kho' },
+  '/stats': { title: 'Thống kê bán hàng', section: 'quan-tri' },
+  '/users': { title: 'Người dùng', section: 'quan-tri' },
+  '/system': { title: 'Trạng thái hệ thống', section: 'quan-tri' },
 };
 
 export const AppLayout: React.FC = () => {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const location = useLocation();
-
-  const pageTitle = TITLE_MAP[location.pathname] || 'Hệ thống Quản lý Siêu thị';
+  const page = PAGES[location.pathname];
 
   return (
-    <div className="min-h-screen bg-slate-50 flex text-slate-900">
-      {/* Sidebar */}
+    <div className="flex min-h-screen bg-[var(--c-bg)] text-gray-900">
       <Sidebar isMobileOpen={isMobileOpen} onCloseMobile={() => setIsMobileOpen(false)} />
-
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 lg:pl-64">
-        <Header onToggleMobileMenu={() => setIsMobileOpen(!isMobileOpen)} isMobileMenuOpen={isMobileOpen} pageTitle={pageTitle} />
-        <main className="flex-1 p-4 sm:p-6 xl:p-8 max-w-[1600px] w-full mx-auto">
+      <div className="flex min-w-0 flex-1 flex-col lg:pl-64">
+        <Header
+          onToggleMobileMenu={() => setIsMobileOpen(!isMobileOpen)}
+          isMobileMenuOpen={isMobileOpen}
+          pageTitle={page?.title ?? 'Hệ thống Quản lý Siêu thị'}
+          section={page?.section}
+        />
+        <main className="mx-auto w-full max-w-[1600px] flex-1 p-4 sm:p-6 xl:p-8">
           <Outlet />
         </main>
       </div>
