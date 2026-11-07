@@ -1,0 +1,17 @@
+info:
+  name: deletePurchaseOrder
+  type: http
+  seq: 5
+  tags:
+    - purchase
+
+http:
+  method: DELETE
+  url: "{{baseUrl}}/api/purchase-orders/{id}"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

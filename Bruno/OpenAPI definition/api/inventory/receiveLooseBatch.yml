@@ -1,0 +1,28 @@
+info:
+  name: receiveLooseBatch
+  type: http
+  seq: 3
+  tags:
+    - inventory
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/inventory/batches"
+  body:
+    type: json
+    data: |-
+      {
+        "productId": "",
+        "supplierId": "",
+        "quantity": 50,
+        "unitCost": 24000,
+        "mfgDate": "2026-11-01",
+        "expiryDate": "2026-11-20"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

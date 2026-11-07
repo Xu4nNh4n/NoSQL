@@ -1,0 +1,17 @@
+info:
+  name: getBatch
+  type: http
+  seq: 2
+  tags:
+    - inventory
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/inventory/batches/{id}"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

@@ -1,0 +1,17 @@
+info:
+  name: getBatches
+  type: http
+  seq: 1
+  tags:
+    - inventory
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/inventory/batches?productId=&page=0&size=20&sortBy=expirySortKey&sortDir=asc"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

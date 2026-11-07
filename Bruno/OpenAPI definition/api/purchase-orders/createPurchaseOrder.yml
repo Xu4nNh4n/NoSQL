@@ -1,0 +1,27 @@
+info:
+  name: createPurchaseOrder
+  type: http
+  seq: 2
+  tags:
+    - purchase
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/purchase-orders"
+  body:
+    type: json
+    data: |-
+      {
+        "supplierId": "",
+        "note": "Nhập hàng tuần 45",
+        "lines": [
+          { "productId": "", "orderedQty": 100, "unitCost": 24000 }
+        ]
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

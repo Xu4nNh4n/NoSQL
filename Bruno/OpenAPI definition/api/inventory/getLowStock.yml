@@ -1,0 +1,17 @@
+info:
+  name: getLowStock
+  type: http
+  seq: 6
+  tags:
+    - inventory
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/inventory/low-stock"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

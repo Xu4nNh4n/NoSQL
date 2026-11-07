@@ -1,0 +1,17 @@
+info:
+  name: getPurchaseOrders
+  type: http
+  seq: 1
+  tags:
+    - purchase
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/purchase-orders?status=DRAFT&supplierId=&page=0&size=20&sortBy=createdAt&sortDir=desc"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

@@ -1,0 +1,25 @@
+info:
+  name: receivePurchaseOrder
+  type: http
+  seq: 6
+  tags:
+    - purchase
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/purchase-orders/{id}/receive"
+  body:
+    type: json
+    data: |-
+      {
+        "lines": [
+          { "lineNo": 1, "receivedQty": 98, "mfgDate": "2026-11-05", "expiryDate": "2026-11-25" }
+        ]
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

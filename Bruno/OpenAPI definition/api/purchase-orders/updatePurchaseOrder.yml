@@ -1,0 +1,28 @@
+info:
+  name: updatePurchaseOrder
+  type: http
+  seq: 4
+  tags:
+    - purchase
+
+http:
+  method: PUT
+  url: "{{baseUrl}}/api/purchase-orders/{id}"
+  body:
+    type: json
+    data: |-
+      {
+        "supplierId": "",
+        "note": "",
+        "lines": [
+          { "productId": "", "orderedQty": 120, "unitCost": 24000 }
+        ],
+        "version": 0
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
