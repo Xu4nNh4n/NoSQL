@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 import { api, errorMessage, qs } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import { useLoad } from '../hooks/useLoad';
@@ -35,21 +36,26 @@ export function InventoryPage() {
 
 function BatchesTab() {
   const toast = useToast();
-  const [productId, setProductId] = useState('');
-  const [page, setPage] = useState(0);
-  const products = useLoad(() => api.get<Page<Product>>('/products?size=100&active=true'), []);
-  const list = useLoad(() => api.get<Page<Batch>>(`/inventory/batches${qs({ productId, page, size: 20 })}`), [productId, page]);
+  const [search, setSearch] = useState('');
+  const [open, setOpen] = useState<Set<string>>(() => new Set());
+  const [version, setVersion] = useState(0);
+  const products = useLoad(() => api.get<Page<Product>>('/products?size=100&active=true'), [version]);
   const [adjust, setAdjust] = useState<{ batch: Batch; quantity: number; reason: string } | null>(null);
   const [loose, setLoose] = useState<{ productId: string; quantity: number; unitCost: number; mfgDate: string; expiryDate: string } | null>(null);
-  const [today] = useState(() => new Date().toISOString().slice(0, 10));
 
+  const refresh = () => setVersion(v => v + 1);
+  const toggle = (id: string) => setOpen(prev => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
   const saveAdjust = async () => {
     if (!adjust) return;
     try {
       await api.post(`/inventory/batches/${adjust.batch.id}/adjustments`, { quantity: adjust.quantity, reason: adjust.reason });
       toast.success('Đã điều chỉnh giảm tồn');
       setAdjust(null);
-      void list.reload();
+      refresh();
     } catch (e) { toast.error(errorMessage(e)); }
   };
   const saveLoose = async () => {
@@ -57,33 +63,48 @@ function BatchesTab() {
     try {
       await api.post('/inventory/batches', { ...loose, mfgDate: loose.mfgDate || null, expiryDate: loose.expiryDate || null });
       toast.success('Đã nhập lô');
+      setOpen(prev => new Set(prev).add(loose.productId));
       setLoose(null);
-      void list.reload();
+      refresh();
     } catch (e) { toast.error(errorMessage(e)); }
   };
+  const newLoose = (productId: string) => setLoose({ productId, quantity: 10, unitCost: 0, mfgDate: '', expiryDate: '' });
+
+  const q = search.trim().toLowerCase();
+  const shown = (products.data?.content ?? []).filter(p => !q || p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q));
+  const allOpen = shown.length > 0 && shown.every(p => open.has(p.id));
 
   return (
     <>
       <Toolbar>
-        <Field label="Sản phẩm"><select className={inputClass} value={productId} onChange={e => { setProductId(e.target.value); setPage(0); }}>
-          <option value="">Tất cả</option>{products.data?.content.map(p => <option key={p.id} value={p.id}>{p.sku} · {p.name}</option>)}</select></Field>
-        <Button variant="outline" onClick={() => setLoose({ productId: products.data?.content[0]?.id ?? '', quantity: 10, unitCost: 0, mfgDate: '', expiryDate: '' })}>Nhập lô lẻ</Button>
+        <Field label="Tìm sản phẩm"><input className={inputClass} placeholder="Tên hoặc SKU" value={search} onChange={e => setSearch(e.target.value)} /></Field>
+        <Button variant="outline" onClick={() => setOpen(allOpen ? new Set() : new Set(shown.map(p => p.id)))}>{allOpen ? 'Thu gọn tất cả' : 'Mở tất cả'}</Button>
+        <Button variant="outline" onClick={() => newLoose(products.data?.content[0]?.id ?? '')}>Nhập lô lẻ</Button>
       </Toolbar>
-      <Table headers={['Mã lô', 'Sản phẩm', 'NCC', 'Nhận', 'Còn', 'Hỏng', 'Giá vốn', 'Hạn dùng', 'Nhận lúc', '']}
-        loading={list.loading} error={list.error} empty={list.data?.content.length === 0}>
-        {list.data?.content.map(b => {
-          const expired = !!b.expiryDate && b.expiryDate < today;
+      <Table headers={['', 'SKU', 'Sản phẩm', 'Nhóm hàng', 'Tồn kho', 'Hỏng', 'Mức đặt lại', '']}
+        loading={products.loading} error={products.error} empty={shown.length === 0}>
+        {shown.map(p => {
+          const isOpen = open.has(p.id);
+          const low = p.stockQuantity <= p.reorderPoint;
           return (
-            <tr key={b.id} className={expired ? 'bg-rose-50' : ''}>
-              <Td className="font-mono text-xs">{b.batchCode}</Td><Td>{b.productName}</Td><Td>{b.supplierName}</Td>
-              <Td>{b.receivedQty}</Td><Td className="font-semibold">{b.remainingQty}</Td><Td>{b.damagedQty}</Td>
-              <Td>{formatVND(b.unitCost)}</Td><Td className={expired ? 'text-rose-600' : ''}>{b.expiryDate ? formatDate(b.expiryDate) : 'Không hạn'}</Td>
-              <Td className="text-xs">{formatDateTime(b.receivedAt)}<br />{b.purchaseOrderCode ?? 'lô lẻ'}</Td>
-              <Td>{b.remainingQty > 0 && <Button size="sm" variant="outline" onClick={() => setAdjust({ batch: b, quantity: 1, reason: '' })}>Điều chỉnh</Button>}</Td>
-            </tr>);
+            <Fragment key={p.id}>
+              <tr className={`cursor-pointer hover:bg-gray-50 ${isOpen ? 'bg-blue-50/60' : ''}`} onClick={() => toggle(p.id)}>
+                <Td className="w-8 text-gray-500">{isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}</Td>
+                <Td className="font-mono text-xs">{p.sku}</Td>
+                <Td className="font-medium">{p.name}</Td>
+                <Td>{p.categoryName}</Td>
+                <Td className={`font-semibold ${p.stockQuantity === 0 ? 'text-rose-600' : low ? 'text-amber-600' : ''}`}>{p.stockQuantity}</Td>
+                <Td>{p.damagedQuantity}</Td>
+                <Td>{p.reorderPoint}</Td>
+                <Td><Button size="sm" variant="ghost" onClick={e => { e.stopPropagation(); newLoose(p.id); }}>+ Nhập lô</Button></Td>
+              </tr>
+              {isOpen && (
+                <tr><td colSpan={8} className="bg-gray-50 px-4 py-3">
+                  <ProductBatches productId={p.id} version={version} onAdjust={bt => setAdjust({ batch: bt, quantity: 1, reason: '' })} />
+                </td></tr>)}
+            </Fragment>);
         })}
       </Table>
-      <ServerPager page={list.data} onPage={setPage} />
 
       <Modal isOpen={!!adjust} onClose={() => setAdjust(null)} title={`Điều chỉnh giảm lô ${adjust?.batch.batchCode ?? ''}`}
         footer={<><Button variant="outline" onClick={() => setAdjust(null)}>Hủy</Button><Button variant="danger" onClick={saveAdjust}>Giảm tồn</Button></>}>
@@ -109,6 +130,50 @@ function BatchesTab() {
           </div>)}
       </Modal>
     </>
+  );
+}
+
+function ProductBatches({ productId, version, onAdjust }: { productId: string; version: number; onAdjust: (b: Batch) => void }) {
+  const [page, setPage] = useState(0);
+  const [today] = useState(() => new Date().toISOString().slice(0, 10));
+  const list = useLoad(() => api.get<Page<Batch>>(`/inventory/batches${qs({ productId, page, size: 20 })}`), [productId, page, version]);
+  if (list.loading && !list.data) return <p className="text-sm text-gray-500">Đang tải lô…</p>;
+  if (list.error) return <p className="text-sm text-rose-600">{list.error}</p>;
+  const rows = list.data?.content ?? [];
+  if (rows.length === 0) return <p className="text-sm text-gray-500">Chưa có lô nào. Bấm "+ Nhập lô" hoặc nhận phiếu nhập.</p>;
+  // Lô bán tiếp theo theo FEFO: còn hàng, chưa hết hạn, hạn gần nhất (API đã sắp theo hạn tăng dần)
+  const next = rows.find(b => b.remainingQty > 0 && !(b.expiryDate && b.expiryDate < today));
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead><tr className="text-left text-xs uppercase text-gray-500">
+          {['Mã lô', 'NCC', 'Nhận', 'Còn', 'Hỏng', 'Giá vốn', 'Hạn dùng', 'Nhận lúc', ''].map(h => <th key={h} className="px-2 py-1 font-medium">{h}</th>)}
+        </tr></thead>
+        <tbody>
+          {rows.map(b => {
+            const expired = !!b.expiryDate && b.expiryDate < today;
+            const empty = b.remainingQty === 0;
+            return (
+              <tr key={b.id} className={`border-t border-gray-200 ${expired && !empty ? 'bg-rose-50' : ''} ${empty ? 'text-gray-400' : ''}`}>
+                <td className="px-2 py-1.5 font-mono text-xs whitespace-nowrap">{b.batchCode}
+                  {b.id === next?.id && <span className="ml-2 rounded bg-green-100 px-1.5 py-0.5 font-sans text-[10px] font-semibold text-green-700">Bán tiếp theo</span>}
+                  {expired && !empty && <span className="ml-2 rounded bg-rose-100 px-1.5 py-0.5 font-sans text-[10px] font-semibold text-rose-700">Hết hạn</span>}
+                  {empty && <span className="ml-2 font-sans text-[10px]">đã hết</span>}
+                </td>
+                <td className="px-2 py-1.5">{b.supplierName}</td>
+                <td className="px-2 py-1.5">{b.receivedQty}</td>
+                <td className="px-2 py-1.5 font-semibold">{b.remainingQty}</td>
+                <td className="px-2 py-1.5">{b.damagedQty}</td>
+                <td className="px-2 py-1.5">{formatVND(b.unitCost)}</td>
+                <td className={`px-2 py-1.5 ${expired && !empty ? 'text-rose-600' : ''}`}>{b.expiryDate ? formatDate(b.expiryDate) : 'Không hạn'}</td>
+                <td className="px-2 py-1.5 text-xs whitespace-nowrap">{formatDateTime(b.receivedAt)} · {b.purchaseOrderCode ?? 'lô lẻ'}</td>
+                <td className="px-2 py-1.5 text-right whitespace-nowrap">{!empty && <Button size="sm" variant="outline" onClick={() => onAdjust(b)}>Điều chỉnh</Button>}</td>
+              </tr>);
+          })}
+        </tbody>
+      </table>
+      <ServerPager page={list.data} onPage={setPage} />
+    </div>
   );
 }
 
