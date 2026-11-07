@@ -1,0 +1,23 @@
+info:
+  name: recallBatch
+  type: http
+  seq: 2
+  tags:
+    - graph
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/batches/L261107-0001/recall"
+  body:
+    type: json
+    data: |-
+      {
+        "reason": "Nhà cung cấp báo lỗi bao bì"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

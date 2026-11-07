@@ -1,0 +1,17 @@
+info:
+  name: traceBatch
+  type: http
+  seq: 1
+  tags:
+    - graph
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/batches/L261107-0001/trace"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
