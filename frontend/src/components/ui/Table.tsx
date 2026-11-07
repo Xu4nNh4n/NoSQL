@@ -1,5 +1,4 @@
 import React from 'react';
-import { Button } from './Button';
 import type { Page } from '../../types';
 
 /** Bảng đơn giản: tiêu đề cột + nội dung. Trạng thái tải/trống/lỗi hiển thị trong thân bảng. */
@@ -35,19 +34,45 @@ export function Td({ children, className = '' }: { children?: React.ReactNode; c
   return <td className={`px-3 py-2.5 align-top ${className}`}>{children}</td>;
 }
 
-/** Phân trang theo server (PageResponse của backend, trang bắt đầu từ 0). */
-export function ServerPager<T>({ page, onPage }: { page: Page<T> | null; onPage: (p: number) => void }) {
-  if (!page || page.totalPages <= 1) return null;
+/** Các số trang cần hiện (trang bắt đầu từ 0): đầu, cuối, quanh trang hiện tại; khoảng trống thành "…". */
+function pageItems(current: number, total: number): (number | 'gap')[] {
+  const keep = new Set<number>([0, total - 1, current - 1, current, current + 1]);
+  if (current <= 2) [1, 2, 3].forEach(p => keep.add(p));
+  if (current >= total - 3) [total - 2, total - 3, total - 4].forEach(p => keep.add(p));
+  const pages = [...keep].filter(p => p >= 0 && p < total).sort((a, b) => a - b);
+  const items: (number | 'gap')[] = [];
+  pages.forEach((p, i) => {
+    if (i > 0 && p - pages[i - 1] > 1) items.push('gap');
+    items.push(p);
+  });
+  return items;
+}
+
+/** Phân trang có số: ‹ 1 2 3 … n ›. {@code page} bắt đầu từ 0. Chỉ 1 trang thì ẩn. */
+export function Pager({ page, totalPages, totalElements, onPage }: { page: number; totalPages: number; totalElements: number; onPage: (p: number) => void }) {
+  if (totalPages <= 1) return null;
+  const btn = 'min-w-8 h-8 rounded-md border px-2 text-sm disabled:opacity-40 disabled:cursor-not-allowed';
   return (
-    <div className="mt-3 flex items-center justify-between text-sm text-gray-600">
-      <span>Trang {page.page + 1}/{page.totalPages} · {page.totalElements} bản ghi</span>
-      <div className="flex gap-2">
-        <Button size="sm" variant="outline" disabled={page.page === 0} onClick={() => onPage(page.page - 1)}>Trước</Button>
-        <Button size="sm" variant="outline" disabled={page.last} onClick={() => onPage(page.page + 1)}>Sau</Button>
+    <nav aria-label="Phân trang" className="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm text-gray-600">
+      <span>{totalElements} bản ghi · trang {page + 1}/{totalPages}</span>
+      <div className="flex flex-wrap items-center gap-1">
+        <button type="button" className={`${btn} border-gray-300 bg-white hover:bg-gray-50`} disabled={page === 0} onClick={() => onPage(page - 1)} aria-label="Trang trước">‹</button>
+        {pageItems(page, totalPages).map((p, i) => p === 'gap'
+          ? <span key={`gap-${i}`} className="px-1 text-gray-400">…</span>
+          : <button key={p} type="button" aria-current={p === page ? 'page' : undefined} onClick={() => onPage(p)}
+              className={`${btn} ${p === page ? 'border-blue-600 bg-blue-600 font-semibold text-white' : 'border-gray-300 bg-white hover:bg-gray-50'}`}>{p + 1}</button>)}
+        <button type="button" className={`${btn} border-gray-300 bg-white hover:bg-gray-50`} disabled={page >= totalPages - 1} onClick={() => onPage(page + 1)} aria-label="Trang sau">›</button>
       </div>
-    </div>
+    </nav>
   );
 }
+
+/** Phân trang theo server (PageResponse của backend, trang bắt đầu từ 0). */
+export function ServerPager<T>({ page, onPage }: { page: Page<T> | null; onPage: (p: number) => void }) {
+  if (!page) return null;
+  return <Pager page={page.page} totalPages={page.totalPages} totalElements={page.totalElements} onPage={onPage} />;
+}
+
 
 export function Tabs<K extends string>({ tabs, value, onChange }: { tabs: { key: K; label: string }[]; value: K; onChange: (k: K) => void }) {
   return (

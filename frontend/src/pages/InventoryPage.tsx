@@ -1,12 +1,13 @@
-import { Fragment, useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { api, errorMessage, qs } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import { useLoad } from '../hooks/useLoad';
+import { useClientPage } from '../hooks/useClientPage';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { useToast } from '../components/ui/Toast';
-import { Field, inputClass, ServerPager, Table, Tabs, Td, Toolbar } from '../components/ui/Table';
+import { Field, inputClass, Pager, ServerPager, Table, Tabs, Td, Toolbar } from '../components/ui/Table';
 import { formatDate, formatDateTime, formatVND } from '../utils/formatters';
 import type { Batch, LowStockItem, Page, Product, TraceResult } from '../types';
 
@@ -27,43 +28,159 @@ export function InventoryPage() {
       <Tabs tabs={tabs} value={tab} onChange={setTab} />
       {tab === 'batches' && <BatchesTab />}
       {tab === 'low' && <LowStockTab />}
-      {tab === 'soon' && <BatchList url="/inventory/batches/expiring-soon" note="Job 07:00 tính sẵn và lưu Redis 24 giờ." />}
-      {tab === 'expired' && <BatchList url="/inventory/batches/expired" note="Lô hết hạn còn tồn: điều chỉnh giảm ở tab Lô hàng." />}
+      {tab === 'soon' && <GroupedBatches key="soon" url="/inventory/batches/expiring-soon" note="Lô còn hàng hết hạn trong 3 ngày tới. Job 07:00 tính sẵn và lưu Redis 24 giờ." />}
+      {tab === 'expired' && <GroupedBatches key="expired" url="/inventory/batches/expired" note="Lô đã quá hạn nhưng còn tồn: quầy không bán được, nên điều chỉnh giảm (hủy hàng)." expired />}
       {tab === 'trace' && <TraceTab />}
     </div>
   );
 }
 
-function BatchesTab() {
-  const toast = useToast();
-  const [search, setSearch] = useState('');
-  const [open, setOpen] = useState<Set<string>>(() => new Set());
-  const [version, setVersion] = useState(0);
-  const products = useLoad(() => api.get<Page<Product>>('/products?size=100&active=true'), [version]);
-  const [adjust, setAdjust] = useState<{ batch: Batch; quantity: number; reason: string } | null>(null);
-  const [loose, setLoose] = useState<{ productId: string; quantity: number; unitCost: number; mfgDate: string; expiryDate: string } | null>(null);
+const todayKey = () => new Date(Date.now() + 7 * 3600000).toISOString().slice(0, 10);
 
-  const refresh = () => setVersion(v => v + 1);
-  const toggle = (id: string) => setOpen(prev => {
-    const next = new Set(prev);
-    if (next.has(id)) next.delete(id); else next.add(id);
-    return next;
-  });
-  const saveAdjust = async () => {
+/** Mở/đóng từng nhóm sản phẩm. */
+function useExpanded() {
+  const [open, setOpen] = useState<Set<string>>(() => new Set());
+  return {
+    isOpen: (id: string) => open.has(id),
+    toggle: (id: string) => setOpen(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    }),
+    openOne: (id: string) => setOpen(prev => new Set(prev).add(id)),
+    setAll: (ids: string[]) => setOpen(new Set(ids)),
+  };
+}
+
+/** Hộp điều chỉnh giảm tồn một lô, dùng chung cho các tab. */
+function useAdjust(onDone: () => void) {
+  const toast = useToast();
+  const [adjust, setAdjust] = useState<{ batch: Batch; quantity: number; reason: string } | null>(null);
+  const save = async () => {
     if (!adjust) return;
     try {
       await api.post(`/inventory/batches/${adjust.batch.id}/adjustments`, { quantity: adjust.quantity, reason: adjust.reason });
       toast.success('Đã điều chỉnh giảm tồn');
       setAdjust(null);
-      refresh();
+      onDone();
     } catch (e) { toast.error(errorMessage(e)); }
   };
+  const modal = (
+    <Modal isOpen={!!adjust} onClose={() => setAdjust(null)} title={`Điều chỉnh giảm lô ${adjust?.batch.batchCode ?? ''}`}
+      footer={<><Button variant="outline" onClick={() => setAdjust(null)}>Hủy</Button><Button variant="danger" onClick={save}>Giảm tồn</Button></>}>
+      {adjust && (
+        <div className="grid gap-3">
+          <p className="text-sm text-gray-600">{adjust.batch.productName} · còn {adjust.batch.remainingQty}. Chỉ được giảm; muốn tăng phải nhập lô.</p>
+          <Field label="Số lượng giảm"><input type="number" min={1} max={adjust.batch.remainingQty} className={inputClass} value={adjust.quantity} onChange={e => setAdjust({ ...adjust, quantity: Number(e.target.value) })} /></Field>
+          <Field label="Lý do *"><input className={inputClass} placeholder="Hư hỏng, hết hạn, hao hụt…" value={adjust.reason} onChange={e => setAdjust({ ...adjust, reason: e.target.value })} /></Field>
+          {adjust.batch.adjustments?.length > 0 && <ul className="text-xs text-gray-500">{adjust.batch.adjustments.map(a => <li key={a.id}>{formatDateTime(a.at)} · −{a.quantity} · {a.reason} · {a.by}</li>)}</ul>}
+        </div>)}
+    </Modal>
+  );
+  return { start: (b: Batch, quantity = 1, reason = '') => setAdjust({ batch: b, quantity, reason }), modal };
+}
+
+/** Một dòng sản phẩm có mũi tên; bấm để xổ phần chi tiết bên dưới. */
+function GroupRow({ open, onToggle, cells, span, children }: {
+  open: boolean; onToggle: () => void; cells: ReactNode; span: number; children: ReactNode;
+}) {
+  return (
+    <>
+      <tr className={`cursor-pointer hover:bg-gray-50 ${open ? 'bg-blue-50/60' : ''}`} onClick={onToggle}>
+        <Td className="w-8 text-gray-500">{open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}</Td>
+        {cells}
+      </tr>
+      {open && <tr><td colSpan={span} className="bg-gray-50 px-4 py-3">{children}</td></tr>}
+    </>
+  );
+}
+
+/** Bảng lô bên trong một sản phẩm. */
+function BatchTable({ rows, onAdjust, markNext = true }: { rows: Batch[]; onAdjust?: (b: Batch) => void; markNext?: boolean }) {
+  const today = todayKey();
+  // Lô bán tiếp theo theo FEFO: còn hàng, chưa hết hạn, hạn gần nhất (danh sách đã sắp theo hạn tăng dần)
+  const next = markNext ? rows.find(b => b.remainingQty > 0 && !(b.expiryDate && b.expiryDate < today)) : undefined;
+  const daysLeft = (d: string) => Math.round((new Date(d).getTime() - new Date(today).getTime()) / 86400000);
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead><tr className="text-left text-xs uppercase text-gray-500">
+          {['Mã lô', 'NCC', 'Nhận', 'Còn', 'Hỏng', 'Giá vốn', 'Hạn dùng', 'Nhận lúc', ''].map(h => <th key={h} className="px-2 py-1 font-medium">{h}</th>)}
+        </tr></thead>
+        <tbody>
+          {rows.map(b => {
+            const expired = !!b.expiryDate && b.expiryDate < today;
+            const empty = b.remainingQty === 0;
+            const left = b.expiryDate ? daysLeft(b.expiryDate) : null;
+            return (
+              <tr key={b.id} className={`border-t border-gray-200 ${expired && !empty ? 'bg-rose-50' : ''} ${empty ? 'text-gray-400' : ''}`}>
+                <td className="px-2 py-1.5 font-mono text-xs whitespace-nowrap">{b.batchCode}
+                  {b.id === next?.id && <span className="ml-2 rounded bg-green-100 px-1.5 py-0.5 font-sans text-[10px] font-semibold text-green-700">Bán tiếp theo</span>}
+                  {expired && !empty && <span className="ml-2 rounded bg-rose-100 px-1.5 py-0.5 font-sans text-[10px] font-semibold text-rose-700">Hết hạn</span>}
+                  {empty && <span className="ml-2 font-sans text-[10px]">đã hết</span>}
+                </td>
+                <td className="px-2 py-1.5 whitespace-nowrap">{b.supplierName}</td>
+                <td className="px-2 py-1.5">{b.receivedQty}</td>
+                <td className="px-2 py-1.5 font-semibold">{b.remainingQty}</td>
+                <td className="px-2 py-1.5">{b.damagedQty}</td>
+                <td className="px-2 py-1.5">{formatVND(b.unitCost)}</td>
+                <td className={`px-2 py-1.5 whitespace-nowrap ${expired && !empty ? 'text-rose-600' : left !== null && left <= 3 && !empty ? 'text-amber-600' : ''}`}>
+                  {b.expiryDate ? formatDate(b.expiryDate) : 'Không hạn'}
+                  {left !== null && !empty && <span className="ml-1 text-[11px]">({left < 0 ? `quá ${-left} ngày` : left === 0 ? 'hôm nay' : `còn ${left} ngày`})</span>}
+                </td>
+                <td className="px-2 py-1.5 text-xs whitespace-nowrap">{formatDateTime(b.receivedAt)} · {b.purchaseOrderCode ?? 'lô lẻ'}</td>
+                <td className="px-2 py-1.5 text-right whitespace-nowrap">{onAdjust && !empty && <Button size="sm" variant="outline" onClick={() => onAdjust(b)}>Điều chỉnh</Button>}</td>
+              </tr>);
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/** Tất cả lô của một sản phẩm, đọc theo trang từ API (sắp theo hạn dùng). */
+function ProductBatches({ productId, version, onAdjust }: { productId: string; version: number; onAdjust?: (b: Batch) => void }) {
+  const [page, setPage] = useState(0);
+  const list = useLoad(() => api.get<Page<Batch>>(`/inventory/batches${qs({ productId, page, size: 10 })}`), [productId, page, version]);
+  if (list.loading && !list.data) return <p className="text-sm text-gray-500">Đang tải lô…</p>;
+  if (list.error) return <p className="text-sm text-rose-600">{list.error}</p>;
+  const rows = list.data?.content ?? [];
+  if (rows.length === 0) return <p className="text-sm text-gray-500">Chưa có lô nào. Bấm "+ Nhập lô" hoặc nhận phiếu nhập.</p>;
+  return (
+    <div>
+      <BatchTable rows={rows} onAdjust={onAdjust} markNext={page === 0} />
+      <ServerPager page={list.data} onPage={setPage} />
+    </div>
+  );
+}
+
+function SearchBox({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return <Field label="Tìm sản phẩm"><input className={inputClass} placeholder="Tên hoặc SKU" value={value} onChange={e => onChange(e.target.value)} /></Field>;
+}
+
+const matches = (q: string, ...fields: (string | undefined)[]) => !q || fields.some(f => f?.toLowerCase().includes(q));
+
+function ExpandAllButton({ ids, expanded }: { ids: string[]; expanded: ReturnType<typeof useExpanded> }) {
+  const allOpen = ids.length > 0 && ids.every(expanded.isOpen);
+  return <Button variant="outline" onClick={() => expanded.setAll(allOpen ? [] : ids)}>{allOpen ? 'Thu gọn tất cả' : 'Mở tất cả'}</Button>;
+}
+
+function BatchesTab() {
+  const toast = useToast();
+  const [search, setSearch] = useState('');
+  const [version, setVersion] = useState(0);
+  const refresh = () => setVersion(v => v + 1);
+  const expanded = useExpanded();
+  const adjust = useAdjust(refresh);
+  const products = useLoad(() => api.get<Page<Product>>('/products?size=100&active=true'), [version]);
+  const [loose, setLoose] = useState<{ productId: string; quantity: number; unitCost: number; mfgDate: string; expiryDate: string } | null>(null);
+
   const saveLoose = async () => {
     if (!loose) return;
     try {
       await api.post('/inventory/batches', { ...loose, mfgDate: loose.mfgDate || null, expiryDate: loose.expiryDate || null });
       toast.success('Đã nhập lô');
-      setOpen(prev => new Set(prev).add(loose.productId));
+      expanded.openOne(loose.productId);
       setLoose(null);
       refresh();
     } catch (e) { toast.error(errorMessage(e)); }
@@ -71,51 +188,36 @@ function BatchesTab() {
   const newLoose = (productId: string) => setLoose({ productId, quantity: 10, unitCost: 0, mfgDate: '', expiryDate: '' });
 
   const q = search.trim().toLowerCase();
-  const shown = (products.data?.content ?? []).filter(p => !q || p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q));
-  const allOpen = shown.length > 0 && shown.every(p => open.has(p.id));
+  const shown = (products.data?.content ?? []).filter(p => matches(q, p.name, p.sku));
+  const paged = useClientPage(shown, 10, q);
 
   return (
     <>
       <Toolbar>
-        <Field label="Tìm sản phẩm"><input className={inputClass} placeholder="Tên hoặc SKU" value={search} onChange={e => setSearch(e.target.value)} /></Field>
-        <Button variant="outline" onClick={() => setOpen(allOpen ? new Set() : new Set(shown.map(p => p.id)))}>{allOpen ? 'Thu gọn tất cả' : 'Mở tất cả'}</Button>
+        <SearchBox value={search} onChange={setSearch} />
+        <ExpandAllButton ids={paged.rows.map(p => p.id)} expanded={expanded} />
         <Button variant="outline" onClick={() => newLoose(products.data?.content[0]?.id ?? '')}>Nhập lô lẻ</Button>
       </Toolbar>
       <Table headers={['', 'SKU', 'Sản phẩm', 'Nhóm hàng', 'Tồn kho', 'Hỏng', 'Mức đặt lại', '']}
         loading={products.loading} error={products.error} empty={shown.length === 0}>
-        {shown.map(p => {
-          const isOpen = open.has(p.id);
+        {paged.rows.map(p => {
           const low = p.stockQuantity <= p.reorderPoint;
           return (
-            <Fragment key={p.id}>
-              <tr className={`cursor-pointer hover:bg-gray-50 ${isOpen ? 'bg-blue-50/60' : ''}`} onClick={() => toggle(p.id)}>
-                <Td className="w-8 text-gray-500">{isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}</Td>
-                <Td className="font-mono text-xs">{p.sku}</Td>
-                <Td className="font-medium">{p.name}</Td>
-                <Td>{p.categoryName}</Td>
-                <Td className={`font-semibold ${p.stockQuantity === 0 ? 'text-rose-600' : low ? 'text-amber-600' : ''}`}>{p.stockQuantity}</Td>
-                <Td>{p.damagedQuantity}</Td>
-                <Td>{p.reorderPoint}</Td>
-                <Td><Button size="sm" variant="ghost" onClick={e => { e.stopPropagation(); newLoose(p.id); }}>+ Nhập lô</Button></Td>
-              </tr>
-              {isOpen && (
-                <tr><td colSpan={8} className="bg-gray-50 px-4 py-3">
-                  <ProductBatches productId={p.id} version={version} onAdjust={bt => setAdjust({ batch: bt, quantity: 1, reason: '' })} />
-                </td></tr>)}
-            </Fragment>);
+            <GroupRow key={p.id} open={expanded.isOpen(p.id)} onToggle={() => expanded.toggle(p.id)} span={8} cells={<>
+              <Td className="font-mono text-xs">{p.sku}</Td>
+              <Td className="font-medium">{p.name}</Td>
+              <Td>{p.categoryName}</Td>
+              <Td className={`font-semibold ${p.stockQuantity === 0 ? 'text-rose-600' : low ? 'text-amber-600' : ''}`}>{p.stockQuantity}</Td>
+              <Td>{p.damagedQuantity}</Td>
+              <Td>{p.reorderPoint}</Td>
+              <Td><Button size="sm" variant="ghost" onClick={e => { e.stopPropagation(); newLoose(p.id); }}>+ Nhập lô</Button></Td>
+            </>}>
+              <ProductBatches productId={p.id} version={version} onAdjust={b => adjust.start(b)} />
+            </GroupRow>);
         })}
       </Table>
-
-      <Modal isOpen={!!adjust} onClose={() => setAdjust(null)} title={`Điều chỉnh giảm lô ${adjust?.batch.batchCode ?? ''}`}
-        footer={<><Button variant="outline" onClick={() => setAdjust(null)}>Hủy</Button><Button variant="danger" onClick={saveAdjust}>Giảm tồn</Button></>}>
-        {adjust && (
-          <div className="grid gap-3">
-            <p className="text-sm text-gray-600">Còn {adjust.batch.remainingQty}. Chỉ được giảm; muốn tăng phải nhập lô.</p>
-            <Field label="Số lượng giảm"><input type="number" min={1} max={adjust.batch.remainingQty} className={inputClass} value={adjust.quantity} onChange={e => setAdjust({ ...adjust, quantity: Number(e.target.value) })} /></Field>
-            <Field label="Lý do *"><input className={inputClass} placeholder="Hư hỏng, hết hạn, hao hụt…" value={adjust.reason} onChange={e => setAdjust({ ...adjust, reason: e.target.value })} /></Field>
-            {adjust.batch.adjustments?.length > 0 && <ul className="text-xs text-gray-500">{adjust.batch.adjustments.map(a => <li key={a.id}>{formatDateTime(a.at)} · −{a.quantity} · {a.reason} · {a.by}</li>)}</ul>}
-          </div>)}
-      </Modal>
+      <Pager {...paged.pager} />
+      {adjust.modal}
 
       <Modal isOpen={!!loose} onClose={() => setLoose(null)} title="Nhập lô lẻ (ngoài phiếu nhập)"
         footer={<><Button variant="outline" onClick={() => setLoose(null)}>Hủy</Button><Button onClick={saveLoose}>Nhập lô</Button></>}>
@@ -133,74 +235,106 @@ function BatchesTab() {
   );
 }
 
-function ProductBatches({ productId, version, onAdjust }: { productId: string; version: number; onAdjust: (b: Batch) => void }) {
-  const [page, setPage] = useState(0);
-  const [today] = useState(() => new Date().toISOString().slice(0, 10));
-  const list = useLoad(() => api.get<Page<Batch>>(`/inventory/batches${qs({ productId, page, size: 20 })}`), [productId, page, version]);
-  if (list.loading && !list.data) return <p className="text-sm text-gray-500">Đang tải lô…</p>;
-  if (list.error) return <p className="text-sm text-rose-600">{list.error}</p>;
-  const rows = list.data?.content ?? [];
-  if (rows.length === 0) return <p className="text-sm text-gray-500">Chưa có lô nào. Bấm "+ Nhập lô" hoặc nhận phiếu nhập.</p>;
-  // Lô bán tiếp theo theo FEFO: còn hàng, chưa hết hạn, hạn gần nhất (API đã sắp theo hạn tăng dần)
-  const next = rows.find(b => b.remainingQty > 0 && !(b.expiryDate && b.expiryDate < today));
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead><tr className="text-left text-xs uppercase text-gray-500">
-          {['Mã lô', 'NCC', 'Nhận', 'Còn', 'Hỏng', 'Giá vốn', 'Hạn dùng', 'Nhận lúc', ''].map(h => <th key={h} className="px-2 py-1 font-medium">{h}</th>)}
-        </tr></thead>
-        <tbody>
-          {rows.map(b => {
-            const expired = !!b.expiryDate && b.expiryDate < today;
-            const empty = b.remainingQty === 0;
-            return (
-              <tr key={b.id} className={`border-t border-gray-200 ${expired && !empty ? 'bg-rose-50' : ''} ${empty ? 'text-gray-400' : ''}`}>
-                <td className="px-2 py-1.5 font-mono text-xs whitespace-nowrap">{b.batchCode}
-                  {b.id === next?.id && <span className="ml-2 rounded bg-green-100 px-1.5 py-0.5 font-sans text-[10px] font-semibold text-green-700">Bán tiếp theo</span>}
-                  {expired && !empty && <span className="ml-2 rounded bg-rose-100 px-1.5 py-0.5 font-sans text-[10px] font-semibold text-rose-700">Hết hạn</span>}
-                  {empty && <span className="ml-2 font-sans text-[10px]">đã hết</span>}
-                </td>
-                <td className="px-2 py-1.5">{b.supplierName}</td>
-                <td className="px-2 py-1.5">{b.receivedQty}</td>
-                <td className="px-2 py-1.5 font-semibold">{b.remainingQty}</td>
-                <td className="px-2 py-1.5">{b.damagedQty}</td>
-                <td className="px-2 py-1.5">{formatVND(b.unitCost)}</td>
-                <td className={`px-2 py-1.5 ${expired && !empty ? 'text-rose-600' : ''}`}>{b.expiryDate ? formatDate(b.expiryDate) : 'Không hạn'}</td>
-                <td className="px-2 py-1.5 text-xs whitespace-nowrap">{formatDateTime(b.receivedAt)} · {b.purchaseOrderCode ?? 'lô lẻ'}</td>
-                <td className="px-2 py-1.5 text-right whitespace-nowrap">{!empty && <Button size="sm" variant="outline" onClick={() => onAdjust(b)}>Điều chỉnh</Button>}</td>
-              </tr>);
-          })}
-        </tbody>
-      </table>
-      <ServerPager page={list.data} onPage={setPage} />
-    </div>
-  );
-}
-
 function LowStockTab() {
-  const list = useLoad(() => api.get<LowStockItem[]>('/inventory/low-stock'), []);
+  const [search, setSearch] = useState('');
+  const [version, setVersion] = useState(0);
+  const expanded = useExpanded();
+  const adjust = useAdjust(() => setVersion(v => v + 1));
+  const list = useLoad(() => api.get<LowStockItem[]>('/inventory/low-stock'), [version]);
+  const q = search.trim().toLowerCase();
+  // Thiếu nhiều nhất lên đầu
+  const shown = (list.data ?? []).filter(i => matches(q, i.name, i.sku)).sort((a, b) => (a.available - a.reorderPoint) - (b.available - b.reorderPoint));
+  const paged = useClientPage(shown, 10, q);
   return (
     <>
-      <p className="mb-3 text-sm text-gray-500">Tồn khả dụng = tổng tồn của các lô còn hạn (aggregation MongoDB, cache Redis 1 phút).</p>
-      <Table headers={['SKU', 'Sản phẩm', 'Khả dụng', 'Tồn (gồm lô hết hạn)', 'Ngưỡng']} loading={list.loading} error={list.error} empty={list.data?.length === 0}>
-        {list.data?.map(i => (
-          <tr key={i.productId}><Td className="font-mono text-xs">{i.sku}</Td><Td>{i.name}</Td>
-            <Td className="font-semibold text-rose-600">{i.available}</Td><Td>{i.stockQuantity}</Td><Td>{i.reorderPoint}</Td></tr>))}
+      <p className="mb-3 text-sm text-gray-500">Sản phẩm có tồn khả dụng (tổng các lô còn hạn) ≤ mức đặt lại. Thiếu nhiều nhất xếp trên. Bấm vào sản phẩm để xem lô.</p>
+      <Toolbar>
+        <SearchBox value={search} onChange={setSearch} />
+        <ExpandAllButton ids={paged.rows.map(i => i.productId)} expanded={expanded} />
+      </Toolbar>
+      <Table headers={['', 'SKU', 'Sản phẩm', 'Khả dụng', 'Tồn (gồm lô hết hạn)', 'Mức đặt lại', 'Cần nhập thêm']}
+        loading={list.loading} error={list.error} empty={shown.length === 0}>
+        {paged.rows.map(i => {
+          const ratio = i.reorderPoint > 0 ? Math.min(1, i.available / i.reorderPoint) : 0;
+          return (
+            <GroupRow key={i.productId} open={expanded.isOpen(i.productId)} onToggle={() => expanded.toggle(i.productId)} span={7} cells={<>
+              <Td className="font-mono text-xs">{i.sku}</Td>
+              <Td className="font-medium">{i.name}</Td>
+              <Td>
+                <span className={`font-semibold ${i.available === 0 ? 'text-rose-600' : 'text-amber-600'}`}>{i.available}</span>
+                <div className="mt-1 h-1.5 w-24 rounded bg-gray-200"><div className={`h-1.5 rounded ${i.available === 0 ? 'bg-rose-500' : 'bg-amber-500'}`} style={{ width: `${ratio * 100}%` }} /></div>
+              </Td>
+              <Td>{i.stockQuantity}{i.stockQuantity > i.available && <span className="ml-1 text-xs text-rose-600">({i.stockQuantity - i.available} hết hạn)</span>}</Td>
+              <Td>{i.reorderPoint}</Td>
+              <Td className="font-semibold">{Math.max(0, i.reorderPoint - i.available)}</Td>
+            </>}>
+              <ProductBatches productId={i.productId} version={version} onAdjust={b => adjust.start(b)} />
+            </GroupRow>);
+        })}
       </Table>
+      <Pager {...paged.pager} />
+      {adjust.modal}
     </>
   );
 }
 
-function BatchList({ url, note }: { url: string; note: string }) {
-  const list = useLoad(() => api.get<Batch[]>(url), [url]);
+type BatchGroup = { productId: string; sku: string; name: string; batches: Batch[]; remaining: number; earliest?: string };
+
+function groupByProduct(batches: Batch[]): BatchGroup[] {
+  const map = new Map<string, BatchGroup>();
+  for (const b of batches) {
+    const g = map.get(b.productId) ?? { productId: b.productId, sku: b.productSku, name: b.productName, batches: [], remaining: 0 };
+    g.batches.push(b);
+    g.remaining += b.remainingQty;
+    if (b.expiryDate && (!g.earliest || b.expiryDate < g.earliest)) g.earliest = b.expiryDate;
+    map.set(b.productId, g);
+  }
+  const groups = [...map.values()];
+  for (const g of groups) g.batches.sort((a, b) => (a.expiryDate ?? '').localeCompare(b.expiryDate ?? ''));
+  return groups.sort((a, b) => (a.earliest ?? '').localeCompare(b.earliest ?? ''));
+}
+
+/** Sắp hết hạn / đã hết hạn: nhóm lô theo sản phẩm. */
+function GroupedBatches({ url, note, expired = false }: { url: string; note: string; expired?: boolean }) {
+  const [search, setSearch] = useState('');
+  const [version, setVersion] = useState(0);
+  const expanded = useExpanded();
+  const adjust = useAdjust(() => setVersion(v => v + 1));
+  const list = useLoad(() => api.get<Batch[]>(url), [url, version]);
+  const q = search.trim().toLowerCase();
+  const groups = groupByProduct(list.data ?? []).filter(g => matches(q, g.name, g.sku));
+  const paged = useClientPage(groups, 10, q);
+  const today = todayKey();
+  const days = (d?: string) => (d ? Math.round((new Date(d).getTime() - new Date(today).getTime()) / 86400000) : null);
   return (
     <>
       <p className="mb-3 text-sm text-gray-500">{note}</p>
-      <Table headers={['Mã lô', 'Sản phẩm', 'Còn', 'Hạn dùng', 'NCC']} loading={list.loading} error={list.error} empty={list.data?.length === 0}>
-        {list.data?.map(b => (
-          <tr key={b.id}><Td className="font-mono text-xs">{b.batchCode}</Td><Td>{b.productName}</Td><Td>{b.remainingQty}</Td>
-            <Td>{b.expiryDate ? formatDate(b.expiryDate) : '—'}</Td><Td>{b.supplierName}</Td></tr>))}
+      <Toolbar>
+        <SearchBox value={search} onChange={setSearch} />
+        <ExpandAllButton ids={paged.rows.map(g => g.productId)} expanded={expanded} />
+      </Toolbar>
+      <Table headers={['', 'SKU', 'Sản phẩm', 'Số lô', 'Tổng còn', expired ? 'Hết hạn sớm nhất' : 'Hạn gần nhất']}
+        loading={list.loading} error={list.error} empty={groups.length === 0}>
+        {paged.rows.map(g => {
+          const d = days(g.earliest);
+          return (
+            <GroupRow key={g.productId} open={expanded.isOpen(g.productId)} onToggle={() => expanded.toggle(g.productId)} span={6} cells={<>
+              <Td className="font-mono text-xs">{g.sku}</Td>
+              <Td className="font-medium">{g.name}</Td>
+              <Td>{g.batches.length}</Td>
+              <Td className="font-semibold">{g.remaining}</Td>
+              <Td className={expired ? 'text-rose-600' : 'text-amber-600'}>
+                {g.earliest ? formatDate(g.earliest) : '—'}
+                {d !== null && <span className="ml-1 text-xs">({d < 0 ? `quá ${-d} ngày` : d === 0 ? 'hôm nay' : `còn ${d} ngày`})</span>}
+              </Td>
+            </>}>
+              <BatchTable rows={g.batches} markNext={false}
+                onAdjust={b => adjust.start(b, expired ? b.remainingQty : 1, expired ? 'Hết hạn, hủy hàng' : '')} />
+            </GroupRow>);
+        })}
       </Table>
+      <Pager {...paged.pager} />
+      {adjust.modal}
     </>
   );
 }
