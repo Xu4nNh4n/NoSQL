@@ -42,8 +42,8 @@ class SyncServiceTest {
         }
 
         @Override
-        public String type() {
-            return type;
+        public java.util.Set<String> types() {
+            return java.util.Set.of(type);
         }
 
         @Override

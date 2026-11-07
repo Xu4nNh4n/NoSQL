@@ -35,7 +35,10 @@ public class SyncService {
     public SyncService(SyncTaskRepository repository, List<SyncHandler> handlers, AppTime time,
             @Value("${app.sync.max-attempts:10}") int maxAttempts) {
         this.repository = repository;
-        this.handlers = handlers.stream().collect(Collectors.groupingBy(SyncHandler::type));
+        this.handlers = handlers.stream()
+                .flatMap(h -> h.types().stream().map(type -> Map.entry(type, h)))
+                .collect(Collectors.groupingBy(Map.Entry::getKey,
+                        Collectors.mapping(Map.Entry::getValue, Collectors.toList())));
         this.time = time;
         this.maxAttempts = maxAttempts;
     }

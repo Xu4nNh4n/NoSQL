@@ -105,9 +105,11 @@ public class ProductService {
             p.setActive(req.active());
         }
         p.setUpdatedAt(time.now());
-        Product saved = products.save(p); // @Version chặn ghi đè nếu có người lưu chen giữa
+        if (!products.updateEditable(p, req.version())) {
+            throw new ConflictException("STALE_VERSION", "Sản phẩm vừa được người khác cập nhật, vui lòng tải lại");
+        }
         cache.evict();
-        return ProductResponse.from(saved);
+        return ProductResponse.from(load(id));
     }
 
     /** Ngừng kinh doanh (xóa mềm): giữ lại để đơn cũ và thẻ kho còn tham chiếu được. */
@@ -117,8 +119,7 @@ public class ProductService {
             return;
         }
         p.setActive(false);
-        p.setUpdatedAt(time.now());
-        products.save(p);
+        products.setActive(id, false, time.now());
         cache.evict();
     }
 

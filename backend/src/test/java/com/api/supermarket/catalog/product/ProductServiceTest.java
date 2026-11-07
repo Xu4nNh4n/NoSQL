@@ -109,9 +109,22 @@ class ProductServiceTest {
         p.setVersion(3L);
         p.setStockQuantity(40);
         when(products.findById("p1")).thenReturn(Optional.of(p));
+        when(products.updateEditable(p, 3L)).thenReturn(true);
         ProductResponse res = service.update("p1", req("a1", "c1", 3L, null));
         assertEquals(40, res.stockQuantity());
         verify(products, never()).existsBySku(anyString(), anyString());
+        verify(products, never()).save(any());
+    }
+
+    @Test
+    void concurrentEditBetweenLoadAndWriteIsConflict() {
+        Product p = new Product();
+        p.setId("p1");
+        p.setSku("A1");
+        p.setVersion(3L);
+        when(products.findById("p1")).thenReturn(Optional.of(p));
+        when(products.updateEditable(p, 3L)).thenReturn(false);
+        assertThrows(ConflictException.class, () -> service.update("p1", req("A1", "c1", 3L, null)));
     }
 
     @Test

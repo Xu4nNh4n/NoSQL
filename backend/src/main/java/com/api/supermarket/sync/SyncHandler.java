@@ -1,12 +1,14 @@
 package com.api.supermarket.sync;
 
+import java.util.Set;
+
 /**
- * Ghi một loại sự kiện sang một CSDL phụ. Một {@code type} có thể có nhiều handler
+ * Ghi một hoặc nhiều loại sự kiện sang một CSDL phụ. Một loại sự kiện có thể có nhiều handler
  * (ví dụ ORDER_CREATED ghi cả Cassandra lẫn Neo4j). Handler phải ghi lặp an toàn:
  * dùng khóa xác định (UUID tạo từ nội dung, MERGE theo id) vì một việc có thể chạy lại.
  */
 public interface SyncHandler {
-    String type();
+    Set<String> types();
 
     void apply(SyncTask task);
 }

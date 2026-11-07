@@ -69,6 +69,42 @@ public class ProductRepository implements MongoIndexContributor {
         return mongo.exists(Query.query(Criteria.where(field).is(value)), Product.class);
     }
 
+    /**
+     * Ghi các trường người dùng được sửa bằng {@code $set}, chỉ khi {@code version} còn khớp.
+     * Không đụng tới {@code stockQuantity}, nên không ghi đè phần tồn vừa được lô/đơn hàng cộng trừ.
+     *
+     * @return false nếu phiên bản đã đổi (người khác vừa sửa)
+     */
+    public boolean updateEditable(Product p, long expectedVersion) {
+        Query query = Query.query(Criteria.where("_id").is(p.getId()).and("version").is(expectedVersion));
+        Update update = new Update().set("sku", p.getSku()).set("name", p.getName()).set("price", p.getPrice())
+                .set("categoryId", p.getCategoryId()).set("categoryName", p.getCategoryName())
+                .set("supplierId", p.getSupplierId()).set("reorderPoint", p.getReorderPoint())
+                .set("imageUrl", p.getImageUrl()).set("attributes", p.getAttributes()).set("active", p.isActive())
+                .set("updatedAt", p.getUpdatedAt()).inc("version", 1);
+        return mongo.updateFirst(query, update, Product.class).getModifiedCount() == 1;
+    }
+
+    public void setActive(String id, boolean active, java.time.Instant at) {
+        mongo.updateFirst(Query.query(Criteria.where("_id").is(id)),
+                new Update().set("active", active).set("updatedAt", at), Product.class);
+    }
+
+    /** Cộng/trừ tồn bán và hàng hỏng; gọi trong cùng transaction với thay đổi lô. */
+    public void incStock(String id, int stockDelta, int damagedDelta) {
+        Update update = new Update().inc("stockQuantity", stockDelta);
+        if (damagedDelta != 0) {
+            update.inc("damagedQuantity", damagedDelta);
+        }
+        mongo.updateFirst(Query.query(Criteria.where("_id").is(id)), update, Product.class);
+    }
+
+    public List<Product> findAllActive() {
+        Query query = Query.query(Criteria.where("active").is(true));
+        query.fields().include("sku", "name", "reorderPoint", "stockQuantity");
+        return mongo.find(query, Product.class);
+    }
+
     /** Tên nhóm hàng được chép vào sản phẩm; đổi tên nhóm thì sửa một lượt mọi sản phẩm của nhóm. */
     public long renameCategory(String categoryId, String categoryName) {
         return mongo.updateMulti(Query.query(Criteria.where("categoryId").is(categoryId)),
