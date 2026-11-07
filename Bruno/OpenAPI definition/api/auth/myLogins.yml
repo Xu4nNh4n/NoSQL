@@ -1,0 +1,17 @@
+info:
+  name: myLogins
+  type: http
+  seq: 7
+  tags:
+    - auth
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/auth/me/logins?month=2026-11"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

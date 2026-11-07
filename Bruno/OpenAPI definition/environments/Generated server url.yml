@@ -6,9 +6,6 @@ variables:
     name: admin
     value: ''
   - secret: true
-    name: quanly
-    value: ''
-  - secret: true
     name: thukho
     value: ''
   - secret: true

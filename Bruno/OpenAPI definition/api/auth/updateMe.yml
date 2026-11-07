@@ -1,0 +1,25 @@
+info:
+  name: updateMe
+  type: http
+  seq: 5
+  tags:
+    - auth
+
+http:
+  method: PUT
+  url: "{{baseUrl}}/api/auth/me"
+  body:
+    type: json
+    data: |-
+      {
+        "fullName": "",
+        "email": "",
+        "phone": ""
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

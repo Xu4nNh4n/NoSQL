@@ -1,7 +1,9 @@
 info:
   name: getMe
   type: http
-  seq: 3
+  seq: 4
+  tags:
+    - auth
 
 http:
   method: GET
