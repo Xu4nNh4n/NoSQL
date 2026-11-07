@@ -61,6 +61,14 @@ class SecurityAccessTest {
     }
 
     @Test
+    void inventoryIsForAdminAndWarehouse() throws Exception {
+        mvc.perform(get("/api/inventory/batches").header("Authorization", bearer("STAFF"))).andExpect(status().isForbidden());
+        mvc.perform(get("/api/inventory/batches/expired").header("Authorization", bearer("STAFF")))
+                .andExpect(status().isForbidden());
+        mvc.perform(get("/api/purchase-orders").header("Authorization", bearer("STAFF"))).andExpect(status().isForbidden());
+    }
+
+    @Test
     void adminCanListRoles() throws Exception {
         mvc.perform(get("/api/roles").header("Authorization", bearer("ADMIN")))
                 .andExpect(status().isOk())
