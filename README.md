@@ -42,7 +42,7 @@ Có hai cách đặt CSDL, trộn được với nhau qua `.env`:
 | CSDL | Chạy máy | Cloud |
 |---|---|---|
 | MongoDB | Bản cài Windows (service `MongoDB`) bật replica set 1 node | Atlas |
-| Cassandra | `docker compose --profile cassandra up -d` (heap 512 MB) | Astra DB (mặc định, không tốn RAM) |
+| Cassandra | `docker compose --profile cassandra up -d` (heap 512 MB, ~1 GB RAM) | Astra DB |
 | Neo4j | `docker compose up -d` (heap 512 MB) | AuraDB |
 | Redis | `docker compose up -d` (128 MB) | Redis Cloud / Upstash |
 

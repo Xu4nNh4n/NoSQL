@@ -1,8 +1,9 @@
 # Chỉ chạy CSDL, không đóng gói backend/frontend.
 #   docker compose up -d                       Neo4j + Redis
 #   docker compose --profile cassandra up -d   thêm Cassandra local (khi không dùng Astra)
+# Cluster name và num_tokens khớp volume cassandra-data đã có từ bản trước (đổi sẽ không khởi động được).
 #   docker compose stop                        tắt, giữ dữ liệu
-# MongoDB dùng bản cài máy (service "MongoDB"), Cassandra mặc định dùng Astra DB.
+# MongoDB dùng bản cài máy (service "MongoDB"). Cassandra: profile "cassandra" hoặc Astra DB.
 # Biến (NEO4J_PASSWORD...) đọc từ .env cùng thư mục.
 
 services:
@@ -36,13 +37,13 @@ services:
     environment:
       MAX_HEAP_SIZE: 512M
       HEAP_NEWSIZE: 128M
-      CASSANDRA_CLUSTER_NAME: supermarket
+      CASSANDRA_CLUSTER_NAME: supermarket-local
       CASSANDRA_DC: datacenter1
       CASSANDRA_ENDPOINT_SNITCH: GossipingPropertyFileSnitch
-      CASSANDRA_NUM_TOKENS: 4
+      CASSANDRA_NUM_TOKENS: 16
     ports: ["127.0.0.1:9042:9042"]
     volumes: [cassandra-data:/var/lib/cassandra]
-    mem_limit: 1200m
+    mem_limit: 1536m
     restart: unless-stopped
 
 volumes:
