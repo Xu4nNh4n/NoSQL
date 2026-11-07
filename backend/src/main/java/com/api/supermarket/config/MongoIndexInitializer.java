@@ -7,11 +7,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.core.annotation.Order;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.stereotype.Component;
 
 /** Tạo index MongoDB lúc khởi động nếu còn thiếu. Lỗi chỉ ghi log, không chặn khởi động. */
 @Component
+@Order(0) // tạo index trước các bộ khởi tạo dữ liệu (AdminBootstrap)
 @ConditionalOnProperty(name = "app.schema.init", havingValue = "true")
 public class MongoIndexInitializer implements ApplicationRunner {
     private static final Logger log = LoggerFactory.getLogger(MongoIndexInitializer.class);

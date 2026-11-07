@@ -13,6 +13,10 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import org.springframework.dao.DuplicateKeyException;
+import org.springframework.dao.OptimisticLockingFailureException;
+
+import com.api.supermarket.common.ConflictException;
 import com.api.supermarket.common.DatastoreUnavailableException;
 import com.api.supermarket.dto.response.ApiErrorResponse;
 
@@ -133,6 +137,36 @@ public class GlobalExceptionHandler {
         ));
     }
 
+
+    // Xung đột trạng thái: ghi đè đồng thời, gửi lặp khác nội dung, giá đã đổi...
+    @ExceptionHandler(ConflictException.class)
+    public ResponseEntity<ApiErrorResponse> handleConflict(ConflictException ex, HttpServletRequest request) {
+        log.warn("Conflict= {} {}, path= {}", ex.code(), ex.getMessage(), request.getRequestURI());
+        return conflict(ex.getMessage(), request);
+    }
+
+    // @Version của MongoDB: người khác đã sửa document trước.
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    public ResponseEntity<ApiErrorResponse> handleOptimisticLock(OptimisticLockingFailureException ex,
+            HttpServletRequest request) {
+        log.warn("Optimistic lock, path= {}", request.getRequestURI());
+        return conflict("Dữ liệu vừa được người khác cập nhật, vui lòng tải lại", request);
+    }
+
+    // Index unique của MongoDB chặn dữ liệu trùng khi hai request ghi cùng lúc.
+    @ExceptionHandler(DuplicateKeyException.class)
+    public ResponseEntity<ApiErrorResponse> handleDuplicateKey(DuplicateKeyException ex, HttpServletRequest request) {
+        log.warn("Duplicate key, path= {}", request.getRequestURI());
+        return ResponseEntity.badRequest().body(new ApiErrorResponse(
+                Instant.now().toString(), HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(),
+                "Dữ liệu đã tồn tại", request.getRequestURI()));
+    }
+
+    private ResponseEntity<ApiErrorResponse> conflict(String message, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(new ApiErrorResponse(
+                Instant.now().toString(), HttpStatus.CONFLICT.value(), HttpStatus.CONFLICT.getReasonPhrase(),
+                message, request.getRequestURI()));
+    }
 
     // CSDL phụ (Cassandra, Neo4j) đang tắt: trả 503 để client biết thử lại sau, không phải lỗi code.
     @ExceptionHandler(DatastoreUnavailableException.class)
