@@ -97,6 +97,16 @@ class SecurityAccessTest {
     }
 
     @Test
+    void statsAreAdminOnly() throws Exception {
+        mvc.perform(get("/api/stats/sales").header("Authorization", bearer("STAFF"))).andExpect(status().isForbidden());
+        mvc.perform(get("/api/stats/sales.csv").header("Authorization", bearer("WAREHOUSE"))).andExpect(status().isForbidden());
+        mvc.perform(get("/api/inventory/batches/expiring-soon").header("Authorization", bearer("STAFF")))
+                .andExpect(status().isForbidden());
+        mvc.perform(get("/api/pos/products/p1/panel").header("Authorization", bearer("WAREHOUSE")))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void adminCanListRoles() throws Exception {
         mvc.perform(get("/api/roles").header("Authorization", bearer("ADMIN")))
                 .andExpect(status().isOk())
