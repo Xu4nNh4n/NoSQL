@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { usePrintReceipt } from '../hooks/usePrintReceipt';
+import { ReceiptView } from '../components/sales/Receipt';
 import { Minus, Pause, Plus, Search, ShoppingCart, Sparkles, Trash2, TrendingUp } from 'lucide-react';
 import { api, ApiError, errorMessage, newRequestKey } from '../api/client';
 import { useLoad } from '../hooks/useLoad';
@@ -26,6 +28,7 @@ export function PosPage() {
   const [txRef, setTxRef] = useState('');
   const [paying, setPaying] = useState(false);
   const [receipt, setReceipt] = useState<SalesOrder | null>(null);
+  const printer = usePrintReceipt();
   const [suggest, setSuggest] = useState<Suggestions | null>(null);
   const [heldOpen, setHeldOpen] = useState(false);
   const [held, setHeld] = useState<HeldCart[]>([]);
@@ -232,20 +235,10 @@ export function PosPage() {
       </Modal>
 
       <Modal isOpen={!!receipt} onClose={() => setReceipt(null)} title={`Hóa đơn ${receipt?.orderCode ?? ''}`}
-        footer={<><Button variant="outline" onClick={() => window.print()}>In</Button><Button onClick={() => setReceipt(null)}>Đơn mới</Button></>}>
-        {receipt && (
-          <div className="space-y-2 text-sm">
-            <p className="text-xs text-gray-500">{formatDateTime(receipt.orderedAt)} · {receipt.cashier.name}{receipt.customer ? ` · ${receipt.customer.name}` : ''}</p>
-            {receipt.items.map(l => (
-              <div key={l.lineNo} className="flex justify-between">
-                <span>{l.gift && '🎁 '}{l.name} × {l.quantity}<br /><span className="text-xs text-gray-400">Lô {l.allocations.map(a => `${a.batchCode}(${a.quantity})`).join(', ')}</span></span>
-                <span>{formatVND(l.netAmount)}</span>
-              </div>))}
-            <div className="flex justify-between border-t pt-2 font-bold"><span>Tổng</span><span>{formatVND(receipt.total)}</span></div>
-            <p className="text-xs text-gray-500">{receipt.paymentMethod === 'CASH' ? 'Tiền mặt' : `Chuyển khoản ${receipt.transactionRef}`}</p>
-          </div>
-        )}
+        footer={<><Button variant="outline" onClick={() => receipt && printer.print(receipt)}>In hóa đơn</Button><Button onClick={() => setReceipt(null)}>Đơn mới</Button></>}>
+        {receipt && <ReceiptView order={receipt} />}
       </Modal>
+      {printer.portal}
     </div>
   );
 }

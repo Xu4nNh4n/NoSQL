@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { api, errorMessage, newRequestKey, qs } from '../api/client';
 import { useLoad } from '../hooks/useLoad';
+import { usePrintReceipt } from '../hooks/usePrintReceipt';
+import { Printer } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { useToast } from '../components/ui/Toast';
@@ -17,6 +19,11 @@ export function OrdersPage() {
   const [selected, setSelected] = useState<SalesOrder | null>(null);
   const list = useLoad(() => api.get<Page<SalesOrder>>(`/orders${qs({ from, to, status, page, size: 20 })}`), [from, to, status, page]);
   const toast = useToast();
+  const printer = usePrintReceipt();
+  const reprint = async (o: SalesOrder) => {
+    try { printer.print(o, o.refundedTotal > 0 ? await api.get<SalesReturn[]>(`/orders/${o.id}/returns`) : [], true); }
+    catch (e) { toast.error(errorMessage(e)); }
+  };
 
   const openByCode = async () => {
     if (!code.trim()) return;
@@ -40,7 +47,7 @@ export function OrdersPage() {
             <Button variant="outline" onClick={openByCode}>Mở</Button></div>
         </Field>
       </Toolbar>
-      <Table headers={['Mã đơn', 'Thời gian', 'Thu ngân', 'Khách', 'Thanh toán', 'Tổng', 'Trạng thái']}
+      <Table headers={['Mã đơn', 'Thời gian', 'Thu ngân', 'Khách', 'Thanh toán', 'Tổng', 'Trạng thái', '']}
         loading={list.loading} error={list.error} empty={list.data?.content.length === 0}>
         {list.data?.content.map(o => (
           <tr key={o.id} className="cursor-pointer hover:bg-gray-50" onClick={() => setSelected(o)}>
@@ -51,15 +58,18 @@ export function OrdersPage() {
             <Td>{PAYMENT_METHOD_LABELS[o.paymentMethod]}</Td>
             <Td className="text-right font-semibold">{formatVND(o.total)}</Td>
             <Td><span className={`rounded border px-2 py-0.5 text-xs ${ORDER_STATUS_LABELS[o.status].bg} ${ORDER_STATUS_LABELS[o.status].color}`}>{ORDER_STATUS_LABELS[o.status].label}</span></Td>
+            <Td><Button size="sm" variant="ghost" title="In lại hóa đơn" onClick={e => { e.stopPropagation(); void reprint(o); }}><Printer className="h-4 w-4" /></Button></Td>
           </tr>))}
       </Table>
       <ServerPager page={list.data} onPage={setPage} />
-      {selected && <OrderDetail order={selected} onClose={() => setSelected(null)} onChanged={o => { setSelected(o); void list.reload(); }} />}
+      {selected && <OrderDetail order={selected} onClose={() => setSelected(null)} onChanged={o => { setSelected(o); void list.reload(); }}
+        onPrint={rs => printer.print(selected, rs, true)} />}
+      {printer.portal}
     </div>
   );
 }
 
-function OrderDetail({ order, onClose, onChanged }: { order: SalesOrder; onClose: () => void; onChanged: (o: SalesOrder) => void }) {
+function OrderDetail({ order, onClose, onChanged, onPrint }: { order: SalesOrder; onClose: () => void; onChanged: (o: SalesOrder) => void; onPrint: (returns: SalesReturn[]) => void }) {
   const toast = useToast();
   const ledger = useLoad(() => api.get<LedgerPayment[]>(`/orders/${order.id}/payments`), [order.id, order.payments.length]);
   const returns = useLoad(() => api.get<SalesReturn[]>(`/orders/${order.id}/returns`), [order.id, order.payments.length]);
@@ -90,7 +100,10 @@ function OrderDetail({ order, onClose, onChanged }: { order: SalesOrder; onClose
   return (
     <Modal isOpen onClose={onClose} title={`Đơn ${order.orderCode}`} maxWidth="2xl">
       <div className="space-y-4 text-sm">
+        <div className="flex flex-wrap items-start justify-between gap-2">
         <p className="text-gray-600">{formatDateTime(order.orderedAt)} · {order.cashier.name} · {order.customer ? `${order.customer.name} (${order.customer.phone})` : 'Khách lẻ'} · {ORDER_STATUS_LABELS[order.status].label}</p>
+          <Button variant="outline" size="sm" disabled={returns.loading} onClick={() => onPrint(returns.data ?? [])}><Printer className="mr-1 h-4 w-4" />In hóa đơn</Button>
+        </div>
         <Table headers={['#', 'Sản phẩm', 'SL', 'Đã trả', 'Thực trả', 'Lô đã xuất', canReturn ? 'Trả' : '']}>
           {order.items.map(l => (
             <tr key={l.lineNo}>
