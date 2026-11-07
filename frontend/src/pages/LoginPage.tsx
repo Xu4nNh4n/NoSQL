@@ -7,7 +7,7 @@ import { Input } from '../components/ui/Input';
 
 export const LoginPage: React.FC = () => {
   const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('123456');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
@@ -38,10 +38,12 @@ export const LoginPage: React.FC = () => {
     }
   };
 
-  const handleFillDemo = (u: string, p: string) => {
-    setUsername(u);
-    setPassword(p);
-  };
+  // Tài khoản do backend tạo (AdminBootstrap, DemoDataSeeder). Mật khẩu không ghi ở đây: lấy APP_ADMIN_PASSWORD / APP_SEED_PASSWORD trong .env.
+  const DEMO = [
+    { username: 'admin', label: 'Quản trị (ADMIN)' },
+    { username: 'thungan01', label: 'Thu ngân (STAFF)' },
+    { username: 'thukho01', label: 'Thủ kho (WAREHOUSE)' },
+  ];
 
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
@@ -92,37 +94,25 @@ export const LoginPage: React.FC = () => {
           </Button>
         </form>
 
-        {/* Demo credentials hint */}
+        {/* Demo accounts */}
         <div className="mt-8 pt-6 border-t border-gray-100">
           <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2 text-center">
-            Tài khoản mẫu thử nghiệm (Click để điền)
+            Tài khoản demo (bấm để điền tên)
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <button
-              type="button"
-              onClick={() => handleFillDemo('admin', '123456')}
-              className="p-2 text-left rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50/50 transition-colors text-xs cursor-pointer"
-            >
-              <div className="font-semibold text-gray-800">Quản trị (ADMIN)</div>
-              <div className="text-[10px] text-gray-500 font-mono">admin / 123456</div>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleFillDemo('nhanvien', '123456')}
-              className="p-2 text-left rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50/50 transition-colors text-xs cursor-pointer"
-            >
-              <div className="font-semibold text-gray-800">Thu ngân (STAFF)</div>
-              <div className="text-[10px] text-gray-500 font-mono">nhanvien / 123456</div>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleFillDemo('kho', '123456')}
-              className="p-2 text-left rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50/50 transition-colors text-xs cursor-pointer"
-            >
-              <div className="font-semibold text-gray-800">Thủ kho (WAREHOUSE)</div>
-              <div className="text-[10px] text-gray-500 font-mono">kho / 123456</div>
-            </button>
+            {DEMO.map(d => (
+              <button
+                key={d.username}
+                type="button"
+                onClick={() => { setUsername(d.username); setPassword(''); }}
+                className="p-2 text-left rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50/50 transition-colors text-xs cursor-pointer"
+              >
+                <div className="font-semibold text-gray-800">{d.label}</div>
+                <div className="text-[10px] text-gray-500 font-mono">{d.username}</div>
+              </button>
+            ))}
           </div>
+          <p className="mt-2 text-[10px] text-gray-400 text-center">Mật khẩu: giá trị APP_ADMIN_PASSWORD trong file .env</p>
         </div>
       </div>
     </div>
