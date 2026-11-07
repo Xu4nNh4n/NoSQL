@@ -1,7 +1,10 @@
-import { Menu, ShoppingCart, LogOut, ChevronRight } from 'lucide-react';
+import { useState } from 'react';
+import { Menu, ShoppingCart, LogOut, ChevronRight, KeyRound } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { ThemeToggle } from '../ui/ThemeToggle';
+import { useToast } from '../ui/Toast';
+import { ChangePasswordModal } from '../auth/ChangePasswordModal';
 
 interface HeaderProps {
   onToggleMobileMenu: () => void;
@@ -14,13 +17,21 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu, isMobileMenuOpen, pageTitle, section }) => {
   const { user, role, logout } = useAuth();
   const navigate = useNavigate();
+  const toast = useToast();
+  const [changingPassword, setChangingPassword] = useState(false);
 
   const handleLogout = async () => {
     await logout();
     navigate('/login');
   };
+  const afterPasswordChanged = async () => {
+    setChangingPassword(false);
+    toast.success('Đã đổi mật khẩu. Vui lòng đăng nhập lại bằng mật khẩu mới.');
+    await handleLogout();
+  };
 
   return (
+    <>
     <header className="sticky top-0 z-30 flex min-h-16 items-center justify-between gap-3 border-b border-gray-200 bg-[var(--c-bg)]/95 px-4 backdrop-blur sm:px-6">
       <div className="flex min-w-0 items-center gap-3">
         <button
@@ -62,6 +73,15 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu, isMobileMenu
           </div>
           <button
             type="button"
+            onClick={() => setChangingPassword(true)}
+            title="Đổi mật khẩu"
+            aria-label="Đổi mật khẩu"
+            className="ml-1 cursor-pointer rounded-md p-1.5 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900"
+          >
+            <KeyRound className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
             onClick={handleLogout}
             title="Đăng xuất"
             aria-label="Đăng xuất tài khoản"
@@ -72,5 +92,8 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu, isMobileMenu
         </div>
       </div>
     </header>
+    {/* Ngoài <header>: header có backdrop-blur nên phần tử fixed bên trong bị giới hạn trong header */}
+    {changingPassword && <ChangePasswordModal onClose={() => setChangingPassword(false)} onChanged={() => void afterPasswordChanged()} />}
+    </>
   );
 };
