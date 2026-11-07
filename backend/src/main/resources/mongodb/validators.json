@@ -1,0 +1,80 @@
+{
+  "users": {
+    "bsonType": "object",
+    "required": ["username", "passwordHash", "role", "active"],
+    "properties": {
+      "username": { "bsonType": "string", "minLength": 3, "maxLength": 30 },
+      "passwordHash": { "bsonType": "string" },
+      "fullName": { "bsonType": "string" },
+      "email": { "bsonType": "string" },
+      "phone": { "bsonType": "string" },
+      "role": { "enum": ["ADMIN", "WAREHOUSE", "STAFF"] },
+      "active": { "bsonType": "bool" }
+    }
+  },
+  "customers": {
+    "bsonType": "object",
+    "required": ["fullName", "phone", "active"],
+    "properties": {
+      "fullName": { "bsonType": "string" },
+      "phone": { "bsonType": "string", "pattern": "^0[0-9]{9,10}$" },
+      "email": { "bsonType": "string" },
+      "active": { "bsonType": "bool" }
+    }
+  },
+  "products": {
+    "bsonType": "object",
+    "required": ["sku", "name", "price", "categoryId", "active", "stockQuantity", "damagedQuantity"],
+    "properties": {
+      "sku": { "bsonType": "string" },
+      "name": { "bsonType": "string" },
+      "price": { "bsonType": "decimal", "minimum": 0 },
+      "categoryId": { "bsonType": "string" },
+      "reorderPoint": { "bsonType": ["int", "long"], "minimum": 0 },
+      "active": { "bsonType": "bool" },
+      "attributes": { "bsonType": "object" },
+      "stockQuantity": { "bsonType": ["int", "long"], "minimum": 0 },
+      "damagedQuantity": { "bsonType": ["int", "long"], "minimum": 0 }
+    }
+  },
+  "batches": {
+    "bsonType": "object",
+    "required": ["batchCode", "productId", "receivedQty", "remainingQty", "damagedQty", "expirySortKey", "receivedAt"],
+    "properties": {
+      "batchCode": { "bsonType": "string" },
+      "productId": { "bsonType": "string" },
+      "receivedQty": { "bsonType": ["int", "long"], "minimum": 1 },
+      "remainingQty": { "bsonType": ["int", "long"], "minimum": 0 },
+      "damagedQty": { "bsonType": ["int", "long"], "minimum": 0 },
+      "unitCost": { "bsonType": "decimal", "minimum": 0 },
+      "expirySortKey": { "bsonType": "date" },
+      "receivedAt": { "bsonType": "date" }
+    }
+  },
+  "orders": {
+    "bsonType": "object",
+    "required": ["orderCode", "requestKey", "status", "paymentMethod", "total", "items", "payments", "orderedAt"],
+    "properties": {
+      "orderCode": { "bsonType": "string" },
+      "requestKey": { "bsonType": "string" },
+      "status": { "enum": ["PAID", "PARTIALLY_RETURNED", "RETURNED"] },
+      "paymentMethod": { "enum": ["CASH", "BANK_TRANSFER"] },
+      "total": { "bsonType": "decimal", "minimum": 0 },
+      "items": { "bsonType": "array", "minItems": 1 },
+      "payments": { "bsonType": "array", "minItems": 1 },
+      "orderedAt": { "bsonType": "date" }
+    }
+  },
+  "promotions": {
+    "bsonType": "object",
+    "required": ["name", "type", "startsAt", "endsAt", "active"],
+    "properties": {
+      "name": { "bsonType": "string" },
+      "type": { "enum": ["PERCENT", "FIXED", "BUY_X_GET_Y", "ORDER_THRESHOLD"] },
+      "startsAt": { "bsonType": "date" },
+      "endsAt": { "bsonType": "date" },
+      "active": { "bsonType": "bool" },
+      "rule": { "bsonType": "object" }
+    }
+  }
+}

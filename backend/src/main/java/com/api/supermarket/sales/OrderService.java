@@ -104,6 +104,14 @@ public class OrderService {
     }
 
     public SalesOrder create(CreateOrderRequest req, JwtPrincipal actor) {
+        return create(req, actor, time.now());
+    }
+
+    /**
+     * Tạo đơn với thời điểm bán cho trước. Chỉ dùng cho bộ tạo dữ liệu mẫu (đơn của 30 ngày trước để trang thống kê
+     * và chốt ca có dữ liệu); API luôn dùng thời điểm hiện tại.
+     */
+    public SalesOrder create(CreateOrderRequest req, JwtPrincipal actor, Instant orderedAt) {
         String ref = UserFields.text(req.transactionRef());
         if (req.paymentMethod() == SalesOrder.Method.BANK_TRANSFER && ref == null) {
             throw new BadRequestException("Chuyển khoản phải nhập mã giao dịch");
@@ -115,7 +123,7 @@ public class OrderService {
         }
         SalesOrder order;
         try {
-            order = tx.run(() -> createInTx(req, ref, fingerprint, actor));
+            order = tx.run(() -> createInTx(req, ref, fingerprint, actor, orderedAt));
         } catch (DuplicateKeyException ex) {
             // Hai yêu cầu cùng requestKey chạy song song: index unique chặn bản thứ hai.
             existing = orders.findByRequestKey(req.requestKey()).orElseThrow(() -> ex);
@@ -126,14 +134,14 @@ public class OrderService {
         return order;
     }
 
-    private SalesOrder createInTx(CreateOrderRequest req, String ref, String fingerprint, JwtPrincipal actor) {
+    private SalesOrder createInTx(CreateOrderRequest req, String ref, String fingerprint, JwtPrincipal actor,
+            Instant now) {
         PricedCart cart = quotes.quote(req.items());
         if (!cart.quoteHash().equals(req.quoteHash())) {
             throw new ConflictException("PRICE_CHANGED", "Giá hoặc khuyến mãi đã thay đổi, vui lòng tính lại giỏ hàng");
         }
         Customer customer = req.customerId() == null || req.customerId().isBlank() ? null
                 : customers.loadActive(req.customerId());
-        Instant now = time.now();
 
         SalesOrder order = new SalesOrder();
         order.setOrderCode(codes.next(DocumentType.ORDER));
@@ -143,7 +151,7 @@ public class OrderService {
         order.setCustomer(customer == null ? null
                 : new SalesOrder.PersonRef(customer.getId(), customer.getFullName(), customer.getPhone()));
         order.setOrderedAt(now);
-        order.setOrderDay(time.today());
+        order.setOrderDay(now.atZone(time.zone()).toLocalDate());
         order.setStatus(SalesOrder.Status.PAID);
         order.setPaymentMethod(req.paymentMethod());
         order.setTransactionRef(ref);
