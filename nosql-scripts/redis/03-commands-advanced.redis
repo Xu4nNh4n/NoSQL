@@ -1,0 +1,29 @@
+# 03-commands-advanced.redis – sorted set, GETDEL, MULTI/EXEC, Lua script nguyên tử, Pub/Sub.
+
+# [NC-R1] AP-19: top bán chạy hôm nay bằng sorted set (TopSalesService)
+ZINCRBY top:sales:20261107 3 p-milk
+ZINCRBY top:sales:20261107 6 p-beer
+ZINCRBY top:sales:20261107 1 p-milk
+EXPIRE top:sales:20261107 259200
+ZREVRANGE top:sales:20261107 0 9 WITHSCORES
+
+# [NC-R2] Refresh token dùng một lần: GETDEL lấy và xóa trong một lệnh; gọi lần 2 trả (nil) (RefreshTokenStore.consume)
+SET auth:refresh:abc123 auth-user-1 EX 604800
+GETDEL auth:refresh:abc123
+GETDEL auth:refresh:abc123
+
+# [NC-R3] AP-18: treo đơn = ghi giỏ + chỉ mục trong một MULTI/EXEC (không xen lệnh khác giữa hai bước)
+MULTI
+SET pos:held:c-lan:h-001 "{\"holdId\":\"h-001\",\"note\":\"Chị áo xanh\",\"items\":[{\"productId\":\"p-milk\",\"quantity\":2}]}" EX 1800
+ZADD pos:held-index:c-lan 1762484400000 h-001
+EXPIRE pos:held-index:c-lan 1800
+EXEC
+ZREVRANGE pos:held-index:c-lan 0 -1
+
+# [NC-R4] Mở lại đơn treo bằng Lua: GET + DEL + ZREM nguyên tử → hai máy không mở được cùng một đơn (HeldCartService.TAKE)
+EVAL "local v = redis.call('GET', KEYS[1]) if v then redis.call('DEL', KEYS[1]) redis.call('ZREM', KEYS[2], ARGV[1]) end return v" 2 pos:held:c-lan:h-001 pos:held-index:c-lan h-001
+EVAL "local v = redis.call('GET', KEYS[1]) if v then redis.call('DEL', KEYS[1]) redis.call('ZREM', KEYS[2], ARGV[1]) end return v" 2 pos:held:c-lan:h-001 pos:held-index:c-lan h-001
+
+# [NC-R5] Pub/Sub: phát cảnh báo cho nhiều máy cùng lúc. Mở terminal khác chạy: SUBSCRIBE notify:alerts
+# (Đồ án không dùng thông báo đẩy trên giao diện; lệnh này minh họa cơ chế phát/nhận của Redis.)
+PUBLISH notify:alerts "{\"type\":\"LOW_STOCK\",\"sku\":\"SUA-VNM-1L\",\"available\":8}"

@@ -1,0 +1,17 @@
+# 02-commands-basic.redis – lệnh cơ bản. Chạy: redis-cli -u "$REDIS_URL" --tls < nosql-scripts/redis/02-commands-basic.redis
+# (Upstash/Redis Cloud cũng có console web chạy từng dòng.)
+
+# [CB-R1] AP-03: cache-aside danh sách sản phẩm ở quầy, hết hạn sau 300 giây
+SET cache:products:active "[{\"id\":\"p1\",\"sku\":\"SUA-VNM-1L\",\"name\":\"Sữa tươi Vinamilk 1L\",\"price\":32000,\"stockQuantity\":80}]" EX 300
+GET cache:products:active
+TTL cache:products:active
+
+# [CB-R2] AP-02: lưu refresh token (chỉ bản băm) 7 ngày và tập token của người dùng
+SET auth:refresh:9f2c1d0e3b auth-user-1 EX 604800
+SADD auth:user-tokens:auth-user-1 9f2c1d0e3b
+EXPIRE auth:user-tokens:auth-user-1 604800
+SMEMBERS auth:user-tokens:auth-user-1
+
+# [CB-R3] Xóa cache khi sản phẩm hoặc lô thay đổi
+DEL cache:products:active cache:products:low-stock
+EXISTS cache:products:active
