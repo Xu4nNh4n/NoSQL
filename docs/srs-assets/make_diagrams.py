@@ -75,11 +75,11 @@ def context():
     actor(ax, 10, 45, "ADMIN\n(Quản lý)")
     actor(ax, 10, 25, "STAFF\n(Thu ngân)")
     actor(ax, 10, 6, "WAREHOUSE\n(Thủ kho)")
-    arrow(ax, 13, 49, 45, 38, "Quản trị, khuyến mãi, thu hồi lô,\nthống kê, sao lưu")
+    arrow(ax, 13, 49, 45, 38, "Quản trị, khuyến mãi, thu hồi lô,\nthống kê")
     arrow(ax, 13, 29, 45, 33, "Bán, trả hàng, đơn treo, chốt ca")
     arrow(ax, 13, 10, 45, 26, "Phiếu nhập, nhận lô,\nđiều chỉnh, thẻ kho", tpos=0.35, toff=(0, -3))
     arrow(ax, 45, 31, 15, 23, "Hóa đơn, gợi ý, top bán chạy", tpos=0.45, toff=(0, -2))
-    arrow(ax, 52, 25, 16, 5, "Thông báo realtime", rad=-0.25, tpos=0.6, toff=(4, -3))
+    arrow(ax, 52, 25, 16, 5, "Cảnh báo sắp hết hàng,\nlô hết hạn", rad=-0.25, tpos=0.6, toff=(4, -3))
     dbs = [(55, "MongoDB Atlas\n(nguồn sự thật)", "mongo"), (40, "Astra DB\n(Cassandra – sổ cái)", "cass"),
            (25, "Neo4j Aura\n(quan hệ)", "neo"), (10, "Redis Cloud\n(tạm, nhanh)", "redis")]
     for y, t, c in dbs:
@@ -95,14 +95,13 @@ def usecase():
     ax.add_patch(Rectangle((25, 3), 85, 102, fc="white", ec="#333", lw=1.2))
     ax.text(67.5, 102, "Hệ thống quản lý siêu thị", ha="center", fontsize=11, fontweight="bold")
     groups = {
-        "STAFF": ["FR-12 Bán tại quầy", "FR-16 Đơn treo", "FR-13 Trả hàng, hoàn tiền", "FR-17 Chốt ca",
-                  "FR-19 Xem gợi ý mua kèm", "FR-04 Quản lý khách hàng"],
-        "CHUNG": ["FR-01 Đăng nhập, làm mới phiên", "FR-02 Hồ sơ, đổi mật khẩu", "FR-07 Tra cứu sản phẩm, cảnh báo",
-                  "FR-11 Xem thẻ kho", "FR-14 Tra cứu đơn, thanh toán", "FR-20 Top bán chạy"],
-        "WAREHOUSE": ["FR-08 Phiếu nhập, nhận lô", "FR-10 Điều chỉnh giảm tồn", "FR-06 Nhà cung cấp",
-                      "FR-05 Sản phẩm", "FR-22 Nhận thông báo"],
-        "ADMIN": ["FR-03 Quản lý người dùng", "FR-06 Nhóm hàng", "FR-15 Khuyến mãi", "FR-18 Truy vết, thu hồi lô",
-                  "FR-21 Thống kê, xuất CSV", "FR-23 Sao lưu dữ liệu", "FR-24 Lịch sử đăng nhập"],
+        "STAFF": ["FR-07 Bán tại quầy", "FR-08 Đơn treo", "FR-09 Trả hàng, hoàn tiền", "FR-12 Chốt ca",
+                  "FR-14 Xem gợi ý mua kèm", "FR-03 Quản lý khách hàng"],
+        "CHUNG": ["FR-01 Đăng nhập, hồ sơ", "FR-04 Tra cứu sản phẩm, cảnh báo",
+                  "FR-06 Xem thẻ kho", "FR-10 Tra cứu đơn, thanh toán"],
+        "WAREHOUSE": ["FR-05 Phiếu nhập, nhận lô", "FR-05 Điều chỉnh giảm tồn", "FR-04 Sản phẩm, nhà cung cấp"],
+        "ADMIN": ["FR-02 Quản lý người dùng", "FR-04 Nhóm hàng", "FR-11 Khuyến mãi", "FR-13 Truy vết, thu hồi lô",
+                  "FR-15 Thống kê, top bán, CSV", "FR-01 Lịch sử đăng nhập"],
     }
     pos = {}
     cols = {"STAFF": (45, 96), "CHUNG": (67.5, 96), "WAREHOUSE": (90, 96), "ADMIN": (67.5, 45)}
@@ -150,7 +149,7 @@ def bpmn():
         ax.text(6, y + 11, name, ha="center", va="center", fontsize=8.5, fontweight="bold")
     ax.add_patch(plt.Circle((17, 77), 2, fc="white", ec="#333"))
     steps = [
-        (22, 72, "Tạo phiếu nhập\n(DRAFT→ORDERED)", "plain"),
+        (22, 72, "Tạo phiếu nhập\n(DRAFT)", "plain"),
         (44, 72, "Nhận hàng: nhập\nSL, NSX, HSD", "plain"),
         (44, 50, "Tạo lô, cộng tồn\n[Mongo] + thẻ kho\n[Cassandra]", "mongo"),
         (22, 28, "Quét hàng, tính giá\n(khuyến mãi)", "plain"),
@@ -208,7 +207,7 @@ def activity():
         ("Cấp phát FEFO: updateOne có điều kiện\nremainingQty ≥ số lấy", "mongo"),
         ("Đủ tồn?", "diamond"),
         ("Tạo đơn (dòng hàng, lô, thanh toán nhúng)\n+ ghi sync_queue → COMMIT", "mongo"),
-        ("Sau commit: ghi sổ Cassandra, MERGE Neo4j,\nZINCRBY top bán, phát cảnh báo nếu tồn thấp", "cass"),
+        ("Sau commit: ghi sổ Cassandra, MERGE Neo4j,\nZINCRBY top bán, xóa cache sản phẩm", "cass"),
         ("In hóa đơn", "app"),
     ]
     y -= 4
@@ -258,7 +257,7 @@ def sequence():
         (32, 104, "@Async: INSERT stock_movements, payments_*"),
         (32, 128, "MERGE Customer/Order/Product/Batch"),
         (32, 56, "sync_queue → DONE"),
-        (32, 80, "ZINCRBY top:sales · DEL cache:products · PUBLISH"),
+        (32, 80, "ZINCRBY top:sales · DEL cache:products"),
     ]
     y = 88
     for a, b, t in msgs:
@@ -313,15 +312,11 @@ def states():
 
     ax.text(105, 66, "Phiếu nhập (purchase_orders.status)", ha="center", fontsize=10, fontweight="bold")
     ax.add_patch(plt.Circle((76, 45), 1.6, fc="#333"))
-    box(ax, 82, 41, 14, 8, "DRAFT", "mongo", 9, True)
-    box(ax, 102, 41, 14, 8, "ORDERED", "mongo", 9, True)
-    box(ax, 122, 41, 15, 8, "RECEIVED", "mongo", 9, True)
-    box(ax, 102, 16, 15, 8, "CANCELLED", "grey", 9, True)
-    arrow(ax, 77.6, 45, 82, 45)
-    arrow(ax, 96, 45, 102, 45, "gửi NCC", toff=(0, 2))
-    arrow(ax, 116, 45, 122, 45, "nhận hàng\n→ tạo lô", toff=(0, 3.5))
-    arrow(ax, 89, 41, 104, 24, "hủy", toff=(-3, 0))
-    arrow(ax, 109, 41, 109.5, 24, "hủy", toff=(3, 0))
+    box(ax, 86, 41, 14, 8, "DRAFT", "mongo", 9, True)
+    box(ax, 116, 41, 15, 8, "RECEIVED", "mongo", 9, True)
+    arrow(ax, 77.6, 45, 86, 45, "tạo phiếu", toff=(0, 2))
+    arrow(ax, 100, 45, 116, 45, "nhận hàng\n→ tạo lô", toff=(0, 3.5))
+    ax.text(93, 33, "còn DRAFT: sửa hoặc xóa phiếu", ha="center", fontsize=7.5)
     ax.text(105, 4, "Nhận hàng: tạo lô + cộng tồn + RECEIVED trong một transaction.",
             ha="center", fontsize=7.5, style="italic")
     save(fig, "07_state_machine.png")

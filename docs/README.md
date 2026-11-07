@@ -2,7 +2,7 @@
 
 | Tài liệu | Nội dung |
 |---|---|
-| [SRS v2.0](SRS_He_thong_quan_ly_sieu_thi_v2_0.docx) | Đặc tả yêu cầu theo mẫu của học phần: 24 FR, 13 NFR, 25 access pattern, sơ đồ, ma trận truy vết |
+| [SRS v2.0](SRS_He_thong_quan_ly_sieu_thi_v2_0.docx) | Đặc tả yêu cầu theo mẫu của học phần: 15 FR, 13 NFR, 24 access pattern, sơ đồ, ma trận truy vết |
 | [SRS v1.1](SRS_He_thong_quan_ly_sieu_thi_v1_1_viet_lai.docx) | Bản trước khi chuyển sang NoSQL, giữ để đối chiếu |
 | [Spec thiết kế](superpowers/specs/2026-11-07-nosql-redesign-design.md) | Thiết kế 4 CSDL, đồng bộ, khuyến mãi, API, frontend, kỹ thuật nâng cao |
 | [Kế hoạch triển khai](superpowers/plans/) | Kế hoạch theo từng giai đoạn; kế hoạch 1 có lộ trình tổng |

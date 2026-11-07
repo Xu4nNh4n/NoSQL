@@ -34,13 +34,13 @@
 |---|---|---|
 | 1 (file này) | Dọn dẹp về khung tối thiểu | mục 15 |
 | 2 | Nền tảng: cấu hình 4 CSDL, `/api/health/datastores`, `counters`, `RedisSafe`, `sync_queue` + job | mục 3, 9, 19.5 |
-| 3 | Tài khoản: người dùng, đăng nhập, refresh token Redis, lịch sử đăng nhập Cassandra | FR-01–03, FR-24 |
-| 4 | Danh mục: nhóm hàng, nhà cung cấp, sản phẩm, khách hàng, cache | FR-04–07 |
-| 5 | Kho: lô, FEFO, điều chỉnh, phiếu nhập, thẻ kho | FR-08–11 |
-| 6 | Khuyến mãi: `PromotionEngine` (TDD) + API | FR-15 |
-| 7 | Bán, trả, đơn treo, top bán, chốt ca | FR-12–14, 16, 17, 20 |
-| 8 | Neo4j: ghi đồ thị, truy vết, gợi ý, dựng lại | FR-18, 19 |
-| 9 | Hỗ trợ: thống kê, thông báo realtime, sao lưu, đa luồng | FR-21–23, mục 19.3 |
+| 3 | Tài khoản: người dùng, đăng nhập, refresh token Redis, lịch sử đăng nhập Cassandra | FR-01, FR-02 |
+| 4 | Danh mục: nhóm hàng, nhà cung cấp, sản phẩm, khách hàng, cache | FR-03, FR-04 |
+| 5 | Kho: lô, FEFO, điều chỉnh, phiếu nhập (DRAFT → RECEIVED), thẻ kho | FR-05, FR-06 |
+| 6 | Khuyến mãi: `PromotionEngine` (TDD) + API | FR-11 |
+| 7 | Bán, trả, đơn treo, top bán, chốt ca | FR-07 → FR-10, FR-12, FR-15 (top bán) |
+| 8 | Neo4j: ghi đồ thị, truy vết, gợi ý, dựng lại | FR-13, FR-14 |
+| 9 | Hỗ trợ: thống kê, xuất CSV, đa luồng | FR-15, mục 19.3 |
 | 10 | Frontend các trang mới, `nosql-scripts/`, dữ liệu mẫu, README | mục 14, 19.4 |
 
 Mỗi kế hoạch được viết chi tiết khi kế hoạch trước xong, để dùng đúng tên lớp và hàm đã có thật.
