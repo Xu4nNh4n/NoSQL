@@ -1,0 +1,17 @@
+info:
+  name: getDatastores
+  type: http
+  seq: 1
+  tags:
+    - ops
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/health/datastores"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

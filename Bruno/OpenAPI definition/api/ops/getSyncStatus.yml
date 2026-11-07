@@ -1,0 +1,17 @@
+info:
+  name: getSyncStatus
+  type: http
+  seq: 2
+  tags:
+    - ops
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/admin/sync/status"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
