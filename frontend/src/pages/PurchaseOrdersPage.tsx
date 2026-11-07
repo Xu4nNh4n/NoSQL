@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import type React from 'react';
-import { Eye, Plus, Trash2 } from 'lucide-react';
+import { Eye, Plus, Printer, Trash2 } from 'lucide-react';
 import { api, errorMessage, qs } from '../api/client';
 import { useLoad } from '../hooks/useLoad';
+import { usePrintDocument } from '../hooks/usePrintDocument';
+import { PurchaseOrderPrint } from '../components/inventory/PurchaseOrderPrint';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { useToast } from '../components/ui/Toast';
@@ -28,6 +30,8 @@ export function PurchaseOrdersPage() {
   const [draft, setDraft] = useState<{ id?: string; supplierId: string; note: string; lines: DraftLine[]; version?: number } | null>(null);
   const [receiving, setReceiving] = useState<{ po: PurchaseOrder; lines: ReceiveLine[] } | null>(null);
   const [view, setView] = useState<PurchaseOrder | null>(null);
+  const printer = usePrintDocument();
+  const printPo = (po: PurchaseOrder) => printer.print(at => <PurchaseOrderPrint po={po} printedAt={at} />, 'a4');
 
   const saveDraft = async () => {
     if (!draft) return;
@@ -70,6 +74,7 @@ export function PurchaseOrdersPage() {
             <Td>{po.status === 'DRAFT' ? 'Nháp' : `Đã nhận ${formatDateTime(po.receivedAt)}`}</Td>
             <Td className="space-x-2 whitespace-nowrap">
               <Button size="sm" variant="outline" leftIcon={<Eye className="h-4 w-4" />} onClick={() => setView(po)}>Xem</Button>
+              <Button size="sm" variant="ghost" title="In phiếu nhập" aria-label={`In phiếu ${po.poCode}`} onClick={() => printPo(po)}><Printer className="h-4 w-4" /></Button>
               {po.status === 'DRAFT' && <>
               <Button size="sm" onClick={() => setReceiving({ po, lines: po.lines.map(l => ({ lineNo: l.lineNo, receivedQty: l.orderedQty, mfgDate: '', expiryDate: '' })) })}>Nhận hàng</Button>
               <Button size="sm" variant="outline" onClick={() => setDraft({ id: po.id, supplierId: po.supplierId, note: po.note ?? '', version: po.version, lines: po.lines.map(l => ({ productId: l.productId, orderedQty: l.orderedQty, unitCost: l.unitCost })) })}>Sửa</Button>
@@ -118,14 +123,15 @@ export function PurchaseOrdersPage() {
           </div>)}
       </Modal>
 
-      {view && <PurchaseOrderDetail po={view} onClose={() => setView(null)}
+      {view && <PurchaseOrderDetail po={view} onClose={() => setView(null)} onPrint={() => printPo(view)}
         onReceive={() => { setView(null); setReceiving({ po: view, lines: view.lines.map(l => ({ lineNo: l.lineNo, receivedQty: l.orderedQty, mfgDate: '', expiryDate: '' })) }); }} />}
+      {printer.portal}
     </div>
   );
 }
 
 /** Chi tiết phiếu nhập: thông tin chung, từng dòng hàng và lô sinh ra, tổng giá trị. */
-function PurchaseOrderDetail({ po, onClose, onReceive }: { po: PurchaseOrder; onClose: () => void; onReceive: () => void }) {
+function PurchaseOrderDetail({ po, onClose, onReceive, onPrint }: { po: PurchaseOrder; onClose: () => void; onReceive: () => void; onPrint: () => void }) {
   const received = po.status === 'RECEIVED';
   const info: [string, React.ReactNode][] = [
     ['Mã phiếu', <span key="code" className="font-mono">{po.poCode}</span>],
@@ -137,7 +143,9 @@ function PurchaseOrderDetail({ po, onClose, onReceive }: { po: PurchaseOrder; on
   ];
   return (
     <Modal isOpen onClose={onClose} title={`Phiếu nhập ${po.poCode}`} maxWidth="5xl"
-      footer={<>{!received && <Button onClick={onReceive}>Nhận hàng</Button>}<Button variant="outline" onClick={onClose}>Đóng</Button></>}>
+      footer={<>{!received && <Button onClick={onReceive}>Nhận hàng</Button>}
+        <Button variant="outline" leftIcon={<Printer className="h-4 w-4" />} onClick={onPrint}>In phiếu nhập</Button>
+        <Button variant="outline" onClick={onClose}>Đóng</Button></>}>
       <div className="space-y-4 text-sm">
         <dl className="grid gap-x-6 gap-y-2 rounded-md border border-gray-200 p-3 sm:grid-cols-2">
           {info.map(([k, v]) => (

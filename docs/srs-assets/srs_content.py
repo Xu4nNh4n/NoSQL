@@ -92,7 +92,8 @@ table(["Phiên bản", "Ngày", "Nội dung thay đổi"], [
                           "Các FR nhỏ được gộp theo use case (hồ sơ và lịch sử đăng nhập vào FR-01; nhóm hàng, nhà cung cấp, "
                           "tra cứu vào FR-03; điều chỉnh tồn vào FR-04; FEFO vào FR-06; top bán chạy vào FR-14)."),
     ("2.1", "07/11/2026", "Bỏ quản lý khách hàng (FR-03 cũ): đơn bán lẻ không gắn khách; truy vết lô trả danh sách đơn đã bán. "
-                          "Còn 14 FR, đánh số lại FR-03 → FR-14 và TC tương ứng; bỏ thực thể Khách hàng và node :Customer."),
+                          "Còn 14 FR, đánh số lại FR-03 → FR-14 và TC tương ứng; bỏ thực thể Khách hàng và node :Customer. "
+                          "Thêm xem chi tiết và in phiếu nhập kho A4 (FR-04), in lại hóa đơn (FR-09)."),
 ], [14, 16, 70])
 
 # ---------------------------------------------------------------- 2
@@ -168,7 +169,7 @@ FR = [
     ("FR-03", "Danh mục hàng hóa", "Tất cả xem; ADMIN, WAREHOUSE ghi", "Sản phẩm (thuộc tính linh hoạt), nhóm hàng, nhà cung cấp; "
      "tra cứu, cảnh báo sắp hết hàng và lô hết hạn", "Cao", "AP-03 → AP-08"),
     ("FR-04", "Nhập hàng và điều chỉnh tồn", "ADMIN, WAREHOUSE", "Phiếu nhập DRAFT → RECEIVED sinh lô; nhập lô lẻ; "
-     "điều chỉnh giảm tồn theo lô", "Cao", "AP-08, AP-22, AP-24"),
+     "điều chỉnh giảm tồn theo lô; xem chi tiết, in phiếu nhập", "Cao", "AP-08, AP-22, AP-24"),
     ("FR-05", "Thẻ kho", "Tất cả", "Lịch sử biến động theo sản phẩm, theo tháng", "Cao", "AP-13"),
     ("FR-06", "Bán tại quầy", "ADMIN, STAFF", "Tính khuyến mãi, cấp phát FEFO, thu tiền, in hóa đơn", "Cao",
      "AP-03, AP-07, AP-09, AP-17, AP-19"),
@@ -285,14 +286,16 @@ uc("FR-04", "Nhập hàng và điều chỉnh tồn", "ADMIN, WAREHOUSE", "Must"
    "1. Tạo phiếu nhập DRAFT; khi còn DRAFT được sửa hoặc xóa.\n2. Hàng về: mở phiếu, nhập số thực nhận và hạn dùng từng dòng, bấm \"Nhận hàng\".\n"
    "3. Trong một giao dịch: tạo lô (mã sinh tự động), cộng tồn, đặt phiếu RECEIVED.\n4. Ghi thẻ kho RECEIPT và quan hệ lô–nhà cung cấp.\n"
    "5. Ngoài phiếu, cho phép nhập lô lẻ cho hàng phát sinh (cùng quy tắc).\n"
-   "6. Điều chỉnh giảm: trừ tồn lô và tồn sản phẩm trong một giao dịch; ghi thẻ kho ADJUSTMENT (số âm), ghi chú \"Lô <mã>: <lý do>\".",
+   "6. Điều chỉnh giảm: trừ tồn lô và tồn sản phẩm trong một giao dịch; ghi thẻ kho ADJUSTMENT (số âm), ghi chú \"Lô <mã>: <lý do>\".\n"
+   "7. Xem chi tiết phiếu: nhà cung cấp, ghi chú, người và thời điểm lập/nhận; từng dòng (mã hàng, số đặt, số nhận, giá vốn, "
+   "thành tiền, lô sinh ra, NSX, HSD) và tổng giá trị. In phiếu nhập kho khổ A4 có chỗ ký người lập, người giao, thủ kho.",
    "• Số lượng > 0; ngày sản xuất không ở tương lai; hạn dùng không trước hôm nay và ngày sản xuất.\n"
    "• Mã lô, mã phiếu duy nhất, sinh bằng bộ đếm nguyên tử.\n• Phiếu RECEIVED không sửa, không xóa được.\n"
    "• Điều chỉnh chỉ giảm (hao hụt, hư hỏng, hết hạn, thu hồi); muốn tăng phải nhập lô. Lý do bắt buộc; không vượt tồn lô.",
    "• Ngày không hợp lệ, sản phẩm hoặc NCC ngừng hoạt động: từ chối.\n• Nhận lại phiếu đã RECEIVED: trả kết quả cũ, không cộng tồn lần hai.\n"
    "• Điều chỉnh vượt tồn hoặc thiếu lý do: từ chối.",
    "Có lô mới và tồn tăng, hoặc tồn giảm; thẻ kho có dòng RECEIPT hoặc ADJUSTMENT.",
-   "Ghi: phiếu nhập, lô, sản phẩm, bộ đếm. Ghi sau: thẻ kho, đồ thị.", "AP-08, AP-22, AP-24")
+   "Đọc: phiếu nhập (xem, in). Ghi: phiếu nhập, lô, sản phẩm, bộ đếm. Ghi sau: thẻ kho, đồ thị.", "AP-08, AP-22, AP-24")
 
 uc("FR-05", "Thẻ kho", "Hệ thống ghi; mọi người dùng xem", "Must",
    "Có thay đổi tồn kho.", "Sản phẩm, tháng.",
@@ -566,7 +569,7 @@ table(["Màn hình", "Vai trò", "Nội dung chính"], [
     ("Chốt ca", "STAFF, ADMIN", "Tổng thu trong ca, nhập tiền đếm được, chênh lệch; ADMIN xem mọi ca"),
     ("Sản phẩm", "Tất cả xem", "Lọc, phân trang, thuộc tính riêng, tab Thẻ kho theo tháng"),
     ("Nhóm hàng, Nhà cung cấp", "ADMIN (+WAREHOUSE với NCC)", "Danh sách, thêm, sửa, xóa"),
-    ("Phiếu nhập", "WAREHOUSE, ADMIN", "Tạo phiếu nháp, nhận hàng sinh lô"),
+    ("Phiếu nhập", "WAREHOUSE, ADMIN", "Tạo phiếu nháp, nhận hàng sinh lô, xem chi tiết, in phiếu nhập kho A4"),
     ("Tồn kho theo lô", "WAREHOUSE, ADMIN", "Lô theo sản phẩm, lô hết hạn, điều chỉnh giảm; ADMIN: truy vết và thu hồi"),
     ("Khuyến mãi", "ADMIN", "Form theo 4 loại, khung gợi ý mua kèm"),
     ("Thống kê", "ADMIN", "Biểu đồ doanh thu theo ngày, nhóm hàng; top bán chạy; xuất CSV"),

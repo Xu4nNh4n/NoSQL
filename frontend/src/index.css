@@ -181,8 +181,11 @@ body {
   box-sizing: border-box;
   background: #ffffff;
 }
+/* Tài liệu A4 (phiếu nhập kho): rộng bằng vùng in A4 trừ lề 12mm */
+.receipt-print-root.print-a4 { width: 186mm; padding: 0; }
 @media print {
   body:has(.receipt-print-root) > :not(.receipt-print-root) { display: none !important; }
+  .receipt-print-root.print-a4 { width: auto; }
   html:has(.receipt-print-root), body:has(.receipt-print-root) { margin: 0; padding: 0; background: #ffffff; }
   .receipt-print-root {
     position: static;
