@@ -87,6 +87,16 @@ class SecurityAccessTest {
     }
 
     @Test
+    void graphFeatures() throws Exception {
+        mvc.perform(get("/api/batches/L1/trace").header("Authorization", bearer("STAFF"))).andExpect(status().isForbidden());
+        mvc.perform(get("/api/products/p1/also-bought").header("Authorization", bearer("WAREHOUSE")))
+                .andExpect(status().isForbidden());
+        // Test không có Neo4j: gợi ý trả rỗng chứ không lỗi
+        mvc.perform(get("/api/products/p1/also-bought").header("Authorization", bearer("STAFF")))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.available").value(false));
+    }
+
+    @Test
     void adminCanListRoles() throws Exception {
         mvc.perform(get("/api/roles").header("Authorization", bearer("ADMIN")))
                 .andExpect(status().isOk())
