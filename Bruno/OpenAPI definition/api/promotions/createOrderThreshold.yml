@@ -1,0 +1,28 @@
+info:
+  name: createOrderThreshold
+  type: http
+  seq: 7
+  tags:
+    - promotion
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/promotions"
+  body:
+    type: json
+    data: |-
+      {
+        "name": "Đơn từ 500k giảm 50k",
+        "type": "ORDER_THRESHOLD",
+        "startsAt": "2026-11-07T00:00:00+07:00",
+        "endsAt": "2026-11-30T23:59:59+07:00",
+        "minTotal": 500000,
+        "amount": 50000
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

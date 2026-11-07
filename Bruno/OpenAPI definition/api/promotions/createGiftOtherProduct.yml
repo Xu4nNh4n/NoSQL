@@ -1,0 +1,30 @@
+info:
+  name: createGiftOtherProduct
+  type: http
+  seq: 6
+  tags:
+    - promotion
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/promotions"
+  body:
+    type: json
+    data: |-
+      {
+        "name": "Mua 2 lon bia tặng 1 ly",
+        "type": "BUY_X_GET_Y",
+        "startsAt": "2026-11-07T00:00:00+07:00",
+        "endsAt": "2026-11-30T23:59:59+07:00",
+        "productIds": [""],
+        "buyQty": 2,
+        "getQty": 1,
+        "giftProductId": ""
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

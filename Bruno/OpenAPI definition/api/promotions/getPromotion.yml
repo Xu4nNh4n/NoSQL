@@ -1,0 +1,17 @@
+info:
+  name: getPromotion
+  type: http
+  seq: 8
+  tags:
+    - promotion
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/promotions/{id}"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

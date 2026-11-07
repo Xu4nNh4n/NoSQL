@@ -1,0 +1,23 @@
+info:
+  name: setPromotionActive
+  type: http
+  seq: 9
+  tags:
+    - promotion
+
+http:
+  method: PUT
+  url: "{{baseUrl}}/api/promotions/{id}/active"
+  body:
+    type: json
+    data: |-
+      {
+        "active": false
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

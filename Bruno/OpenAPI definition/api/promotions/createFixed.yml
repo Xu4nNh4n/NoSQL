@@ -1,0 +1,28 @@
+info:
+  name: createFixed
+  type: http
+  seq: 4
+  tags:
+    - promotion
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/promotions"
+  body:
+    type: json
+    data: |-
+      {
+        "name": "Mì gói giảm 2.000đ",
+        "type": "FIXED",
+        "startsAt": "2026-11-07T00:00:00+07:00",
+        "endsAt": "2026-11-30T23:59:59+07:00",
+        "productIds": [""],
+        "amount": 2000
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

@@ -1,0 +1,17 @@
+info:
+  name: getPromotions
+  type: http
+  seq: 1
+  tags:
+    - promotion
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/promotions?type=&active=true&page=0&size=20&sortBy=startsAt&sortDir=desc"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
