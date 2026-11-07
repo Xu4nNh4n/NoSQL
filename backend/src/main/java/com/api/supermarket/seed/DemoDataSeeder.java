@@ -94,7 +94,8 @@ public class DemoDataSeeder implements ApplicationRunner {
             SupplierService suppliers, ProductService products, CustomerService customers,
             PurchaseOrderService purchaseOrders, PromotionService promotions, QuoteService quotes, OrderService orders,
             ReturnService returns, AppTime time,
-            @Value("${app.seed.password:${app.bootstrap.admin-password:}}") String password,
+            @Value("${app.seed.password:}") String password,
+            @Value("${app.bootstrap.admin-password:}") String adminPassword,
             @Value("${app.seed.orders:80}") int orderCount) {
         this.mongo = mongo;
         this.users = users;
@@ -109,7 +110,8 @@ public class DemoDataSeeder implements ApplicationRunner {
         this.orders = orders;
         this.returns = returns;
         this.time = time;
-        this.password = password;
+        // APP_SEED_PASSWORD để trống trong .env là chuỗi rỗng, không phải "không có": dùng mật khẩu admin
+        this.password = password == null || password.isBlank() ? adminPassword : password;
         this.orderCount = orderCount;
     }
 
