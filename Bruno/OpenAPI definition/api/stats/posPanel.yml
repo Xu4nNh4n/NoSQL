@@ -1,0 +1,17 @@
+info:
+  name: posPanel
+  type: http
+  seq: 3
+  tags:
+    - stats
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/pos/products/{id}/panel"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

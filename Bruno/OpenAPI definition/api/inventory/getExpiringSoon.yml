@@ -1,0 +1,17 @@
+info:
+  name: getExpiringSoon
+  type: http
+  seq: 8
+  tags:
+    - inventory
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/inventory/batches/expiring-soon"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

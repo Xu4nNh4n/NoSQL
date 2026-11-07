@@ -1,0 +1,17 @@
+info:
+  name: salesStats
+  type: http
+  seq: 1
+  tags:
+    - stats
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/stats/sales?from=2026-11-01&to=2026-11-07"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
