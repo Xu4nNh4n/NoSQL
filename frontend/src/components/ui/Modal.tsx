@@ -57,11 +57,11 @@ export const Modal: React.FC<ModalProps> = ({
           role="dialog"
           aria-modal="true"
           aria-labelledby="app-modal-title"
-          className={`relative transform overflow-hidden rounded-lg bg-white text-left shadow-2xl transition-all w-full my-8 border border-gray-200 ${maxWidthStyles[effectiveWidth]}`}
+          className={`ui-modal relative transform overflow-hidden rounded-lg bg-white text-left shadow-2xl transition-all w-full my-8 border border-gray-200 ${maxWidthStyles[effectiveWidth]}`}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
+          <div className="ui-modal-head flex items-center justify-between border-b border-gray-200 px-5 py-4">
             <h3 id="app-modal-title" className="text-base font-bold text-gray-900">{title}</h3>
             <button
               type="button"

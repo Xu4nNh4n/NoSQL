@@ -1,22 +1,31 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 
-export type Theme = 'light' | 'dark';
+/** light: giấy ngà · dark: terminal đen · playful: kem pastel viền đậm (neo-brutalism). */
+export type Theme = 'light' | 'dark' | 'playful';
+
+export const THEMES: Theme[] = ['light', 'dark', 'playful'];
 
 const ThemeContext = createContext<{ theme: Theme; toggle: () => void; setTheme: (t: Theme) => void } | null>(null);
 
-/** Chế độ đã được index.html đặt sẵn (class "dark" trên <html>); ở đây chỉ đọc lại và cho đổi. */
-const current = (): Theme => (document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+/** Chế độ đã được index.html đặt sẵn (class "dark" / "playful" trên <html>); ở đây chỉ đọc lại và cho đổi. */
+const current = (): Theme => {
+  const cl = document.documentElement.classList;
+  return cl.contains('dark') ? 'dark' : cl.contains('playful') ? 'playful' : 'light';
+};
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(current);
 
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', theme === 'dark');
+    const cl = document.documentElement.classList;
+    cl.toggle('dark', theme === 'dark');
+    cl.toggle('playful', theme === 'playful');
     try { localStorage.setItem('theme', theme); } catch { /* chế độ riêng tư: chỉ không nhớ được lựa chọn */ }
   }, [theme]);
 
   const setTheme = useCallback((t: Theme) => setThemeState(t), []);
-  const toggle = useCallback(() => setThemeState(t => (t === 'dark' ? 'light' : 'dark')), []);
+  /** Xoay vòng sáng → tối → vui tươi. */
+  const toggle = useCallback(() => setThemeState(t => THEMES[(THEMES.indexOf(t) + 1) % THEMES.length]), []);
   return <ThemeContext.Provider value={{ theme, toggle, setTheme }}>{children}</ThemeContext.Provider>;
 }
 

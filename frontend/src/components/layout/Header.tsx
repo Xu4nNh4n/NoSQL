@@ -32,7 +32,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu, isMobileMenu
 
   return (
     <>
-    <header className="sticky top-0 z-30 flex min-h-16 items-center justify-between gap-3 border-b border-gray-200 bg-[var(--c-bg)]/95 px-4 backdrop-blur sm:px-6">
+    <header className="ui-header sticky top-0 z-30 flex min-h-16 items-center justify-between gap-3 border-b border-gray-200 bg-[var(--c-bg)]/95 px-4 backdrop-blur sm:px-6">
       <div className="flex min-w-0 items-center gap-3">
         <button
           type="button"
@@ -56,7 +56,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu, isMobileMenu
           <button
             type="button"
             onClick={() => navigate('/pos')}
-            className="hidden h-9 cursor-pointer items-center gap-2 rounded-md bg-accent px-3 text-xs font-semibold text-accent-fg hover:bg-[var(--a-hover)] md:inline-flex"
+            className="ui-btn ui-btn-primary hidden h-9 cursor-pointer items-center gap-2 rounded-md bg-accent px-3 text-xs font-semibold text-accent-fg hover:bg-[var(--a-hover)] md:inline-flex"
           >
             <ShoppingCart className="h-4 w-4" /> Mở quầy POS
           </button>
@@ -64,7 +64,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu, isMobileMenu
         <ThemeToggle />
 
         <div className="ml-1 flex items-center gap-2.5 border-l border-gray-200 pl-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-md border border-gray-300 text-xs font-bold text-gray-900">
+          <div className="ui-avatar flex h-8 w-8 items-center justify-center rounded-md border border-gray-300 text-xs font-bold text-gray-900">
             {(user?.username ?? '?').charAt(0).toUpperCase()}
           </div>
           <div className="hidden text-left sm:block">

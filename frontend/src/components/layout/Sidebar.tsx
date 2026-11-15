@@ -61,14 +61,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onCloseMobile })
       <aside
         id="main-navigation"
         aria-label="Điều hướng chính"
-        className={`fixed top-0 bottom-0 left-0 z-40 flex w-64 flex-col border-r border-gray-200 bg-white transition-transform duration-200 ease-in-out lg:translate-x-0 ${
+        className={`ui-sidebar fixed top-0 bottom-0 left-0 z-40 flex w-64 flex-col border-r border-gray-200 bg-white transition-transform duration-200 ease-in-out lg:translate-x-0 ${
           isMobileOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         {/* Thương hiệu: biểu tượng ⇅ + tên đậm + dòng phụ nhỏ */}
         <div className="px-5 pt-6 pb-4">
           <div className="flex items-center gap-2.5">
-            <ArrowDownUp className="h-5 w-5 text-gray-900" strokeWidth={2.5} />
+            <span className="ui-logo inline-flex"><ArrowDownUp className="h-5 w-5 text-gray-900" strokeWidth={2.5} /></span>
             <h1 className="text-lg font-bold tracking-tight text-gray-900">SuperMarket</h1>
           </div>
           <p className="mt-0.5 pl-[30px] text-[11px] text-gray-500">Bán hàng · Kho · NoSQL</p>
@@ -92,9 +92,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onCloseMobile })
                         onClick={onCloseMobile}
                         aria-label={item.label}
                         className={({ isActive }) =>
-                          `flex min-h-10 items-center gap-3 rounded-md border px-3 py-2 text-[13px] transition-colors ${
+                          `ui-nav flex min-h-10 items-center gap-3 rounded-md border px-3 py-2 text-[13px] transition-colors ${
                             isActive
-                              ? 'border-gray-300 bg-gray-50 font-semibold text-gray-900'
+                              ? 'ui-nav-active border-gray-300 bg-gray-50 font-semibold text-gray-900'
                               : 'border-transparent text-gray-600 hover:border-gray-200 hover:text-gray-900'
                           }`
                         }

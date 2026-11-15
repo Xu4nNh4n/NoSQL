@@ -47,9 +47,9 @@ export const LoginPage: React.FC = () => {
       </div>
 
       <div className="flex flex-1 items-center justify-center px-4 pb-10">
-        <div className="grid w-full max-w-5xl overflow-hidden rounded-lg border border-gray-200 bg-white lg:grid-cols-[1.1fr_1fr]">
+        <div className="ui-card ui-login grid w-full max-w-5xl overflow-hidden rounded-lg border border-gray-200 bg-white lg:grid-cols-[1.1fr_1fr]">
           {/* Banner */}
-          <div className="flex flex-col justify-between gap-8 border-b border-gray-200 p-7 sm:p-10 lg:border-r lg:border-b-0">
+          <div className="ui-hero flex flex-col justify-between gap-8 border-b border-gray-200 p-7 sm:p-10 lg:border-r lg:border-b-0">
             <div>
               <p className="tag-accent">Đồ án NoSQL · 4 CSDL</p>
               <h1 className="mt-4 text-3xl leading-tight font-extrabold tracking-tight sm:text-4xl">
@@ -64,7 +64,7 @@ export const LoginPage: React.FC = () => {
               <div className="seg-stripe" />
               <div className="mt-4 grid grid-cols-2 gap-2 text-[11px] text-gray-500 sm:grid-cols-4">
                 {['MongoDB', 'Cassandra', 'Neo4j', 'Redis'].map(db => (
-                  <span key={db} className="rounded-md border border-gray-200 px-2 py-1.5 text-center">{db}</span>
+                  <span key={db} className="ui-db-chip rounded-md border border-gray-200 px-2 py-1.5 text-center">{db}</span>
                 ))}
               </div>
             </div>
@@ -95,8 +95,8 @@ export const LoginPage: React.FC = () => {
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                 {DEMO.map(d => (
                   <button key={d.username} type="button" onClick={() => { setUsername(d.username); setPassword(''); }}
-                    className={`cursor-pointer rounded-md border p-2.5 text-left text-xs transition-colors ${
-                      username === d.username ? 'border-gray-400 bg-gray-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                    className={`ui-demo cursor-pointer rounded-md border p-2.5 text-left text-xs transition-colors ${
+                      username === d.username ? 'ui-demo-active border-gray-400 bg-gray-50' : 'border-gray-200 hover:border-gray-300'}`}>
                     <div className="font-semibold text-gray-900">{d.label}</div>
                     <div className="mt-0.5 text-[10px] text-gray-500">{d.username} · {d.role}</div>
                   </button>

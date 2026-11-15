@@ -77,6 +77,25 @@
   --stripe-1: #e8e8e8; --stripe-2: #ffd84d; --stripe-3: #4a4632;
 }
 
+/* ---------- Vui tươi: nền kem, mực đen, viền dày + bóng lệch, thẻ pastel (neo-brutalism) ---------- */
+:root.playful {
+  color-scheme: light;
+  --ink: #161616;
+  --pl-mint: #b4ecc4;  --pl-peach: #ffb59c; --pl-pink: #ffadd2;
+  --pl-sky: #a9d8f5;   --pl-lilac: #d5c4f7; --pl-yellow: #ffd84a;
+  --c-bg: #fbf4e4;
+  --c-surface: #fffdf7;
+  --g-50: #fbf6ea;  --g-100: #f5ecd8; --g-200: #e6dabe; --g-300: #cbbd9c; --g-400: #9a8f78;
+  --g-500: #6e6656; --g-600: #4f493d; --g-700: #353129; --g-800: #221f1a; --g-900: #161616; --g-950: #0a0a0a;
+  --a-50: #fff7d1;  --a-100: #ffefa3; --a-200: #ffe170; --a-300: #ffd84a; --a-400: #ffd84a; --a-500: #ffd84a;
+  --a-600: #ffd84a; --a-700: #6b5000; --a-800: #4d3a00; --a-900: #332600; --a-fg: #161616; --a-hover: #ffcd1f;
+  --r-50: #ffeef6;  --r-100: #ffdcec; --r-200: #ffadd2; --r-300: #ff86bc; --r-500: #f0457f; --r-600: #d92a68; --r-700: #b0184f; --r-800: #861040;
+  --y-50: #fff8dc;  --y-100: #ffefb0; --y-200: #ffe07a; --y-300: #ffd24a; --y-500: #f5a300; --y-600: #d98a00; --y-700: #a86400; --y-800: #7a4800;
+  --e-50: #e9faee;  --e-100: #d2f5dd; --e-200: #b4ecc4; --e-300: #82dc9e; --e-500: #22b45a; --e-600: #12964a; --e-700: #0b7339; --e-800: #07552a;
+  --stripe-1: #161616; --stripe-2: #ffd84a; --stripe-3: #ff86bc;
+  --font-sans: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+}
+
 :root {
   font-family: var(--font-sans);
   color: var(--g-900);
@@ -194,4 +213,134 @@ body {
     color: #000000;
   }
   .receipt-print-root * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+
+/* =====================================================================
+ * Giao diện "Vui tươi" (class "playful" trên <html>).
+ * CSS ngoài @layer nên thắng class tiện ích của Tailwind; chỉ chạm các phần tử có class ui-*.
+ * ===================================================================== */
+.theme-swatch {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.75rem; height: 1.75rem; flex-shrink: 0;
+  border-radius: 0.5rem; border: 1px solid var(--g-300);
+}
+.theme-swatch-light { background: #f3f1ea; color: #7a5f00; }
+.theme-swatch-dark { background: #0b0b0b; color: #ffd84d; border-color: #3b3b3b; }
+.theme-swatch-playful {
+  background: linear-gradient(135deg, #b4ecc4 0 33%, #ffd84a 33% 66%, #ffadd2 66%);
+  color: #161616; border: 2px solid #161616; box-shadow: 2px 2px 0 #161616;
+}
+
+:root.playful body {
+  background-color: var(--c-bg);
+  background-image: radial-gradient(rgb(22 22 22 / 7%) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+:root.playful h1, :root.playful h2, :root.playful h3 { letter-spacing: -0.02em; }
+
+/* Thẻ: viền 2px, bo 16px, bóng lệch; tiêu đề thẻ xoay màu pastel */
+:root.playful .ui-card {
+  border: 2px solid var(--ink);
+  border-radius: 1rem;
+  box-shadow: 5px 5px 0 var(--ink);
+}
+:root.playful .ui-card-head { border-bottom: 2px solid var(--ink); background: var(--pl-mint); }
+:root.playful .ui-card:nth-of-type(5n+2) > .ui-card-head { background: var(--pl-peach); }
+:root.playful .ui-card:nth-of-type(5n+3) > .ui-card-head { background: var(--pl-pink); }
+:root.playful .ui-card:nth-of-type(5n+4) > .ui-card-head { background: var(--pl-sky); }
+:root.playful .ui-card:nth-of-type(5n+5) > .ui-card-head { background: var(--pl-lilac); }
+:root.playful .ui-card-head h3 { font-size: 1rem; }
+
+/* Nút: viền đen, bóng lệch, bấm thì "lún" xuống */
+:root.playful .ui-btn {
+  border: 2px solid var(--ink);
+  border-radius: 0.75rem;
+  font-weight: 700;
+  box-shadow: 3px 3px 0 var(--ink);
+  transition: transform 90ms ease, box-shadow 90ms ease, background-color 120ms ease;
+}
+:root.playful .ui-btn:hover:not(:disabled) { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--ink); }
+:root.playful .ui-btn:active:not(:disabled) { transform: translate(3px, 3px); box-shadow: 0 0 0 var(--ink); }
+:root.playful .ui-btn-secondary, :root.playful .ui-btn-outline { background: var(--c-surface); color: var(--ink); }
+:root.playful .ui-btn-secondary:hover:not(:disabled), :root.playful .ui-btn-outline:hover:not(:disabled) { background: var(--pl-sky); }
+:root.playful .ui-btn-danger { background: var(--pl-pink); color: var(--ink); }
+:root.playful .ui-btn-danger:hover:not(:disabled) { background: var(--r-300); }
+:root.playful .ui-btn-ghost { border-color: transparent; box-shadow: none; }
+:root.playful .ui-btn-ghost:hover:not(:disabled) { border-color: var(--ink); box-shadow: 3px 3px 0 var(--ink); background: var(--c-surface); }
+
+/* Ô nhập */
+:root.playful .ui-input, :root.playful select.ui-input {
+  border: 2px solid var(--ink);
+  border-radius: 0.75rem;
+  background: var(--c-surface);
+}
+:root.playful .ui-input:focus { box-shadow: 3px 3px 0 var(--ink); outline: none; --tw-ring-shadow: 0 0 #0000; }
+
+/* Bảng */
+:root.playful .ui-table { border: 2px solid var(--ink); border-radius: 1rem; box-shadow: 5px 5px 0 var(--ink); }
+:root.playful .ui-thead { background: var(--pl-yellow); border-bottom: 2px solid var(--ink); color: var(--ink); }
+:root.playful .ui-table tbody tr:hover { background: var(--a-50); }
+
+/* Hộp thoại, menu bật lên */
+:root.playful .ui-modal { border: 2px solid var(--ink); border-radius: 1.25rem; box-shadow: 8px 8px 0 var(--ink); }
+:root.playful .ui-modal-head { background: var(--pl-yellow); border-bottom: 2px solid var(--ink); }
+:root.playful .ui-pop { border: 2px solid var(--ink); border-radius: 0.875rem; box-shadow: 5px 5px 0 var(--ink); }
+
+/* Thanh bên: nền kem đậm hơn, mục đang chọn là "viên" xanh bạc hà */
+:root.playful .ui-sidebar { background: #f6ebd3; border-right: 2px solid var(--ink); }
+:root.playful .ui-logo {
+  align-items: center; justify-content: center;
+  width: 2.25rem; height: 2.25rem; border-radius: 0.75rem;
+  background: var(--pl-yellow); border: 2px solid var(--ink); box-shadow: 3px 3px 0 var(--ink);
+}
+:root.playful .ui-nav { border-radius: 0.75rem; border-width: 2px; }
+:root.playful .ui-nav:hover { border-color: var(--ink); background: var(--c-surface); }
+:root.playful .ui-nav-active, :root.playful .ui-nav-active:hover {
+  border-color: var(--ink); background: var(--pl-mint); color: var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+:root.playful .ui-nav-active svg { color: var(--ink); }
+
+/* Thanh trên, chip, avatar */
+:root.playful .ui-header { border-bottom: 2px solid var(--ink); }
+:root.playful .ui-chip { border: 2px solid var(--ink); border-radius: 0.75rem; box-shadow: 2px 2px 0 var(--ink); color: var(--ink); }
+:root.playful .ui-avatar { border: 2px solid var(--ink); border-radius: 0.625rem; background: var(--pl-pink); box-shadow: 2px 2px 0 var(--ink); }
+
+/* Phân trang, tab */
+:root.playful .ui-page { border: 2px solid var(--ink); border-radius: 0.625rem; }
+:root.playful .ui-page-active { background: var(--pl-yellow); box-shadow: 2px 2px 0 var(--ink); }
+:root.playful .ui-tab { border-radius: 0.75rem 0.75rem 0 0; }
+:root.playful .ui-tab-active { border-color: var(--ink); color: var(--ink); background: var(--pl-mint); font-weight: 700; }
+
+/* Tiêu đề trang, dải trang trí, nhãn */
+:root.playful .page-heading { border-bottom: 2px solid var(--ink); }
+:root.playful .page-heading h2 { font-size: 1.75rem; font-weight: 700; }
+:root.playful .seg-stripe {
+  height: 5px; border-radius: 3px;
+  background: repeating-linear-gradient(90deg,
+    var(--pl-mint) 0 18px, transparent 18px 24px,
+    var(--pl-yellow) 24px 42px, transparent 42px 48px,
+    var(--pl-pink) 48px 66px, transparent 66px 72px,
+    var(--pl-sky) 72px 90px, transparent 90px 96px);
+}
+:root.playful .tag-accent::before { content: '● '; color: var(--e-600); }
+:root.playful .eyebrow { color: var(--g-700); letter-spacing: 0.12em; }
+
+/* Màn đăng nhập: banner vàng như hero của mẫu */
+:root.playful .ui-hero { background: var(--pl-yellow); border-color: var(--ink); border-width: 0 0 2px 0; }
+@media (min-width: 1024px) { :root.playful .ui-hero { border-width: 0 2px 0 0; } }
+:root.playful .ui-hero h1 { font-size: 3rem; font-weight: 700; }
+:root.playful .ui-hero p { color: var(--g-700); }
+:root.playful .ui-db-chip { border: 2px solid var(--ink); border-radius: 0.625rem; background: var(--c-surface); color: var(--ink); font-weight: 600; }
+:root.playful .ui-db-chip:nth-child(1) { background: var(--pl-mint); }
+:root.playful .ui-db-chip:nth-child(2) { background: var(--pl-peach); }
+:root.playful .ui-db-chip:nth-child(3) { background: var(--pl-sky); }
+:root.playful .ui-db-chip:nth-child(4) { background: var(--pl-pink); }
+:root.playful .ui-demo { border: 2px solid var(--ink); border-radius: 0.75rem; transition: transform 90ms ease, box-shadow 90ms ease; }
+:root.playful .ui-demo:hover { transform: translate(-1px, -1px); box-shadow: 3px 3px 0 var(--ink); }
+:root.playful .ui-demo-active { background: var(--pl-mint); box-shadow: 3px 3px 0 var(--ink); }
+
+@media (prefers-reduced-motion: reduce) {
+  :root.playful .ui-btn, :root.playful .ui-demo { transition: none; }
+  :root.playful .ui-btn:hover:not(:disabled), :root.playful .ui-btn:active:not(:disabled), :root.playful .ui-demo:hover { transform: none; }
 }
