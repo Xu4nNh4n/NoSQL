@@ -17,9 +17,9 @@ MongoDB ghi nghiệp vụ và bản ghi `sync_queue` trong cùng một transacti
 
 | Vai trò | Màn hình |
 |---|---|
-| `ADMIN` | Toàn bộ, thêm: khuyến mãi, nhóm hàng, người dùng, thống kê, truy vết/thu hồi lô, trạng thái hệ thống |
+| `ADMIN` | Quản lý: thống kê, người dùng, khuyến mãi, nhóm hàng, tra cứu đơn, xem/mở lại ca, truy vết/thu hồi lô, trạng thái hệ thống và các màn hình kho. Không bán tại quầy, trả hàng, chốt ca |
 | `WAREHOUSE` | Sản phẩm & thẻ kho, tồn kho theo lô, phiếu nhập, nhà cung cấp |
-| `STAFF` | Bán tại quầy, đơn hàng & trả hàng, chốt ca, sản phẩm |
+| `STAFF` | Bán tại quầy (tiền mặt, QR chuyển khoản), đơn hàng & trả hàng, chốt ca, sản phẩm |
 
 ## Cấu trúc thư mục
 

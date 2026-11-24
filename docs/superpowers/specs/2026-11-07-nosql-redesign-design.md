@@ -32,7 +32,7 @@ Ngày: 2026-11-07 · Nhánh: `nosql-migration` · Mốc trước khi chuyển: c
 
 | Vai trò | Ai | Việc chính |
 |---|---|---|
-| `ADMIN` | Chủ cửa hàng kiêm quản lý | Người dùng, nhóm hàng, sản phẩm, nhà cung cấp, khuyến mãi, thu hồi lô, xem chốt ca mọi thu ngân, top bán chạy, dựng lại Neo4j |
+| `ADMIN` | Chủ cửa hàng kiêm quản lý | Người dùng, nhóm hàng, sản phẩm, nhà cung cấp, khuyến mãi, thu hồi lô, tra cứu đơn, xem và mở lại ca của thu ngân, top bán chạy, dựng lại Neo4j; có quyền của WAREHOUSE, không bán, trả hàng hay chốt ca |
 | `WAREHOUSE` | Thủ kho | Phiếu nhập hàng, nhận lô, điều chỉnh giảm tồn, thẻ kho, cảnh báo sắp hết hàng và lô hết hạn |
 | `STAFF` | Thu ngân | Bán tại quầy, đơn treo, trả hàng kèm hoàn tiền, chốt ca của mình |
 
@@ -96,12 +96,12 @@ Rút gọn từ 24 xuống 15 FR (07/11/2026): gộp các FR nhỏ theo use case
 | FR-03 | Danh mục hàng hóa: sản phẩm (thuộc tính linh hoạt), nhóm hàng, nhà cung cấp, tra cứu, cảnh báo sắp hết hàng và lô hết hạn | Tất cả xem; ADMIN, WAREHOUSE ghi | ● | | ● | ● cache |
 | FR-04 | Nhập hàng (phiếu DRAFT → RECEIVED, lô lẻ) và điều chỉnh giảm tồn | ADMIN, WAREHOUSE | ● | ● | ● | |
 | FR-05 | Thẻ kho (lịch sử biến động) | Tất cả | | ● | | |
-| FR-06 | Bán tại quầy (khuyến mãi, cấp phát FEFO) | ADMIN, STAFF | ● | ● | ● | ● top bán |
+| FR-06 | Bán tại quầy (khuyến mãi, cấp phát FEFO) | STAFF | ● | ● | ● | ● top bán |
 | FR-07 | Đơn treo tại quầy | STAFF | | | | ● |
-| FR-08 | Trả hàng kèm hoàn tiền (1 bước) | ADMIN, STAFF | ● | ● | | |
+| FR-08 | Trả hàng kèm hoàn tiền (1 bước) | STAFF | ● | ● | | |
 | FR-09 | Tra cứu đơn, phiếu trả, thanh toán | ADMIN, STAFF | ● | ● | | |
 | FR-10 | Khuyến mãi 4 loại | ADMIN | ● | | | ● cache |
-| FR-11 | Chốt ca thu ngân | STAFF (của mình), ADMIN (tất cả) | ● | ● | | |
+| FR-11 | Chốt ca thu ngân | STAFF (chốt ca của mình), ADMIN (xem, mở lại) | ● | ● | | |
 | FR-12 | Truy vết và thu hồi lô | ADMIN | | | ● | |
 | FR-13 | Gợi ý mua kèm | STAFF (quầy), ADMIN (tạo KM) | | | ● | |
 | FR-14 | Thống kê bán hàng, biểu đồ, xuất CSV, top bán chạy hôm nay | ADMIN (STAFF xem top bán) | ● aggregation | | | ● sorted set |
@@ -294,7 +294,7 @@ Kết quả là `netAmount` của từng dòng (mục 5.2).
 
 **Nhập hàng (FR-04)**: WAREHOUSE tạo phiếu `DRAFT` (nhà cung cấp, dòng hàng, giá vốn); còn `DRAFT` thì sửa hoặc xóa được. Khi hàng về, mở phiếu, nhập số thực nhận, ngày sản xuất, hạn dùng từng dòng → bấm "Nhận hàng". Một transaction thực hiện: tạo các lô, cộng `stockQuantity`, đặt phiếu `RECEIVED`, ghi `sync_queue` (`RECEIPT` sang Cassandra, Batch→Supplier sang Neo4j). Vẫn giữ nhập lô lẻ không cần phiếu cho hàng phát sinh. Điều chỉnh giảm tồn theo lô cũng thuộc FR-04.
 
-**Bán (FR-06)**: quầy → `quote` → thu ngân chọn CASH hoặc BANK_TRANSFER (bắt buộc mã giao dịch) → `POST /api/orders`. Một transaction: kiểm tra `requestKey`, tính lại khuyến mãi, cấp phát FEFO, trừ tồn, tạo đơn có thanh toán nhúng, ghi `sync_queue`. Sau commit: `ZINCRBY` top bán, xóa cache sản phẩm.
+**Bán (FR-06)**: quầy → `quote` → thu ngân chọn CASH hoặc BANK_TRANSFER (hiện QR, mã giao dịch tự sinh, bấm xác nhận sau khi tiền về) → `POST /api/orders`. Một transaction: kiểm tra `requestKey`, tính lại khuyến mãi, cấp phát FEFO, trừ tồn, tạo đơn có thanh toán nhúng, ghi `sync_queue`. Sau commit: `ZINCRBY` top bán, xóa cache sản phẩm.
 
 **Đơn treo (FR-07)**: nút "Treo đơn" lưu giỏ vào Redis; danh sách "Đơn đang treo" cho phép mở lại hoặc xóa. Mở lại thì giỏ quay về quầy và xóa key. Đơn treo không giữ tồn kho.
 
@@ -356,9 +356,9 @@ seed/          DemoDataSeeder (APP_SEED_DEMO)
 | Trang | Tác nhân | Thay đổi |
 |---|---|---|
 | Đăng nhập | Tất cả | Thêm tự làm mới token; chọn nhanh tài khoản demo |
-| Bán tại quầy | STAFF, ADMIN | Khuyến mãi tự áp, dòng quà, đơn treo có ghi chú, gợi ý mua kèm, top bán chạy, in hóa đơn 80 mm |
-| Đơn hàng | STAFF, ADMIN | Trả hàng 1 bước, lịch sử thanh toán, in lại hóa đơn |
-| Chốt ca | STAFF, ADMIN | Mới |
+| Bán tại quầy | STAFF | Khuyến mãi tự áp, dòng quà, QR chuyển khoản, đơn treo có ghi chú, gợi ý mua kèm, top bán chạy, in hóa đơn 80 mm |
+| Đơn hàng | STAFF, ADMIN | Lịch sử thanh toán, in lại hóa đơn; STAFF trả hàng 1 bước |
+| Chốt ca | STAFF, ADMIN | Mới; STAFF chốt ca, ADMIN xem và mở lại |
 | Sản phẩm | Tất cả xem | Thuộc tính linh hoạt, tab "Thẻ kho" (gộp `StockHistoryPage`) |
 | Nhóm hàng | ADMIN | Mới |
 | Nhà cung cấp | ADMIN, WAREHOUSE | Giữ |
@@ -366,12 +366,12 @@ seed/          DemoDataSeeder (APP_SEED_DEMO)
 | Tồn kho theo lô | ADMIN, WAREHOUSE | Danh sách sản phẩm bấm để xổ lô theo FEFO; tab sắp hết hàng / sắp hết hạn / đã hết hạn nhóm theo sản phẩm; "Truy vết / Thu hồi" (ADMIN) |
 | Khuyến mãi | ADMIN | Form theo 4 loại, khung gợi ý mua kèm |
 | Người dùng | ADMIN | Bỏ MANAGER |
-| Trạng thái hệ thống | ADMIN | Mới: tình trạng 4 CSDL, sync queue, nút dựng lại Neo4j |
+| Trạng thái hệ thống | ADMIN | Mới: tình trạng 4 CSDL, sync queue (dựng lại Neo4j qua API) |
 | Thống kê | ADMIN | Mới: số liệu tổng, doanh thu theo ngày, theo nhóm hàng, top 10, xuất CSV |
 
 Giao diện chung: kiểu terminal (chữ JetBrains Mono, nhấn vàng), chế độ tối/sáng lưu trong `localStorage` (mặc định theo hệ điều hành), phân trang đánh số dùng chung, thanh trên có đổi mật khẩu và đăng xuất. Bảng màu Tailwind (gray/blue/white) trỏ về biến CSS nên các trang tự đổi theo chế độ. Ảnh chụp màn hình ở `img/giao-dien/`.
 
-ID chuyển từ `number` sang `string` trong `types/index.ts`. Trang chủ sau đăng nhập: ADMIN và STAFF vào Bán tại quầy, WAREHOUSE vào Tồn kho.
+ID chuyển từ `number` sang `string` trong `types/index.ts`. Trang chủ sau đăng nhập: ADMIN vào Thống kê, STAFF vào Bán tại quầy, WAREHOUSE vào Tồn kho.
 
 ## 15. Xóa code và file cũ
 

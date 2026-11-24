@@ -130,14 +130,16 @@ table(["Phân hệ", "Yêu cầu chức năng"], [
 h2("2.4 Tác nhân và đặc điểm người dùng")
 table(["Vai trò", "Mô tả", "Đặc điểm / kỹ năng"], [
     ("ADMIN", "Chủ cửa hàng kiêm quản lý: người dùng, nhóm hàng, sản phẩm, nhà cung cấp, khuyến mãi, thu hồi lô, "
-              "thống kê; có toàn quyền của STAFF và WAREHOUSE.", "Am hiểu nghiệp vụ; ra quyết định giá và khuyến mãi."),
+              "thống kê, tra cứu đơn, xem và mở lại ca của thu ngân; có toàn quyền của WAREHOUSE. "
+              "Không bán tại quầy, không trả hàng, không có ca riêng.", "Am hiểu nghiệp vụ; ra quyết định giá và khuyến mãi."),
     ("WAREHOUSE", "Thủ kho: phiếu nhập, nhận lô, điều chỉnh giảm tồn, sản phẩm, nhà cung cấp, thẻ kho, cảnh báo.",
      "Nhập liệu thường xuyên, cần số tồn chính xác."),
     ("STAFF", "Thu ngân: bán tại quầy, đơn treo, trả hàng và hoàn tiền, chốt ca của mình.",
      "Thao tác nhanh tại quầy; ít kiến thức kỹ thuật."),
 ], [16, 54, 30])
 p("So với bản 1.1, vai trò MANAGER được gộp vào ADMIN vì cửa hàng nhỏ không tách người quản lý với chủ cửa hàng; "
-  "giảm số vai trò giúp phân quyền và demo rõ ràng hơn.")
+  "giảm số vai trò giúp phân quyền và demo rõ ràng hơn. ADMIN chỉ quản lý, không thu hay hoàn tiền, nên người giữ tiền (STAFF) "
+  "và người kiểm tra ca (ADMIN) là hai người khác nhau.")
 
 h2("2.5 Môi trường vận hành")
 p("Backend Java 21, Spring Boot 4.1, chạy trên JVM. Giao diện React + TypeScript (Vite) trên trình duyệt hiện đại. "
@@ -163,7 +165,8 @@ b("Học phần NoSQL: dữ liệu phải nằm trên đủ 4 loại CSDL NoSQL;
   "Xác thực JWT không giữ phiên; mật khẩu băm BCrypt, tối đa 72 byte.")
 
 h2("2.7 Giả định và phụ thuộc")
-b("Xác nhận chuyển khoản tại quầy do thu ngân thực hiện bằng cách nhập mã giao dịch sau khi kiểm tra tiền về.",
+b("Chuyển khoản tại quầy: hệ thống hiện mã QR kèm mã giao dịch tự sinh cho từng giỏ; thu ngân kiểm tra tiền về rồi bấm xác nhận. "
+  "QR mang tính mô phỏng, hệ thống không kết nối ngân hàng để tự kiểm tra.",
   "Hoàn tiền thực hiện tại quầy, ghi nhận cùng lúc với phiếu trả.",
   "Hạn dùng, ngày sản xuất là ngày lịch; múi giờ thống nhất Asia/Ho_Chi_Minh cho khái niệm \"hôm nay\".",
   "Tiền tệ VND, không có phần lẻ.",
@@ -184,24 +187,24 @@ FR = [
     ("FR-04", "Nhập hàng và điều chỉnh tồn", "ADMIN, WAREHOUSE", "Phiếu nhập DRAFT → RECEIVED sinh lô; nhập lô lẻ; "
      "điều chỉnh giảm tồn theo lô; xem chi tiết, in phiếu nhập", "Cao", "AP-08, AP-22, AP-24"),
     ("FR-05", "Thẻ kho", "Tất cả", "Lịch sử biến động theo sản phẩm, theo tháng", "Cao", "AP-13"),
-    ("FR-06", "Bán tại quầy", "ADMIN, STAFF", "Tính khuyến mãi, cấp phát FEFO, thu tiền, in hóa đơn", "Cao",
+    ("FR-06", "Bán tại quầy", "STAFF", "Tính khuyến mãi, cấp phát FEFO, thu tiền (tiền mặt, QR chuyển khoản), in hóa đơn", "Cao",
      "AP-03, AP-07, AP-09, AP-17, AP-19"),
-    ("FR-07", "Đơn treo tại quầy", "STAFF, ADMIN", "Tạm giữ giỏ 30 phút, mở lại hoặc hủy", "Trung bình", "AP-18"),
-    ("FR-08", "Trả hàng kèm hoàn tiền", "ADMIN, STAFF", "Một bước: lập phiếu, nhập lại đúng lô, hoàn tiền", "Cao", "AP-12"),
+    ("FR-07", "Đơn treo tại quầy", "STAFF", "Tạm giữ giỏ 30 phút, mở lại hoặc hủy", "Trung bình", "AP-18"),
+    ("FR-08", "Trả hàng kèm hoàn tiền", "STAFF", "Một bước: lập phiếu, nhập lại đúng lô, hoàn tiền", "Cao", "AP-12"),
     ("FR-09", "Tra cứu đơn, phiếu trả, thanh toán", "ADMIN, STAFF", "Lọc đơn, xem chi tiết, lịch sử thanh toán", "Cao",
      "AP-10, AP-11, AP-14"),
     ("FR-10", "Khuyến mãi 4 loại", "ADMIN", "Giảm %, giảm tiền, mua X tặng Y, giảm theo tổng đơn", "Cao", "AP-17"),
-    ("FR-11", "Chốt ca thu ngân", "STAFF, ADMIN", "Tổng thu theo ca, nhập tiền đếm được, chênh lệch", "Cao", "AP-15"),
+    ("FR-11", "Chốt ca thu ngân", "STAFF (chốt); ADMIN (xem, mở lại)", "Tổng thu theo ca, nhập tiền đếm được, chênh lệch", "Cao", "AP-15"),
     ("FR-12", "Truy vết và thu hồi lô", "ADMIN", "Lô → các đơn đã bán; thu hồi phần còn tồn", "Cao", "AP-20"),
-    ("FR-13", "Gợi ý mua kèm", "STAFF, ADMIN", "\"Đơn có A thường có B\"", "Trung bình", "AP-21"),
+    ("FR-13", "Gợi ý mua kèm", "STAFF (quầy); ADMIN (khuyến mãi)", "\"Đơn có A thường có B\"", "Trung bình", "AP-21"),
     ("FR-14", "Thống kê, top bán chạy, xuất CSV", "ADMIN (STAFF xem top bán)", "Doanh thu theo ngày, nhóm hàng; tiền khuyến mãi; "
      "top 10 bán chạy hôm nay", "Trung bình", "AP-19, AP-23"),
 ]
 table(["Mã", "Tên yêu cầu", "Tác nhân", "Mô tả", "Ưu tiên", "Truy vết AP"], FR, [10, 19, 15, 32, 10, 14])
 
 h2("3.2 Sơ đồ use case")
-p("Hình 2 là sơ đồ use case tổng quát. Cột giữa là các chức năng cả ba vai trò cùng dùng; ADMIN kế thừa toàn bộ quyền "
-  "của STAFF và WAREHOUSE.")
+p("Hình 2 là sơ đồ use case tổng quát. Cột giữa là các chức năng dùng chung (FR-09 chỉ ADMIN và STAFF); ADMIN kế thừa toàn bộ quyền "
+  "của WAREHOUSE, không bán, không trả hàng và không chốt ca.")
 img("02_use_case_tong_quat.png", "Sơ đồ use case tổng quát", 15)
 
 h2("3.3 Mô hình hóa nghiệp vụ (BPMN)")
@@ -215,6 +218,7 @@ table(["Bước", "Vai trò", "Dữ liệu đọc", "Dữ liệu sinh ra"], [
     ("Treo đơn", "STAFF", "Giỏ hiện tại", "Đơn treo (30 phút)"),
     ("Trả hàng", "STAFF", "Đơn, cấp phát lô", "Phiếu trả, hoàn tiền, thẻ kho RETURN/RETURN_DAMAGED"),
     ("Chốt ca", "STAFF", "Thanh toán theo thu ngân trong ngày", "Bản ghi chốt ca"),
+    ("Kiểm tra, mở lại ca", "ADMIN", "Bản ghi chốt ca theo ngày", "Trạng thái REOPENED, người và thời điểm mở lại"),
     ("Thu hồi lô", "ADMIN", "Quan hệ lô → đơn", "Danh sách đơn đã bán từ lô, điều chỉnh giảm phần còn tồn"),
 ], [18, 14, 30, 38])
 
@@ -318,12 +322,13 @@ uc("FR-05", "Thẻ kho", "Hệ thống ghi; mọi người dùng xem", "Must",
    "• Tổng RECEIPT + SALE + RETURN + ADJUSTMENT của sản phẩm bằng tồn sản phẩm.",
    "• Sản phẩm không tồn tại: 404.", "Mọi thay đổi tồn có dòng tương ứng.", "Ghi/đọc: thẻ kho.", "AP-13")
 
-uc("FR-06", "Bán tại quầy", "ADMIN, STAFF", "Must",
+uc("FR-06", "Bán tại quầy", "STAFF", "Must",
    "Có ít nhất một dòng hàng; sản phẩm đang bán và đủ tồn.",
    "Khóa yêu cầu request_key, danh sách sản phẩm và số lượng, phương thức CASH hoặc BANK_TRANSFER, "
-   "mã giao dịch với chuyển khoản, mã báo giá quoteHash.",
+   "mã giao dịch với chuyển khoản (giao diện tự sinh cho từng giỏ), mã báo giá quoteHash.",
    "1. Thu ngân quét hàng; hệ thống tính giá: áp khuyến mãi (FR-10), thêm dòng quà, trả quoteHash.\n"
-   "2. Thu ngân chọn phương thức thanh toán và xác nhận.\n3. Kiểm tra request_key; tính lại giá, so quoteHash.\n"
+   "2. Thu ngân chọn phương thức thanh toán. Tiền mặt: bấm Thu tiền. Chuyển khoản: hiện mã QR, số tiền, nội dung; "
+   "thu ngân kiểm tra tiền về rồi bấm Đã nhận chuyển khoản.\n3. Kiểm tra request_key; tính lại giá, so quoteHash.\n"
    "4. Cấp phát FEFO cho từng dòng: lọc lô còn tồn và còn hạn; sắp hạn dùng tăng dần, lô không hạn xếp cuối, rồi ngày nhận, mã lô; "
    "lấy lần lượt đến khi đủ, mỗi lần trừ chỉ thành công nếu tồn lô còn đủ.\n"
    "5. Trừ tồn, tạo đơn PAID kèm dòng cấp phát lô và thanh toán PAYMENT trong một giao dịch.\n"
@@ -338,7 +343,7 @@ uc("FR-06", "Bán tại quầy", "ADMIN, STAFF", "Must",
    "Đọc: sản phẩm, khuyến mãi (cache), lô. Ghi: đơn, lô, sản phẩm. Ghi sau: thẻ kho, sổ thanh toán, đồ thị, top bán.",
    "AP-03, AP-07, AP-09, AP-17, AP-19")
 
-uc("FR-07", "Đơn treo tại quầy", "STAFF, ADMIN", "Should",
+uc("FR-07", "Đơn treo tại quầy", "STAFF", "Should",
    "Giỏ hiện tại có ít nhất một dòng.", "Giỏ hàng, ghi chú để nhận lại đơn (vd: chị áo xanh).",
    "1. Bấm \"Treo đơn\": lưu giỏ, giỏ quầy trống để phục vụ khách khác.\n2. Danh sách đơn treo của thu ngân.\n"
    "3. Mở lại: giỏ quay về quầy và bị xóa khỏi danh sách (một thao tác nguyên tử).\n4. Hủy đơn treo.",
@@ -346,7 +351,7 @@ uc("FR-07", "Đơn treo tại quầy", "STAFF, ADMIN", "Should",
    "• Đơn treo đã hết hạn: báo không còn.\n• Bộ nhớ tạm không khả dụng: báo tạm thời không dùng được, vẫn bán bình thường.",
    "Giỏ được giữ hoặc khôi phục.", "Ghi/đọc/xóa: đơn treo (tạm).", "AP-18")
 
-uc("FR-08", "Trả hàng kèm hoàn tiền", "ADMIN, STAFF", "Must",
+uc("FR-08", "Trả hàng kèm hoàn tiền", "STAFF", "Must",
    "Đơn PAID hoặc PARTIALLY_RETURNED, trong 7 ngày kể từ ngày mua (cấu hình).",
    "Mã đơn, request_key, dòng trả (dòng đơn, số lượng, restock, lý do), phương thức hoàn, mã tham chiếu với chuyển khoản.",
    "1. Kiểm tra điều kiện, thời hạn, request_key.\n2. Chia số lượng trả vào các lô đã cấp phát, lô hạn xa nhất trước.\n"
@@ -377,11 +382,11 @@ uc("FR-10", "Khuyến mãi 4 loại", "ADMIN (quản lý); hệ thống áp dụ
    "• Tham số sai, thời gian kết thúc trước bắt đầu: từ chối.", "Khuyến mãi có hiệu lực ngay ở quầy.",
    "Đọc/ghi: khuyến mãi; xóa cache khuyến mãi.", "AP-17")
 
-uc("FR-11", "Chốt ca thu ngân", "STAFF (ca của mình); ADMIN (mọi thu ngân)", "Must",
+uc("FR-11", "Chốt ca thu ngân", "STAFF (chốt ca của mình); ADMIN (xem, mở lại ca của mọi thu ngân)", "Must",
    "Thu ngân có giao dịch trong ngày.", "Ngày, tiền mặt đếm được, ghi chú.",
    "1. Đồng bộ các giao dịch còn chờ của thu ngân.\n2. Hiện tiền mặt thu, chuyển khoản thu, tiền hoàn, tiền mặt phải có.\n"
    "3. Thu ngân nhập tiền đếm được; hệ thống tính chênh lệch và lưu bản chốt ca.\n4. ADMIN xem danh sách chốt ca theo ngày.",
-   "• Mỗi thu ngân mỗi ngày một bản chốt; ADMIN được mở lại.\n• Tiền mặt phải có = thu tiền mặt − hoàn tiền mặt.",
+   "• Mỗi thu ngân mỗi ngày một bản chốt; ADMIN được mở lại nhưng không có ca riêng.\n• Tiền mặt phải có = thu tiền mặt − hoàn tiền mặt.",
    "• Đã chốt: từ chối, trừ khi ADMIN mở lại.\n• Chốt ca không khóa việc bán; đơn bán sau lúc chốt không nằm trong bản chốt đã lưu.", "Có bản chốt ca kèm chênh lệch.",
    "Đọc: sổ thanh toán theo thu ngân và ngày. Ghi: chốt ca.", "AP-15")
 
@@ -390,7 +395,7 @@ uc("FR-12", "Truy vết và thu hồi lô", "ADMIN", "Must",
    "1. Nhập mã lô; hệ thống trả các đơn đã lấy hàng từ lô, số lượng, thời điểm.\n"
    "2. Hiện tổng đã bán, còn tồn, nhà cung cấp của lô.\n3. Đánh dấu thu hồi: điều chỉnh giảm phần còn tồn (FR-04) và giữ danh sách đơn đã bán từ lô.",
    "• Kết quả gồm cả đơn đã trả hàng.",
-   "• Đồ thị chưa đồng bộ: hiện cảnh báo và cho dựng lại từ dữ liệu gốc.", "Lô còn tồn bằng 0; có danh sách đơn đã bán từ lô.",
+   "• Đồ thị chưa đồng bộ: hiện cảnh báo; ADMIN dựng lại từ dữ liệu gốc qua API.", "Lô còn tồn bằng 0; có danh sách đơn đã bán từ lô.",
    "Đọc: quan hệ lô–đơn. Ghi: lô (điều chỉnh).", "AP-20")
 
 uc("FR-13", "Gợi ý mua kèm", "STAFF, ADMIN", "Should",
@@ -578,17 +583,19 @@ table(["Mã", "Mẫu truy cập", "Loại", "Tham số", "Tần suất", "Độ 
 # ---------------------------------------------------------------- 7
 h1("7. YÊU CẦU GIAO DIỆN")
 h2("7.1 Giao diện người dùng")
-p("Ứng dụng web một trang, tiếng Việt, dùng nội bộ. Màn hình chỉ hiện với vai trò được phép; sau đăng nhập ADMIN và STAFF "
-  "vào màn hình Bán tại quầy, WAREHOUSE vào Tồn kho. Giao diện kiểu terminal: chữ monospace, màu nhấn vàng, có chế độ tối và sáng. "
-  "Bố cục: menu trái theo nhóm (Bán hàng, Hàng hóa & kho, Quản trị); thanh trên hiện đường dẫn trang, nút đổi tối/sáng, "
+p("Ứng dụng web một trang, tiếng Việt, dùng nội bộ. Màn hình chỉ hiện với vai trò được phép; sau đăng nhập ADMIN vào "
+  "Thống kê, STAFF vào Bán tại quầy, WAREHOUSE vào Tồn kho. Giao diện kiểu terminal: chữ monospace, màu nhấn vàng, có chế độ tối và sáng. "
+  "Bố cục: menu trái theo nhóm (Giới thiệu, Bán hàng, Hàng hóa & kho, Quản trị); thanh trên hiện đường dẫn trang, nút đổi tối/sáng, "
   "đổi mật khẩu, đăng xuất. Danh sách dài phân trang đánh số (‹ 1 2 … n ›). Ảnh chụp màn hình thật nằm trong img/giao-dien "
   "và được đưa vào Chương 6 của báo cáo.")
 table(["Màn hình", "Vai trò", "Nội dung chính"], [
     ("Đăng nhập", "Tất cả", "Tên đăng nhập, mật khẩu, chọn nhanh tài khoản demo, đổi tối/sáng; tự làm mới phiên"),
     ("Thanh trên (mọi màn hình)", "Tất cả", "Đổi chế độ tối/sáng, đổi mật khẩu (đổi xong đăng xuất mọi phiên), đăng xuất"),
-    ("Bán tại quầy", "STAFF, ADMIN", "Tìm/quét sản phẩm, giỏ có khuyến mãi và dòng quà, gợi ý mua kèm, top bán chạy, đơn treo có ghi chú, thanh toán, in hóa đơn 80 mm"),
-    ("Đơn hàng", "STAFF, ADMIN", "Lọc đơn, chi tiết, in lại hóa đơn, trả hàng một bước, lịch sử thanh toán"),
-    ("Chốt ca", "STAFF, ADMIN", "Tổng thu trong ca, nhập tiền đếm được, chênh lệch; ADMIN xem mọi ca"),
+    ("Giới thiệu 4 CSDL", "Tất cả", "Vai trò của từng CSDL, đường đi của một đơn bán qua 4 CSDL, điều xảy ra khi một CSDL tắt"),
+    ("Bán tại quầy", "STAFF", "Tìm/quét sản phẩm, giỏ có khuyến mãi và dòng quà, gợi ý mua kèm, top bán chạy, đơn treo có ghi chú, "
+     "thanh toán tiền mặt hoặc mã QR chuyển khoản có nút xác nhận, in hóa đơn 80 mm"),
+    ("Đơn hàng", "STAFF, ADMIN", "Lọc đơn, chi tiết, in lại hóa đơn, lịch sử thanh toán; STAFF: trả hàng một bước"),
+    ("Chốt ca", "STAFF, ADMIN", "STAFF: tổng thu trong ca, nhập tiền đếm được, chênh lệch. ADMIN: danh sách ca đã chốt theo ngày, mở lại ca"),
     ("Sản phẩm", "Tất cả xem", "Lọc, phân trang, thuộc tính riêng, tab Thẻ kho theo tháng"),
     ("Nhóm hàng, Nhà cung cấp", "ADMIN (+WAREHOUSE với NCC)", "Danh sách, thêm, sửa, xóa"),
     ("Phiếu nhập", "WAREHOUSE, ADMIN", "Tạo phiếu nháp, nhận hàng sinh lô, xem chi tiết, in phiếu nhập kho A4"),
@@ -597,7 +604,7 @@ table(["Màn hình", "Vai trò", "Nội dung chính"], [
     ("Khuyến mãi", "ADMIN", "Form theo 4 loại, khung gợi ý mua kèm"),
     ("Thống kê", "ADMIN", "Biểu đồ doanh thu theo ngày, nhóm hàng; top bán chạy; xuất CSV"),
     ("Người dùng", "ADMIN", "Quản lý tài khoản, lịch sử đăng nhập"),
-    ("Trạng thái hệ thống", "ADMIN", "Tình trạng 4 CSDL, dữ liệu chờ đồng bộ, dựng lại đồ thị"),
+    ("Trạng thái hệ thống", "ADMIN", "Tình trạng 4 CSDL, dữ liệu chờ đồng bộ, thử lại việc lỗi"),
 ], [20, 22, 58])
 
 h2("7.2 Giao diện API")

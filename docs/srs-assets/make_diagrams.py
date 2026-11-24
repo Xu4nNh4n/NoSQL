@@ -101,7 +101,7 @@ def usecase():
                   "FR-05 Xem thẻ kho", "FR-09 Tra cứu đơn, thanh toán"],
         "WAREHOUSE": ["FR-04 Phiếu nhập, nhận lô", "FR-04 Điều chỉnh giảm tồn", "FR-03 Sản phẩm, nhà cung cấp"],
         "ADMIN": ["FR-02 Quản lý người dùng", "FR-03 Nhóm hàng", "FR-10 Khuyến mãi", "FR-12 Truy vết, thu hồi lô",
-                  "FR-14 Thống kê, top bán, CSV", "FR-01 Lịch sử đăng nhập"],
+                  "FR-14 Thống kê, top bán, CSV", "FR-01 Lịch sử đăng nhập", "FR-11 Xem, mở lại ca"],
     }
     pos = {}
     cols = {"STAFF": (45, 96), "CHUNG": (67.5, 96), "WAREHOUSE": (90, 96), "ADMIN": (67.5, 45)}
@@ -134,7 +134,7 @@ def usecase():
     for it in groups["ADMIN"][4:]:
         x, y = pos[it]
         arrow(ax, 122, 26, x + 15, y, style="-", color="#666")
-    ax.text(67.5, 5.5,"Cả 3 vai trò dùng chung cột giữa. ADMIN có toàn quyền của STAFF và WAREHOUSE.",
+    ax.text(67.5, 5.5,"Cột giữa dùng chung (FR-09: ADMIN, STAFF). ADMIN có toàn quyền của WAREHOUSE; không bán, trả hàng, chốt ca.",
             ha="center", fontsize=8, style="italic")
     save(fig, "02_use_case_tong_quat.png")
 
