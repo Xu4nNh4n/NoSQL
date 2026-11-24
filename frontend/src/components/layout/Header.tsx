@@ -13,7 +13,7 @@ interface HeaderProps {
   section?: string;
 }
 
-/** Thanh trên: đường dẫn kiểu terminal "~/supermarket $ <mục> › <trang>", nút đổi giao diện, người dùng. */
+/** Thanh trên: đường dẫn "<nhóm> › <trang>", nút đổi giao diện, người dùng. */
 export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu, isMobileMenuOpen, pageTitle, section }) => {
   const { user, role, logout } = useAuth();
   const navigate = useNavigate();
@@ -45,9 +45,13 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu, isMobileMenu
           <Menu className="h-5 w-5" />
         </button>
         <div className="flex min-w-0 items-center gap-2 text-[13px]">
-          <span className="hidden shrink-0 text-gray-500 md:inline">~/supermarket $ {section ?? (role ?? '').toLowerCase()}</span>
-          <ChevronRight className="hidden h-3.5 w-3.5 shrink-0 text-gray-400 md:inline" />
-          <h2 className="truncate font-semibold text-gray-900">{pageTitle || 'Hệ thống Quản lý Siêu thị'}</h2>
+          {section && (
+            <>
+              <span className="hidden shrink-0 text-gray-500 md:inline">{section}</span>
+              <ChevronRight className="hidden h-3.5 w-3.5 shrink-0 text-gray-400 md:inline" />
+            </>
+          )}
+          <h2 className="truncate font-semibold text-gray-900">{pageTitle || 'Siêu thị Uy Tín'}</h2>
         </div>
       </div>
 

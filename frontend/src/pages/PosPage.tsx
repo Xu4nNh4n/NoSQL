@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { usePrintReceipt } from '../hooks/usePrintReceipt';
 import { ReceiptView } from '../components/sales/Receipt';
+import { BankTransferModal } from '../components/sales/BankTransferModal';
 import { Minus, Pause, Plus, Search, ShoppingCart, Sparkles, Trash2, TrendingUp } from 'lucide-react';
 import { api, ApiError, errorMessage, newRequestKey } from '../api/client';
 import { useLoad } from '../hooks/useLoad';
@@ -9,7 +10,8 @@ import { Card } from '../components/ui/Card';
 import { Modal } from '../components/ui/Modal';
 import { useToast } from '../components/ui/Toast';
 import { inputClass } from '../components/ui/Table';
-import { formatDateTime, formatVND } from '../utils/formatters';
+import { formatDateTime, formatVND, vietnamDateKey } from '../utils/formatters';
+import { newTransferCode } from '../utils/vietqr';
 import type { HeldCart, PaymentMethod, PosProduct, PricedCart, SalesOrder, Suggestions, TopSales } from '../types';
 
 type CartItem = { productId: string; quantity: number };
@@ -24,7 +26,9 @@ export function PosPage() {
   const [quoting, setQuoting] = useState(false);
   const [note, setNote] = useState('');
   const [method, setMethod] = useState<PaymentMethod>('CASH');
-  const [txRef, setTxRef] = useState('');
+  // Một mã cho mỗi giỏ, đi cùng requestKey để bấm lại khi mạng lỗi vẫn là cùng một đơn
+  const [transferCode, setTransferCode] = useState(() => newTransferCode(vietnamDateKey()));
+  const [qrOpen, setQrOpen] = useState(false);
   const [paying, setPaying] = useState(false);
   const [receipt, setReceipt] = useState<SalesOrder | null>(null);
   const printer = usePrintReceipt();
@@ -42,6 +46,7 @@ export function PosPage() {
   // Tính giá lại mỗi khi giỏ đổi (khuyến mãi tự áp ở server).
   useEffect(() => {
     requestKey.current = newRequestKey();
+    setTransferCode(newTransferCode(vietnamDateKey()));
     if (cart.length === 0) { setQuote(null); return; }
     const t = setTimeout(async () => {
       setQuoting(true);
@@ -70,16 +75,15 @@ export function PosPage() {
   };
 
 
-  const reset = () => { setCart([]); setQuote(null); setNote(''); setTxRef(''); setMethod('CASH'); setSuggest(null); };
+  const reset = () => { setCart([]); setQuote(null); setNote(''); setQrOpen(false); setMethod('CASH'); setSuggest(null); };
 
   const pay = async () => {
     if (!quote) return;
-    if (method === 'BANK_TRANSFER' && !txRef.trim()) { toast.warning('Nhập mã giao dịch chuyển khoản'); return; }
     setPaying(true);
     try {
       const order = await api.post<SalesOrder>('/orders', {
         requestKey: requestKey.current, items: cart,
-        paymentMethod: method, transactionRef: method === 'BANK_TRANSFER' ? txRef.trim() : null, quoteHash: quote.quoteHash,
+        paymentMethod: method, transactionRef: method === 'BANK_TRANSFER' ? transferCode : null, quoteHash: quote.quoteHash,
       });
       setReceipt(order);
       reset();
@@ -87,6 +91,7 @@ export function PosPage() {
       void top.reload();
     } catch (e) {
       if (e instanceof ApiError && e.status === 409) {
+        setQrOpen(false);
         toast.warning('Giá hoặc khuyến mãi vừa thay đổi, đã tính lại giỏ hàng');
         setQuote(await api.post<PricedCart>('/orders/quote', { items: cart }));
       } else toast.error(errorMessage(e));
@@ -202,13 +207,12 @@ export function PosPage() {
           )}
           <div className="grid grid-cols-2 gap-2">
             {(['CASH', 'BANK_TRANSFER'] as PaymentMethod[]).map(m => (
-              <Button key={m} variant={method === m ? 'primary' : 'outline'} onClick={() => setMethod(m)}>{m === 'CASH' ? 'Tiền mặt' : 'Chuyển khoản'}</Button>
+              <Button key={m} variant={method === m ? 'primary' : 'outline'} onClick={() => { setMethod(m); if (m === 'BANK_TRANSFER' && quote && !quoting) setQrOpen(true); }}>{m === 'CASH' ? 'Tiền mặt' : 'Chuyển khoản'}</Button>
             ))}
           </div>
-          {method === 'BANK_TRANSFER' && <input className={inputClass} placeholder="Mã giao dịch ngân hàng" value={txRef} onChange={e => setTxRef(e.target.value)} />}
           <div className="grid grid-cols-[1fr_2fr] gap-2">
             <Button variant="outline" disabled={cart.length === 0} onClick={hold}>Treo đơn</Button>
-            <Button size="lg" disabled={!quote || quoting} isLoading={paying} onClick={pay}>Thu tiền {quote ? formatVND(quote.total) : ''}</Button>
+            <Button size="lg" disabled={!quote || quoting} isLoading={paying} onClick={method === 'BANK_TRANSFER' ? () => setQrOpen(true) : pay}>{method === 'BANK_TRANSFER' ? 'Hiện mã QR' : 'Thu tiền'} {quote ? formatVND(quote.total) : ''}</Button>
           </div>
         </div>
       </Card>
@@ -225,6 +229,9 @@ export function PosPage() {
               </div>
             </li>))}</ul>)}
       </Modal>
+
+      {quote && <BankTransferModal isOpen={qrOpen && !quoting} total={quote.total} code={transferCode} paying={paying}
+        onConfirm={pay} onClose={() => setQrOpen(false)} />}
 
       <Modal isOpen={!!receipt} onClose={() => setReceipt(null)} title={`Hóa đơn ${receipt?.orderCode ?? ''}`}
         footer={<><Button variant="outline" onClick={() => receipt && printer.print(receipt)}>In hóa đơn</Button><Button onClick={() => setReceipt(null)}>Đơn mới</Button></>}>

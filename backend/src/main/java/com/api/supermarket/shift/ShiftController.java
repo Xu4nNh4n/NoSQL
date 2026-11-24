@@ -33,13 +33,13 @@ public class ShiftController {
     }
 
     @GetMapping("/me/today")
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasRole('STAFF')")
     public ShiftSummary myToday(@AuthenticationPrincipal JwtPrincipal me) {
         return shifts.today(me);
     }
 
     @PostMapping("/me/close")
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasRole('STAFF')")
     public ShiftClosing close(@AuthenticationPrincipal JwtPrincipal me, @Valid @RequestBody CloseRequest req) {
         return shifts.close(me, req);
     }

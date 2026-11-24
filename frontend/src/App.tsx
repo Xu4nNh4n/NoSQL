@@ -5,6 +5,7 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { ToastProvider } from './components/ui/Toast';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { AppLayout } from './components/layout/AppLayout';
+import { homeFor } from './utils/homeFor';
 import type { RoleName } from './types';
 
 import { LoginPage } from './pages/LoginPage';
@@ -20,13 +21,13 @@ import { PromotionsPage } from './pages/PromotionsPage';
 import { UsersPage } from './pages/UsersPage';
 import { StatsPage } from './pages/StatsPage';
 import { SystemPage } from './pages/SystemPage';
+import { IntroPage } from './pages/IntroPage';
 
-const homeFor =(role: RoleName | null) => (role === 'WAREHOUSE' ? '/inventory' : role ? '/pos' : '/login');
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
   if (isLoading) {
-    return <div className="flex min-h-screen items-center justify-center text-sm text-gray-500">~/supermarket $ đang khởi tạo phiên làm việc…</div>;
+    return <div className="flex min-h-screen items-center justify-center text-sm text-gray-500">Đang khởi tạo phiên làm việc…</div>;
   }
   return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
 };
@@ -44,7 +45,7 @@ const Home: React.FC = () => {
 
 const ALL: RoleName[] = ['ADMIN', 'WAREHOUSE', 'STAFF'];
 const routes: { path: string; roles: RoleName[]; element: React.ReactNode }[] = [
-  { path: '/pos', roles: ['ADMIN', 'STAFF'], element: <PosPage /> },
+  { path: '/pos', roles: ['STAFF'], element: <PosPage /> },
   { path: '/orders', roles: ['ADMIN', 'STAFF'], element: <OrdersPage /> },
   { path: '/shift', roles: ['ADMIN', 'STAFF'], element: <ShiftPage /> },
   { path: '/products', roles: ALL, element: <ProductsPage /> },
@@ -56,6 +57,7 @@ const routes: { path: string; roles: RoleName[]; element: React.ReactNode }[] = 
   { path: '/users', roles: ['ADMIN'], element: <UsersPage /> },
   { path: '/stats', roles: ['ADMIN'], element: <StatsPage /> },
   { path: '/system', roles: ['ADMIN'], element: <SystemPage /> },
+  { path: '/intro', roles: ALL, element: <IntroPage /> },
 ];
 
 export const App: React.FC = () => (

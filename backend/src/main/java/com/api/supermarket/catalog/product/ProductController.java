@@ -49,7 +49,7 @@ public class ProductController {
 
     /** Danh sách cho màn hình bán hàng, đọc từ cache Redis (AP-03). */
     @GetMapping("/active")
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasRole('STAFF')")
     public List<PosProduct> active() {
         return service.activeForPos();
     }

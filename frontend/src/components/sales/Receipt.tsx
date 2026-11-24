@@ -1,7 +1,8 @@
 import { formatDateTime, formatVND, PAYMENT_METHOD_LABELS } from '../../utils/formatters';
+import { BrandLogo } from '../ui/Brand';
 import type { SalesOrder, SalesReturn } from '../../types';
 
-export const STORE_NAME = 'SIÊU THỊ & POS';
+export const STORE_NAME = 'SIÊU THỊ UY TÍN';
 
 /** Nội dung hóa đơn khổ 80mm: dùng cho xem trước trên màn hình và bản in. */
 export function ReceiptView({ order, returns = [], reprint = false, printedAt }: { order: SalesOrder; returns?: SalesReturn[]; reprint?: boolean; printedAt?: string }) {
@@ -10,6 +11,7 @@ export function ReceiptView({ order, returns = [], reprint = false, printedAt }:
   return (
     <div className="mx-auto w-full max-w-[80mm] bg-[#ffffff] font-mono text-[12px] leading-snug text-[#000000]">
       <div className="text-center">
+        <BrandLogo className="mx-auto mb-1 h-8 w-8" />
         <p className="text-sm font-bold">{STORE_NAME}</p>
         <p className="mt-1 font-bold">HÓA ĐƠN BÁN HÀNG</p>
         {reprint && <p className="mt-0.5 text-[11px] font-semibold">(BẢN IN LẠI)</p>}

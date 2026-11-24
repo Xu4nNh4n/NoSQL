@@ -3,20 +3,21 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 
-/** Tên trang và "thư mục" hiện trên đường dẫn kiểu terminal ở thanh trên. */
+/** Tên nhóm và tên trang hiện trên đường dẫn ở thanh trên; nhóm trùng với menu trái. */
 const PAGES: Record<string, { title: string; section: string }> = {
-  '/pos': { title: 'Bán tại quầy', section: 'ban-hang' },
-  '/orders': { title: 'Đơn hàng & trả hàng', section: 'ban-hang' },
-  '/shift': { title: 'Chốt ca thu ngân', section: 'ban-hang' },
-  '/promotions': { title: 'Khuyến mãi', section: 'ban-hang' },
-  '/products': { title: 'Sản phẩm & thẻ kho', section: 'kho' },
-  '/categories': { title: 'Nhóm hàng', section: 'kho' },
-  '/inventory': { title: 'Tồn kho theo lô', section: 'kho' },
-  '/purchase-orders': { title: 'Phiếu nhập hàng', section: 'kho' },
-  '/suppliers': { title: 'Nhà cung cấp', section: 'kho' },
-  '/stats': { title: 'Thống kê bán hàng', section: 'quan-tri' },
-  '/users': { title: 'Người dùng', section: 'quan-tri' },
-  '/system': { title: 'Trạng thái hệ thống', section: 'quan-tri' },
+  '/pos': { title: 'Bán tại quầy', section: 'Bán hàng' },
+  '/orders': { title: 'Đơn hàng & trả hàng', section: 'Bán hàng' },
+  '/shift': { title: 'Chốt ca thu ngân', section: 'Bán hàng' },
+  '/promotions': { title: 'Khuyến mãi', section: 'Bán hàng' },
+  '/products': { title: 'Sản phẩm & thẻ kho', section: 'Hàng hóa & kho' },
+  '/categories': { title: 'Nhóm hàng', section: 'Hàng hóa & kho' },
+  '/inventory': { title: 'Tồn kho theo lô', section: 'Hàng hóa & kho' },
+  '/purchase-orders': { title: 'Phiếu nhập hàng', section: 'Hàng hóa & kho' },
+  '/suppliers': { title: 'Nhà cung cấp', section: 'Hàng hóa & kho' },
+  '/stats': { title: 'Thống kê bán hàng', section: 'Quản trị' },
+  '/users': { title: 'Người dùng', section: 'Quản trị' },
+  '/system': { title: 'Trạng thái hệ thống', section: 'Quản trị' },
+  '/intro': { title: 'Giới thiệu 4 CSDL', section: 'Giới thiệu' },
 };
 
 export const AppLayout: React.FC = () => {
@@ -31,7 +32,7 @@ export const AppLayout: React.FC = () => {
         <Header
           onToggleMobileMenu={() => setIsMobileOpen(!isMobileOpen)}
           isMobileMenuOpen={isMobileOpen}
-          pageTitle={page?.title ?? 'Hệ thống Quản lý Siêu thị'}
+          pageTitle={page?.title ?? 'Siêu thị Uy Tín'}
           section={page?.section}
         />
         <main className="mx-auto w-full max-w-[1600px] flex-1 p-4 sm:p-6 xl:p-8">

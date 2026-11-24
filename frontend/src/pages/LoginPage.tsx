@@ -1,12 +1,20 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowDownUp, Lock, User, AlertCircle } from 'lucide-react';
+import { Lock, User, AlertCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { homeFor } from '../utils/homeFor';
+import { BRAND_NAME, BrandLogo } from '../components/ui/Brand';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { ThemeToggle } from '../components/ui/ThemeToggle';
 
-// Tài khoản do backend tạo (AdminBootstrap, DemoDataSeeder). Mật khẩu không ghi ở đây: lấy APP_ADMIN_PASSWORD / APP_SEED_PASSWORD trong .env.
+// Mật khẩu demo do vite.config.ts lấy từ .env khi chạy dev; null trong bản build
+declare const __DEMO_PASSWORDS__: { admin: string; seed: string } | null;
+
+const demoPassword = (username: string) =>
+  (username === 'admin' ? __DEMO_PASSWORDS__?.admin : __DEMO_PASSWORDS__?.seed) ?? '';
+
+// Tài khoản do backend tạo (AdminBootstrap, DemoDataSeeder)
 const DEMO = [
   { username: 'admin', label: 'Quản trị', role: 'ADMIN' },
   { username: 'thungan01', label: 'Thu ngân', role: 'STAFF' },
@@ -27,7 +35,7 @@ export const LoginPage: React.FC = () => {
     setIsLoading(true);
     try {
       const res = await login(username, password);
-      navigate(res.role === 'WAREHOUSE' ? '/inventory' : res.role ? '/pos' : '/');
+      navigate(res.role ? homeFor(res.role) : '/');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Đăng nhập không thành công');
     } finally {
@@ -39,9 +47,8 @@ export const LoginPage: React.FC = () => {
     <div className="flex min-h-screen flex-col bg-[var(--c-bg)] text-gray-900">
       <div className="flex items-center justify-between px-5 py-4 sm:px-8">
         <div className="flex items-center gap-2.5">
-          <ArrowDownUp className="h-5 w-5" strokeWidth={2.5} />
-          <span className="text-lg font-bold tracking-tight">SuperMarket</span>
-          <span className="hidden text-[11px] text-gray-500 sm:inline">~/supermarket $ login</span>
+          <BrandLogo className="h-9 w-9 shrink-0" />
+          <span className="text-lg font-bold tracking-tight">{BRAND_NAME}</span>
         </div>
         <ThemeToggle />
       </div>
@@ -91,10 +98,10 @@ export const LoginPage: React.FC = () => {
             </form>
 
             <div className="mt-8">
-              <p className="eyebrow mb-2">Tài khoản demo · bấm để điền tên</p>
+              <p className="eyebrow mb-2">Tài khoản demo · bấm để điền {__DEMO_PASSWORDS__?.admin ? 'tên và mật khẩu' : 'tên'}</p>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                 {DEMO.map(d => (
-                  <button key={d.username} type="button" onClick={() => { setUsername(d.username); setPassword(''); }}
+                  <button key={d.username} type="button" onClick={() => { setUsername(d.username); setPassword(demoPassword(d.username)); setError(null); }}
                     className={`ui-demo cursor-pointer rounded-md border p-2.5 text-left text-xs transition-colors ${
                       username === d.username ? 'ui-demo-active border-gray-400 bg-gray-50' : 'border-gray-200 hover:border-gray-300'}`}>
                     <div className="font-semibold text-gray-900">{d.label}</div>
@@ -102,7 +109,9 @@ export const LoginPage: React.FC = () => {
                   </button>
                 ))}
               </div>
-              <p className="mt-2 text-[10px] text-gray-500">Mật khẩu: giá trị APP_ADMIN_PASSWORD trong file .env</p>
+              {!__DEMO_PASSWORDS__?.admin && (
+                <p className="mt-2 text-[10px] text-gray-500">Mật khẩu: giá trị APP_ADMIN_PASSWORD trong file .env</p>
+              )}
             </div>
           </div>
         </div>

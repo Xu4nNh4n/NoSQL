@@ -29,7 +29,7 @@ import com.api.supermarket.security.JwtPrincipal;
 
 import jakarta.validation.Valid;
 
-/** Bán tại quầy, tra cứu đơn, trả hàng, đơn treo, top bán chạy. ADMIN và STAFF. */
+/** Bán tại quầy, đơn treo, trả hàng: chỉ STAFF. Tra cứu đơn và top bán chạy: ADMIN và STAFF. */
 @RestController
 @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
 public class SalesController {
@@ -51,11 +51,13 @@ public class SalesController {
     }
 
     @PostMapping("/api/orders/quote")
+    @PreAuthorize("hasRole('STAFF')")
     public PricedCart quote(@Valid @RequestBody QuoteRequest req) {
         return quotes.quote(req.items());
     }
 
     @PostMapping("/api/orders")
+    @PreAuthorize("hasRole('STAFF')")
     @ResponseStatus(HttpStatus.CREATED)
     public SalesOrder create(@Valid @RequestBody CreateOrderRequest req, @AuthenticationPrincipal JwtPrincipal actor) {
         return orders.create(req, actor);
@@ -93,6 +95,7 @@ public class SalesController {
     }
 
     @PostMapping("/api/orders/{id}/returns")
+    @PreAuthorize("hasRole('STAFF')")
     @ResponseStatus(HttpStatus.CREATED)
     public SalesReturn createReturn(@PathVariable String id, @Valid @RequestBody ReturnRequest req,
             @AuthenticationPrincipal JwtPrincipal actor) {
@@ -105,11 +108,13 @@ public class SalesController {
     }
 
     @GetMapping("/api/pos/held")
+    @PreAuthorize("hasRole('STAFF')")
     public List<HeldCart> held(@AuthenticationPrincipal JwtPrincipal me) {
         return held.list(me.userId());
     }
 
     @PostMapping("/api/pos/held")
+    @PreAuthorize("hasRole('STAFF')")
     @ResponseStatus(HttpStatus.CREATED)
     public HeldCart hold(@AuthenticationPrincipal JwtPrincipal me, @Valid @RequestBody HoldRequest req) {
         return held.hold(me.userId(), req);
@@ -117,11 +122,13 @@ public class SalesController {
 
     /** Mở lại đơn treo: trả giỏ về quầy và xóa khỏi Redis. */
     @GetMapping("/api/pos/held/{holdId}")
+    @PreAuthorize("hasRole('STAFF')")
     public HeldCart resume(@AuthenticationPrincipal JwtPrincipal me, @PathVariable String holdId) {
         return held.resume(me.userId(), holdId);
     }
 
     @DeleteMapping("/api/pos/held/{holdId}")
+    @PreAuthorize("hasRole('STAFF')")
     public ResponseEntity<Void> deleteHeld(@AuthenticationPrincipal JwtPrincipal me, @PathVariable String holdId) {
         held.delete(me.userId(), holdId);
         return ResponseEntity.noContent().build();

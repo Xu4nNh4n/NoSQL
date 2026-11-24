@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { CheckCircle2, XCircle } from 'lucide-react';
 import { api, errorMessage } from '../api/client';
 import { useLoad } from '../hooks/useLoad';
@@ -9,12 +8,11 @@ import { Table, Td } from '../components/ui/Table';
 import { formatDateTime } from '../utils/formatters';
 import type { DatastoreStatus, SyncStatusView } from '../types';
 
-/** Trạng thái 4 CSDL, hàng đợi đồng bộ MongoDB → Cassandra/Neo4j, dựng lại đồ thị. Dùng khi demo chịu lỗi (NFR-09). */
+/** Trạng thái 4 CSDL, hàng đợi đồng bộ MongoDB → Cassandra/Neo4j. Dùng khi demo chịu lỗi (NFR-09). */
 export function SystemPage() {
   const toast = useToast();
   const health = useLoad(() => api.get<{ datastores: DatastoreStatus[]; checkedAt: string }>('/health/datastores'), []);
   const sync = useLoad(() => api.get<SyncStatusView>('/admin/sync/status'), []);
-  const [rebuilding, setRebuilding] = useState(false);
 
   const retry = async () => {
     try {
@@ -22,15 +20,6 @@ export function SystemPage() {
       toast.success(`Đã đặt lại ${r.reset} việc lỗi về PENDING`);
       void sync.reload();
     } catch (e) { toast.error(errorMessage(e)); }
-  };
-  const rebuild = async () => {
-    if (!confirm('Xóa và dựng lại toàn bộ đồ thị Neo4j từ MongoDB?')) return;
-    setRebuilding(true);
-    try {
-      const r = await api.post<{ deletedNodes: number; batches: number; orders: number; millis: number }>('/admin/graph/rebuild');
-      toast.success(`Dựng lại xong: ${r.batches} lô, ${r.orders} đơn trong ${(r.millis / 1000).toFixed(1)} giây`);
-    } catch (e) { toast.error(errorMessage(e)); }
-    finally { setRebuilding(false); }
   };
 
   return (
@@ -63,11 +52,6 @@ export function SystemPage() {
               </Table>)}
             <p className="text-xs text-gray-500">MongoDB ghi đơn/lô và sự kiện trong cùng transaction; sự kiện được ghi sang Cassandra (thẻ kho, sổ thanh toán) và Neo4j ngay sau commit, job mỗi 60 giây thử lại phần còn chờ.</p>
           </div>)}
-      </Card>
-
-      <Card title="Đồ thị Neo4j">
-        <p className="mb-3 text-sm text-gray-600">Đồ thị là dữ liệu suy ra từ MongoDB. Khi lệch hoặc Aura bị xóa, dựng lại toàn bộ (đọc theo trang 500 lô/đơn).</p>
-        <Button variant="danger" isLoading={rebuilding} onClick={rebuild}>Dựng lại đồ thị</Button>
       </Card>
     </div>
   );

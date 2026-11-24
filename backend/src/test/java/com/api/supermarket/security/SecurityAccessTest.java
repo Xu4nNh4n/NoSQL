@@ -2,6 +2,7 @@ package com.api.supermarket.security;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -72,6 +73,30 @@ class SecurityAccessTest {
     void promotionsAreManagedByAdminOnly() throws Exception {
         mvc.perform(get("/api/promotions").header("Authorization", bearer("STAFF"))).andExpect(status().isForbidden());
         mvc.perform(get("/api/promotions/active").header("Authorization", bearer("WAREHOUSE")))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void adminManagesButDoesNotWorkTheCounter() throws Exception {
+        String admin = bearer("ADMIN");
+        mvc.perform(get("/api/products/active").header("Authorization", admin)).andExpect(status().isForbidden());
+        mvc.perform(get("/api/pos/held").header("Authorization", admin)).andExpect(status().isForbidden());
+        mvc.perform(get("/api/pos/held/h1").header("Authorization", admin)).andExpect(status().isForbidden());
+        mvc.perform(delete("/api/pos/held/h1").header("Authorization", admin)).andExpect(status().isForbidden());
+        mvc.perform(get("/api/pos/products/p1/panel").header("Authorization", admin)).andExpect(status().isForbidden());
+        mvc.perform(get("/api/shifts/me/today").header("Authorization", admin)).andExpect(status().isForbidden());
+        // Thân hợp lệ để chắc chắn bị chặn vì quyền, không phải vì dữ liệu sai
+        String items = "\"items\":[{\"productId\":\"p1\",\"quantity\":1}]";
+        post403("/api/orders/quote", "{" + items + "}", admin);
+        post403("/api/orders", "{\"requestKey\":\"k\"," + items + ",\"paymentMethod\":\"CASH\",\"quoteHash\":\"h\"}", admin);
+        post403("/api/orders/o1/returns", "{\"requestKey\":\"k\",\"items\":[{\"lineNo\":1,\"quantity\":1,\"reason\":\"r\"}],"
+                + "\"refundMethod\":\"CASH\"}", admin);
+        post403("/api/pos/held", "{" + items + "}", admin);
+        post403("/api/shifts/me/close", "{\"countedCash\":0}", admin);
+    }
+
+    private void post403(String url, String body, String bearer) throws Exception {
+        mvc.perform(post(url).header("Authorization", bearer).contentType("application/json").content(body))
                 .andExpect(status().isForbidden());
     }
 

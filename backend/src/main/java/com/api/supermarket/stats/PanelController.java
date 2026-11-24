@@ -21,7 +21,7 @@ public class PanelController {
     }
 
     @GetMapping("/api/pos/products/{id}/panel")
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasRole('STAFF')")
     public Panel panel(@PathVariable String id) {
         return panel.panel(id);
     }

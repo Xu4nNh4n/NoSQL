@@ -9,9 +9,14 @@ import { Field, inputClass, Table, Td, Toolbar } from '../components/ui/Table';
 import { formatDateTime, formatVND, vietnamDateKey } from '../utils/formatters';
 import type { ShiftClosing, ShiftSummary } from '../types';
 
-/** Chốt ca (FR-11): tổng thu đọc từ Cassandra payments_by_cashier_day sau khi đồng bộ các giao dịch còn chờ. */
+/** Chốt ca (FR-11): STAFF chốt ca của mình; ADMIN xem và mở lại ca của các thu ngân. */
 export function ShiftPage() {
   const { role } = useAuth();
+  return role === 'ADMIN' ? <AdminShifts /> : <MyShift />;
+}
+
+/** Tổng thu đọc từ Cassandra payments_by_cashier_day sau khi đồng bộ các giao dịch còn chờ. */
+function MyShift() {
   const toast = useToast();
   const mine = useLoad(() => api.get<ShiftSummary>('/shifts/me/today'), []);
   const [counted, setCounted] = useState('');
@@ -57,7 +62,6 @@ export function ShiftPage() {
             </div>
           )}
       </Card>
-      {role === 'ADMIN' && <AdminShifts />}
     </div>
   );
 }

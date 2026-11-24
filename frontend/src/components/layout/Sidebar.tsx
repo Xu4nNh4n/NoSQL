@@ -2,9 +2,10 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   Package, Boxes, ShoppingCart, Receipt, UserCheck, Truck, Tags, Wallet, FolderTree,
-  ClipboardList, BarChart3, Server, ArrowDownUp,
+  ClipboardList, BarChart3, Server, Info,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { BRAND_NAME, BrandLogo } from '../ui/Brand';
 import type { RoleName } from '../../types';
 
 interface SidebarProps {
@@ -16,9 +17,15 @@ type NavItem = { to: string; label: string; icon: React.ComponentType<{ classNam
 
 const NAV: { title: string; items: NavItem[] }[] = [
   {
+    title: 'Giới thiệu',
+    items: [
+      { to: '/intro', label: 'Giới thiệu 4 CSDL', icon: Info, roles: ['ADMIN', 'STAFF', 'WAREHOUSE'] },
+    ],
+  },
+  {
     title: 'Bán hàng',
     items: [
-      { to: '/pos', label: 'Bán tại quầy', icon: ShoppingCart, roles: ['ADMIN', 'STAFF'] },
+      { to: '/pos', label: 'Bán tại quầy', icon: ShoppingCart, roles: ['STAFF'] },
       { to: '/orders', label: 'Đơn hàng & trả hàng', icon: Receipt, roles: ['ADMIN', 'STAFF'] },
       { to: '/shift', label: 'Chốt ca', icon: Wallet, roles: ['ADMIN', 'STAFF'] },
       { to: '/promotions', label: 'Khuyến mãi', icon: Tags, roles: ['ADMIN'] },
@@ -68,10 +75,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onCloseMobile })
         {/* Thương hiệu: biểu tượng ⇅ + tên đậm + dòng phụ nhỏ */}
         <div className="px-5 pt-6 pb-4">
           <div className="flex items-center gap-2.5">
-            <span className="ui-logo inline-flex"><ArrowDownUp className="h-5 w-5 text-gray-900" strokeWidth={2.5} /></span>
-            <h1 className="text-lg font-bold tracking-tight text-gray-900">SuperMarket</h1>
+            <BrandLogo className="h-9 w-9 shrink-0" />
+            <h1 className="text-lg font-bold tracking-tight text-gray-900">{BRAND_NAME}</h1>
           </div>
-          <p className="mt-0.5 pl-[30px] text-[11px] text-gray-500">Bán hàng · Kho · NoSQL</p>
+          <p className="mt-0.5 pl-[46px] text-[11px] text-gray-500">Bán hàng · Kho · NoSQL</p>
           <p className="tag-accent mt-4">4 CSDL · NoSQL edition</p>
         </div>
 

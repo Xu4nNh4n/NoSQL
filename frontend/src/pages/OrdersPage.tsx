@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { api, errorMessage, newRequestKey, qs } from '../api/client';
+import { useAuth } from '../contexts/AuthContext';
 import { useLoad } from '../hooks/useLoad';
 import { usePrintReceipt } from '../hooks/usePrintReceipt';
 import { Printer } from 'lucide-react';
@@ -78,7 +79,9 @@ function OrderDetail({ order, onClose, onChanged, onPrint }: { order: SalesOrder
   const [method, setMethod] = useState<PaymentMethod>('CASH');
   const [ref, setRef] = useState('');
   const [saving, setSaving] = useState(false);
-  const canReturn = order.status !== 'RETURNED';
+  const { role } = useAuth();
+  // ADMIN chỉ tra cứu; trả hàng và hoàn tiền là việc của thu ngân
+  const canReturn = role === 'STAFF' && order.status !== 'RETURNED';
 
   const submitReturn = async () => {
     const items = Object.entries(qty).filter(([, q]) => q > 0)
@@ -101,7 +104,7 @@ function OrderDetail({ order, onClose, onChanged, onPrint }: { order: SalesOrder
       <div className="space-y-4 text-sm">
         <div className="flex flex-wrap items-start justify-between gap-2">
         <p className="text-gray-600">{formatDateTime(order.orderedAt)} · {order.cashier.name} · {ORDER_STATUS_LABELS[order.status].label}</p>
-          <Button variant="outline" size="sm" disabled={returns.loading} onClick={() => onPrint(returns.data ?? [])}><Printer className="mr-1 h-4 w-4" />In hóa đơn</Button>
+          <Button variant="outline" size="sm" disabled={returns.loading} className="shrink-0 whitespace-nowrap" leftIcon={<Printer className="h-4 w-4" />} onClick={() => onPrint(returns.data ?? [])}>In hóa đơn</Button>
         </div>
         <Table headers={['#', 'Sản phẩm', 'SL', 'Đã trả', 'Thực trả', 'Lô đã xuất', canReturn ? 'Trả' : '']}>
           {order.items.map(l => (

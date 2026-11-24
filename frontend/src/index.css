@@ -288,11 +288,6 @@ body {
 
 /* Thanh bên: nền kem đậm hơn, mục đang chọn là "viên" xanh bạc hà */
 :root.playful .ui-sidebar { background: #f6ebd3; border-right: 2px solid var(--ink); }
-:root.playful .ui-logo {
-  align-items: center; justify-content: center;
-  width: 2.25rem; height: 2.25rem; border-radius: 0.75rem;
-  background: var(--pl-yellow); border: 2px solid var(--ink); box-shadow: 3px 3px 0 var(--ink);
-}
 :root.playful .ui-nav { border-radius: 0.75rem; border-width: 2px; }
 :root.playful .ui-nav:hover { border-color: var(--ink); background: var(--c-surface); }
 :root.playful .ui-nav-active, :root.playful .ui-nav-active:hover {
